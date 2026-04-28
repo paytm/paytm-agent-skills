@@ -40,7 +40,7 @@ Clone into your Claude skills directory:
 
 ```bash
 mkdir -p ~/.claude/skills
-git clone https://github.com/<your-org>/paytm-integration-skills.git ~/.claude/skills/paytm-integration
+git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills/paytm-integration
 ```
 
 Restart Claude Code (or reload skills). Verify:
