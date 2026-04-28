@@ -36,12 +36,12 @@ Integration variants: **JS Checkout** (web), **All-in-One SDK** (mobile), **Cust
 
 ## Environments
 
-| Environment | Base URL |
-|---|---|
-| Staging | `https://securegw-stage.paytm.in` |
-| Production | `https://securegw.paytm.in` |
+| Environment | Base URL (newer MIDs — default) | Legacy host |
+|---|---|---|
+| Staging | `https://securestage.paytmpayments.com` | `https://securegw-stage.paytm.in` |
+| Production | `https://secure.paytmpayments.com` | `https://securegw.paytm.in` |
 
-Always build and test against staging first. Production credentials are available after account activation on the Paytm dashboard.
+New merchants are provisioned on `paytmpayments.com`; older MIDs may still resolve only on `paytm.in`. Use whichever the dashboard shows for your MID — the two are not interchangeable per MID. Always build and test against staging first.
 
 ---
 
@@ -82,23 +82,23 @@ Called server-side to get a `txnToken` before rendering the payment UI.
 POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
 ```
 
-**Request body:**
+**Request body** (all top-level body fields shown are required):
 ```json
 {
-  "head": { "signature": "<CHECKSUMHASH>" },
+  "head": { "signature": "<CHECKSUMHASH over JSON.stringify(body)>" },
   "body": {
     "requestType": "Payment",
     "mid": "YOUR_MID",
     "websiteName": "YOUR_WEBSITE_NAME",
-    "orderId": "ORDERID_98765",
-    "callbackUrl": "https://yoursite.com/callback",
+    "orderId": "ORD_ABC123",
+    "callbackUrl": "https://yoursite.com/paytm/callback",
     "txnAmount": { "value": "1.00", "currency": "INR" },
-    "userInfo": { "custId": "CUST_001" }
+    "userInfo": { "custId": "CUST_001", "mobile": "9999999999", "email": "buyer@example.com" }
   }
 }
 ```
 
-**Response:** Returns `txnToken` — store this to invoke JS Checkout / SDK.
+`websiteName` is per-MID (dashboard value, e.g. `DEFAULT`, `WEBSTAGING`, `retail`). `channelId` (`WEB`/`WAP`) and `industryTypeId` are usually inherited from the dashboard but can be overridden in the body. **Response:** `body.txnToken` — single-use, **15-min TTL**.
 
 ---
 
@@ -106,19 +106,29 @@ POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
 
 **Web – JS Checkout:**
 ```html
-<script src="https://securegw-stage.paytm.in/merchantpgpui/checkoutjs/merchants/{MID}.js"
-        crossorigin="anonymous"></script>
+<script src="{pgDomain}/merchantpgpui/checkoutjs/merchants/{MID}.js"
+        type="application/javascript" crossorigin="anonymous"></script>
 <script>
-  window.Paytm.CheckoutJS.init({
-    merchant: { mid: "YOUR_MID", name: "Your Store" },
-    order: { id: "ORDERID_98765", token: "<txnToken>", amount: "1.00" },
-    flow: "DEFAULT",
-    handler: {
-      notifyMerchant: function(eventType, data) { console.log(eventType, data); }
-    }
-  }).then(() => window.Paytm.CheckoutJS.invoke());
+  window.Paytm.CheckoutJS.onLoad(function () {
+    window.Paytm.CheckoutJS.init({
+      root: "",
+      flow: "DEFAULT",
+      data: {
+        orderId: "ORD_ABC123",
+        token: "<txnToken>",
+        tokenType: "TXN_TOKEN",
+        amount: "1.00"
+      },
+      merchant: { redirect: false },
+      handler: {
+        notifyMerchant: function (e, d) { console.log(e, d); },
+        transactionStatus: function (d) { window.Paytm.CheckoutJS.close(); }
+      }
+    }).then(function () { window.Paytm.CheckoutJS.invoke(); });
+  });
 </script>
 ```
+Full reference + alternative config shape in `references/web-integration.md`. Working copy-paste page at `scripts/frontend/js-checkout.html`.
 
 **Mobile – All-in-One SDK:**
 - Android: Add Paytm SDK to `build.gradle`, call `PaytmSDK.getBuilder()` with `txnToken`.
@@ -259,11 +269,44 @@ All endpoints prefixed with the environment base URL.
 
 ---
 
+## Pitfalls (read before shipping)
+
+1. **`websiteName`** must match the dashboard exactly — wrong value yields a `txnToken` that fails to render.
+2. **`txnAmount.value` is a string with two decimals** (`"1.00"`). `1`, `1.0`, `1.000` break things.
+3. **`orderId` is single-use even on failure.** Generate a new one for every retry. Charset: `[A-Za-z0-9_@-]`, ≤ 50 chars.
+4. **`txnToken`** is single-use, 15-minute TTL. Don't cache or pre-fetch.
+5. **Don't mix PG hosts.** Staging MID + prod host (or vice versa) returns confusing 401/checksum errors.
+6. **Browser callback ≠ webhook.** Callback can be lost (popup blockers, network drop). Always reconfirm via Transaction Status API or the S2S webhook before fulfilling.
+7. **Callback verification** uses sorted form params *minus* `CHECKSUMHASH` — different shape from API checksum, and field names are UPPERCASE.
+8. **JSON bytes used to sign must equal bytes sent.** Don't re-serialize between hashing and POSTing.
+9. **INR only** for domestic Paytm PG.
+10. Popup blockers kill the modal flow on mobile; offer `merchant.redirect: true` as a fallback.
+
+Symptom-driven debugging: `references/troubleshooting.md`.
+
+---
+
 ## Reference Files
 
+**Core flow**
+- `references/web-integration.md` — JS Checkout, non-SDK form POST, full callback field list, callback-vs-webhook
 - `references/mobile-sdk.md` — All-in-One SDK and Custom UI SDK setup for Android, iOS, React Native, Flutter
-- `references/web-integration.md` — JS Checkout and Non-SDK web integration details
-- `references/affordability.md` — EMI, No Cost EMI, Bank Offers integration
+- `references/troubleshooting.md` — symptom → cause → fix tree, expanded RESPCODE table, decision tree
+
+**Per-product deep dives**
+- `references/refunds.md` — apply/status/webhook lifecycle, partial refunds, polling cadence, error codes
+- `references/subscriptions.md` — UPI Autopay & card mandates, charge/edit/cancel, NPCI pre-notification rules
+- `references/payment-links.md` — FIXED / REUSABLE / OPEN links, fetch, expire, SMS dispatch
+- `references/tokenization.md` — RBI-compliant saved cards, network tokens, CVV-less mandates
+- `references/webhooks.md` — S2S signature verification, retry/idempotency semantics, event reference
+- `references/qr-codes.md` — dynamic & static QR generation, status, reconciliation
+- `references/affordability.md` — Standard EMI, No-Cost EMI, Cardless EMI/BNPL, Bank Offers
+
+**Reference backends + frontend**
+- `scripts/backend-node/` — Express + `paytmchecksum`
+- `scripts/backend-spring/` — Spring MVC + `RestTemplate`
+- `scripts/backend-python/` — Flask + `paytmchecksum`
+- `scripts/frontend/js-checkout.html` — minimal copy-paste browser page
 
 ---
 

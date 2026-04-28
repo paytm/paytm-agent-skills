@@ -1,42 +1,60 @@
 # paytm-integration-skills
 
-A collection of Claude Skills for Paytm Payment Gateway integration — covering APIs, SDKs, checksums, webhooks, and more.
+A [Claude Skill](https://docs.anthropic.com/en/docs/claude-code/skills) for Paytm Payment Gateway integration — covering APIs, SDKs, checksums, callbacks, webhooks, refunds, subscriptions, tokenization, payment links, QR codes, and affordability products.
 
-These `.skill` files plug into [Claude](https://claude.ai) to give it deep, accurate knowledge of Paytm's developer ecosystem, so you can get expert integration help without digging through docs every time.
-
----
-
-## What are Claude Skills?
-
-Claude Skills are packaged knowledge bundles that Claude loads on demand. When you ask a Paytm-related question, Claude automatically reads the relevant skill and responds with precise, context-aware guidance — correct API endpoints, proper checksum logic, the right SDK methods, etc.
-
-Install a `.skill` file once in your Claude environment, and it's available across all your conversations.
+When installed, Claude loads this knowledge on demand whenever you ask a Paytm-related question, returning grounded, current answers without you digging through docs.
 
 ---
 
-## Skills in this repo
+## What's inside
 
-| Skill | Description |
-|---|---|
-| [`paytm-integration`](./paytm-integration/) | Core Paytm PG integration: Initiate Transaction, checksum generation, JS Checkout, All-in-One SDK, Transaction Status, Refunds, UPI Autopay |
-
----
-
-## Getting Started
-
-### 1. Clone the repo
-
-```bash
-git clone https://github.com/paytm/paytm-integration-skills.git
+```
+.
+├── SKILL.md                          # Entry point + core flow + pitfalls
+├── references/
+│   ├── web-integration.md            # JS Checkout, callback fields, non-SDK form POST
+│   ├── mobile-sdk.md                 # Android, iOS, React Native, Flutter
+│   ├── troubleshooting.md            # Symptom → cause → fix tree, RESPCODE table
+│   ├── refunds.md                    # apply/status/webhook lifecycle, partial refunds
+│   ├── subscriptions.md              # UPI Autopay & card mandates: charge/edit/cancel
+│   ├── payment-links.md              # FIXED / REUSABLE / OPEN links
+│   ├── tokenization.md               # RBI-compliant saved cards (network tokens)
+│   ├── webhooks.md                   # S2S signature verification + event reference
+│   ├── qr-codes.md                   # Dynamic & static QR generation
+│   └── affordability.md              # EMI, No-Cost EMI, BNPL, Bank Offers
+└── scripts/
+    ├── backend-node/                 # Express + paytmchecksum reference backend
+    ├── backend-spring/               # Spring MVC + RestTemplate reference backend
+    ├── backend-python/               # Flask + paytmchecksum reference backend
+    └── frontend/
+        └── js-checkout.html          # Minimal copy-paste browser page
 ```
 
-### 2. Install a skill
+`SKILL.md` is the entry point with YAML frontmatter — Claude reads it first, then pulls in `references/` files only when relevant to the user's question.
 
-Download the `.skill` file for the skill you want, then install it in your Claude environment per your setup (Claude Code, Claude.ai, or your own Claude-powered app).
+---
 
-### 3. Start asking
+## Install as a Claude Code skill
 
-Once installed, just ask Claude naturally:
+Clone into your Claude skills directory:
+
+```bash
+mkdir -p ~/.claude/skills
+git clone https://github.com/<your-org>/paytm-integration-skills.git ~/.claude/skills/paytm-integration
+```
+
+Restart Claude Code (or reload skills). Verify:
+
+```bash
+# In Claude Code
+/skills
+```
+
+You should see `paytm-integration` listed. From then on, any Paytm-related question auto-loads the skill.
+
+---
+
+## Usage examples
 
 > *"How do I generate a checksum for the Initiate Transaction API in Python?"*
 
@@ -44,57 +62,41 @@ Once installed, just ask Claude naturally:
 
 > *"What does RESPCODE 227 mean and how do I fix it?"*
 
-Claude will automatically use the skill to give you accurate, grounded answers.
+> *"Set up UPI Autopay with monthly debits of ₹499."*
+
+> *"Show me a working Flask backend for JS Checkout."*
 
 ---
 
-## Skill structure
+## Running the reference backends
 
-Each skill follows this layout:
+Each `scripts/backend-*` folder is independently runnable. All three implement the same four endpoints (`/paytm-client-config.json`, `/paytm/create-order`, `/paytm/order-status`, `/paytm/callback`) so you can swap between them while keeping the same `scripts/frontend/js-checkout.html`.
 
-```
-skill-name/
-├── SKILL.md              # Core instructions + API reference
-└── references/
-    ├── mobile-sdk.md     # Android, iOS, React Native, Flutter
-    └── web-integration.md  # JS Checkout, form POST, Payment Links
-```
-
-`SKILL.md` is the entry point. Reference files are loaded by Claude only when relevant to your question, keeping context lean and responses fast.
+You'll need your own MID and Merchant Key from the [Paytm dashboard](https://dashboard.paytmpayments.com) — see each backend's `README.md` for env vars.
 
 ---
 
 ## Coverage
 
-The `paytm-integration` skill currently covers:
-
-- **Authentication** — Checksum generation and verification (Java, Python, PHP, Node.js, .NET)
-- **Initiate Transaction API** — Request structure, parameters, txnToken handling
-- **JS Checkout** — Web integration with `window.Paytm.CheckoutJS`
-- **All-in-One SDK** — Android, iOS, React Native, Flutter, Ionic, Cordova, Unity
-- **Custom UI SDK** — Native mobile integration with full UI control
-- **Callback handling** — Parsing Paytm's POST response, status values
-- **Transaction Status API** — Server-side verification (the authoritative final status)
-- **Refunds** — Initiate and query refund status
-- **UPI Autopay / Subscriptions** — Recurring mandate creation
-- **Payment Links** — Programmatic link generation API
-- **eCommerce Plugins** — WooCommerce, Magento, Shopify, PrestaShop, OpenCart
-- **Test credentials** — Staging environment setup and test data
-- **Error codes** — Common RESPCODE values and fixes
+- **Core flow** — Initiate Transaction, JS Checkout, callback verification, Transaction Status API
+- **Refunds** — Apply, status, partial refunds, webhook lifecycle
+- **Subscriptions** — UPI Autopay & card mandates, charge/edit/cancel, NPCI pre-notification
+- **Payment Links** — FIXED / REUSABLE / OPEN, fetch, expire
+- **Tokenization** — RBI-compliant saved cards, CVV-less repeat charges
+- **Webhooks** — S2S signature verification, retry/idempotency semantics, full event catalogue
+- **QR Codes** — Dynamic & static, generation and reconciliation
+- **Affordability** — Standard EMI, No-Cost EMI, Cardless EMI / BNPL, Bank Offers
+- **Mobile SDKs** — Android, iOS, React Native, Flutter
+- **Troubleshooting** — Decision tree, RESPCODE catalogue, common pitfalls
 
 ---
 
 ## Contributing
 
-Contributions are welcome. To add a new skill or improve an existing one:
-
-1. Fork the repo
-2. Create your skill directory under a descriptive name
-3. Follow the `SKILL.md` structure (YAML frontmatter with `name` and `description` fields, then Markdown body)
-4. Add reference files under `references/` for any deep-dive content
-5. Open a pull request with a clear description of what the skill covers
-
-Please keep skill content accurate and tested against current Paytm API documentation at [paytmpayments.com/docs](https://www.paytmpayments.com/docs).
+PRs welcome. Please:
+- Keep API examples grounded in current [Paytm docs](https://www.paytmpayments.com/docs/) — link to the source where reasonable.
+- Match the existing reference-doc structure (concepts → endpoints → field tables → pitfalls).
+- Use `YOUR_MID`, `YOUR_MERCHANT_KEY`, etc. as placeholders — never commit real credentials.
 
 ---
 
@@ -104,7 +106,7 @@ Please keep skill content accurate and tested against current Paytm API document
 - [Paytm Dashboard](https://dashboard.paytmpayments.com)
 - [Checksum Library](https://www.paytmpayments.com/docs/checksum/)
 - [Server SDKs](https://www.paytmpayments.com/docs/server-sdk/)
-- [API Reference](https://www.paytmpayments.com/docs/api/initiate-transaction-api)
+- [Claude Skills documentation](https://docs.anthropic.com/en/docs/claude-code/skills)
 
 ---
 
