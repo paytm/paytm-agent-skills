@@ -1,6 +1,8 @@
 package com.paytm.demo.config;
 
 import java.io.InputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -135,7 +137,8 @@ public final class PaytmMerchantConfig {
    * @see <a href="https://www.paytmpayments.com/docs/jscheckout-invoke-payment">Invoke Payment Page</a>
    */
   public static String checkoutJsLoaderUrl() {
-    return pgDomain() + "/merchantpgpui/checkoutjs/merchants/" + mid() + ".js";
+    return pgDomain() + "/merchantpgpui/checkoutjs/merchants/"
+        + URLEncoder.encode(mid(), StandardCharsets.UTF_8) + ".js";
   }
 
   /**

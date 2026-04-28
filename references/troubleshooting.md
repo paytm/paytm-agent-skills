@@ -36,6 +36,30 @@ Symptom → most-likely cause → fix. Work top-down per section.
 
 ---
 
+## `Failed to parse URL from /paytm-client-config.json` (or `/paytm/create-order`)
+
+You're calling `fetch()` with a relative or root-relative URL in a context where it's evaluated by **Node's `fetch`** (not the browser's). Node requires absolute URLs.
+
+Where this happens:
+- **Next.js / Remix / SvelteKit SSR** — the component runs server-side first.
+- **React Server Components** — runs in Node.
+- **Node test scripts** that import the frontend code.
+- HTML opened via `file://` (relative resolves but the request fails differently).
+
+Two fixes, pick one:
+
+1. **Always use absolute URLs in browser-only code.** The reference frontends use `new URL("paytm/create-order", document.baseURI).toString()` — works in browser regardless of mount path, fails fast in SSR (so you know not to call it there).
+2. **For SSR / Node contexts:** prepend the backend origin explicitly:
+   ```js
+   const base = process.env.PAYTM_BACKEND_BASE || "http://localhost:3001";
+   fetch(`${base}/paytm/create-order`, { ... })
+   ```
+   Or move the fetch into a `useEffect` / client-only component so it never runs server-side.
+
+Rule of thumb: any code that talks to your `/paytm/*` backend endpoints is client-side only — guard it with `"use client"` (Next.js), `onMount` (Svelte), or browser-only checks (`typeof window !== "undefined"`).
+
+---
+
 ## JS Checkout doesn't render
 
 | Symptom | Likely cause |

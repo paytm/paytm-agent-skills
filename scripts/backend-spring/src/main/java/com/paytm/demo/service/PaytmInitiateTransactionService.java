@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paytm.demo.config.PaytmMerchantConfig;
 import com.paytm.demo.web.PaytmUpstreamException;
 import com.paytm.pg.merchant.PaytmChecksum;
+import java.security.SecureRandom;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpEntity;
@@ -23,6 +23,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class PaytmInitiateTransactionService {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final SecureRandom RANDOM = new SecureRandom();
 
   private final RestTemplate restTemplate;
 
@@ -31,7 +32,14 @@ public class PaytmInitiateTransactionService {
   }
 
   public InitiateResult initiate(String amount, String custId) throws Exception {
-    String orderId = "ORD_" + UUID.randomUUID().toString().replace("-", "").substring(0, 20);
+    // 20 hex chars (10 random bytes), uppercased — matches Node + Python backends.
+    byte[] rnd = new byte[10];
+    RANDOM.nextBytes(rnd);
+    StringBuilder hex = new StringBuilder(20);
+    for (byte b : rnd) {
+      hex.append(String.format("%02X", b));
+    }
+    String orderId = "ORD_" + hex;
     String normalizedAmount = normalizeAmount(amount);
 
     JSONObject body = new JSONObject();

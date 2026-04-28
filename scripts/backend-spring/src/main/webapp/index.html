@@ -49,7 +49,7 @@
       setStatus("Creating order (initiateTransaction)…");
       payBtn.disabled = true;
 
-      fetch("paytm/create-order", {
+      fetch(new URL("paytm/create-order", document.baseURI).toString(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: amount, custId: "CUST_DEMO" })

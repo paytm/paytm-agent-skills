@@ -1,11 +1,12 @@
 """Paytm merchant config — env-driven, mirrors backend-node/paytmConfig.js."""
 import os
+from typing import Optional
 
 PROD_PG_DOMAIN = "https://secure.paytmpayments.com"
 STAGING_PG_DOMAIN = "https://securestage.paytmpayments.com"
 
 
-def _strip(v: str | None, default: str = "") -> str:
+def _strip(v: Optional[str], default: str = "") -> str:
     return (v or default).strip().rstrip("/")
 
 

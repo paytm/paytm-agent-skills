@@ -46,7 +46,7 @@ Add `cardTokenization` to the `initiateTransaction` body:
 }
 ```
 
-`userConsentForSavingCard` reflects the explicit checkbox the customer ticked on **your** UI (or on Paytm's hosted checkout). RBI requires explicit per-card consent — don't default it on.
+> **⚠️ RBI compliance:** `userConsentForSavingCard` MUST reflect a real, explicit checkbox the customer ticked **for this specific card on this specific transaction**. Hard-coding `"Y"`, defaulting it on, pre-checking the box, or implying consent through ToS acceptance all violate the RBI CoF tokenization framework and expose the merchant to scheme fines. If no checkbox was shown / ticked, send `"N"` (or omit the field).
 
 After successful payment, `/v3/order/status` response includes:
 

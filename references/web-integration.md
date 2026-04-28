@@ -97,6 +97,8 @@ The loader URL **embeds your MID** — there is no shared script.
 
 ### 3. Browser: `init` → `invoke`
 
+> **Browser-only.** This snippet touches `window.Paytm` and `document` — it cannot run in Next.js / Remix / RSC server components, in Node test scripts, or during SSR. Wrap in `"use client"` (Next.js), `onMount` (Svelte), or `typeof window !== "undefined"` guards.
+
 ```javascript
 var config = {
   root: "",                 // CSS selector to mount inline; "" → modal popup
@@ -277,7 +279,7 @@ All plugins require MID, Merchant Key, Industry Type, Website Name from the dash
 
 ## Pitfalls (read before you ship)
 
-1. **`websiteName` mismatch** silently breaks checkout — token returned but page won't render. Get the exact value from the dashboard.
+1. **`websiteName` mismatch** usually fails `initiateTransaction` with `resultStatus: "F"`; in some legacy configs the API succeeds but JS Checkout then refuses to render. Check the dashboard value first.
 2. **`txnAmount.value` must be a string** with exactly two decimals. `1`, `1.0`, `1.000` all fail checksum validation downstream.
 3. **`orderId` is single-use** even on failure. Generate a fresh one for every retry.
 4. **`txnToken` is single-use and 15-min TTL.** Don't cache or pre-fetch.

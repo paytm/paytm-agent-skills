@@ -27,7 +27,9 @@ export function requireCredentials() {
 
 export async function initiateTransaction({ amount, custId, serverBaseUrl }) {
   const cfg = requireCredentials();
-  const orderId = `ORD_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
+  // 20 hex chars (10 random bytes) — matches Python's secrets.token_hex(10) and avoids
+  // UUID-based truncation, which silently reduces entropy.
+  const orderId = `ORD_${crypto.randomBytes(10).toString("hex").toUpperCase()}`;
   const effectiveBase = (serverBaseUrl ?? "").toString().trim() || cfg.callbackBase;
   const callbackUrl = cfg.callbackUrl?.trim() || `${effectiveBase}/paytm/callback`;
 
@@ -92,7 +94,12 @@ export function verifyCallbackChecksum(params) {
 
   const toVerify = { ...params };
   delete toVerify.CHECKSUMHASH;
-  return PaytmChecksum.verifySignature(toVerify, cfg.merchantKey, signature);
+  try {
+    return PaytmChecksum.verifySignature(toVerify, cfg.merchantKey, signature);
+  } catch {
+    // Library can throw on malformed/empty input — treat as failed verification.
+    return false;
+  }
 }
 
 function asPaytmUpstreamError(code, message, orderId, rawBody) {

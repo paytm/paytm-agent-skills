@@ -104,7 +104,7 @@ POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
 
 ### Step 3 – Render Payment Page
 
-**Web – JS Checkout:**
+**Web – JS Checkout** (browser-only — never paste into a Next.js / Remix / RSC server component; wrap in `"use client"` or guard with `typeof window !== "undefined"`):
 ```html
 <script src="{pgDomain}/merchantpgpui/checkoutjs/merchants/{MID}.js"
         type="application/javascript" crossorigin="anonymous"></script>
@@ -271,7 +271,7 @@ All endpoints prefixed with the environment base URL.
 
 ## Pitfalls (read before shipping)
 
-1. **`websiteName`** must match the dashboard exactly — wrong value yields a `txnToken` that fails to render.
+1. **`websiteName`** must match the dashboard exactly. Wrong value typically makes `initiateTransaction` itself fail with `body.resultInfo.resultStatus = "F"` and a generic message; in some legacy MID configs it returns a token that then fails at the JS Checkout step. Either way, check the dashboard value first.
 2. **`txnAmount.value` is a string with two decimals** (`"1.00"`). `1`, `1.0`, `1.000` break things.
 3. **`orderId` is single-use even on failure.** Generate a new one for every retry. Charset: `[A-Za-z0-9_@-]`, ≤ 50 chars.
 4. **`txnToken`** is single-use, 15-minute TTL. Don't cache or pre-fetch.
@@ -281,6 +281,8 @@ All endpoints prefixed with the environment base URL.
 8. **JSON bytes used to sign must equal bytes sent.** Don't re-serialize between hashing and POSTing.
 9. **INR only** for domestic Paytm PG.
 10. Popup blockers kill the modal flow on mobile; offer `merchant.redirect: true` as a fallback.
+11. **Callback URL must be reachable from the user's browser AND match what your backend listens on.** The reference backends default to `http://localhost:{3001|5001|8080/paytm-backend}` — when scaffolding a multi-service project (e.g. Next.js frontend on `:3000` + separate backend), set `PAYTM_CALLBACK_BASE` (or `PAYTM_CALLBACK_URL`) to the *backend's* public URL, not the frontend's. Never hard-code `localhost` for production.
+12. **Frontend `fetch` calls are browser-only.** The reference HTML uses `new URL("paytm/create-order", document.baseURI)` which deliberately fails fast in SSR (no `document`). When using Next.js / RSC, isolate Paytm calls in client components or behind `typeof window` guards.
 
 Symptom-driven debugging: `references/troubleshooting.md`.
 

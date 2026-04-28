@@ -4,7 +4,7 @@ Mirrors backend-node/paytmService.js. Uses Paytm's official `paytmchecksum` pack
 """
 import json
 import secrets
-from typing import Any
+from typing import Any, Optional
 
 import requests
 from paytmchecksum import PaytmChecksum
@@ -14,7 +14,7 @@ from paytm_config import get_paytm_config
 
 class PaytmError(Exception):
     def __init__(self, code: str, message: str, *, http_status: int = 500,
-                 order_id: str | None = None, paytm: dict | None = None):
+                 order_id: Optional[str] = None, paytm: Optional[dict] = None):
         super().__init__(message)
         self.code = code
         self.http_status = http_status
@@ -44,8 +44,9 @@ def _require_credentials() -> dict:
     return cfg
 
 
-def initiate_transaction(amount: Any, cust_id: str | None, server_base_url: str) -> dict:
+def initiate_transaction(amount: Any, cust_id: Optional[str], server_base_url: str) -> dict:
     cfg = _require_credentials()
+    # 20 hex chars (10 random bytes), uppercased — matches Node + Spring backends.
     order_id = "ORD_" + secrets.token_hex(10).upper()
     callback_url = cfg["callback_url"] or f"{server_base_url.rstrip('/')}/paytm/callback"
 
