@@ -365,6 +365,19 @@ handler: {
 
 `transactionStatus` is the user-facing status. `notifyMerchant` covers the lifecycle events (popup closed, session expired) where `transactionStatus` doesn't fire. Without these, the UI is silent and the user is stuck.
 
+### 5. Do NOT render debug logs / status dumps on the user-facing screen
+
+**Symptom:** The page shows raw event payloads, `JSON.stringify(data)` blobs, `console.log` mirrored into a `<pre>` tag, or a "Status: …" debug strip on the production checkout page. Looks unprofessional, leaks internal field names, and confuses real users.
+
+**Rule:** When generating production-grade UI code, **never** add an on-screen logger / status panel / debug `<pre>` block. Use `console.log` / `console.warn` / `console.error` for developer visibility — that's what DevTools is for. The user-facing UI should show only **clean, customer-readable messages**:
+
+- "Payment successful"
+- "Payment failed — please try again"
+- "Payment cancelled"
+- "Payment pending — we'll confirm shortly"
+
+The reference `scripts/frontend/js-checkout.html` includes a `#status` div for **demo/learning purposes only**. When scaffolding for a real product, drop that div and route diagnostics to `console.*` instead. No `alert()` either — use a proper toast / banner / modal in the host app's design system.
+
 ---
 
 ## Reference Files
