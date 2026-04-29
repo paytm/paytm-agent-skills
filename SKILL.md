@@ -378,6 +378,52 @@ handler: {
 
 The reference `scripts/frontend/js-checkout.html` includes a `#status` div for **demo/learning purposes only**. When scaffolding for a real product, drop that div and route diagnostics to `console.*` instead. No `alert()` either — use a proper toast / banner / modal in the host app's design system.
 
+### 6. Merchant key in `.env` must be wrapped in double quotes
+
+**Symptom:** Checksum generation produces wrong signatures even though the key looks correct. Paytm responds with `resultCode: 227` (checksum mismatch). Hours lost debugging.
+
+**Cause:** Paytm Merchant Keys often contain `#`, `@`, `!`, `$`, or `%` characters. In `.env` files, an unquoted `#` is treated as a comment delimiter — everything after it is dropped. Other special chars can also be mis-parsed by some dotenv loaders.
+
+**Rule:** **Always** wrap the Merchant Key in double quotes in `.env`:
+
+```bash
+# ❌ Wrong — any '#' in the key truncates the value
+PAYTM_MERCHANT_KEY=ab#cd@1234XYZ
+
+# ✅ Correct
+PAYTM_MERCHANT_KEY="ab#cd@1234XYZ"
+```
+
+Same rule applies to any other secret with non-alphanumeric chars (DB passwords, API keys, etc.). When generating `.env` / `.env.example` files, **always** quote secrets — don't try to inspect the key and decide.
+
+### 7. `.env` ordering and placeholder conventions
+
+Rules:
+
+- **`PAYTM_ENVIRONMENT` must be the first variable** — everything else derives from it.
+- **Use generic placeholders** (`YOUR_MID`, not `YOUR_STAGING_MID_HERE`). The environment lives in `PAYTM_ENVIRONMENT`, not in placeholder text.
+- **All keys at the top, comments / optional overrides in a later section** — keep the active config block clean.
+
+Canonical `.env.example`:
+
+```bash
+PAYTM_ENVIRONMENT=staging
+PAYTM_MID=YOUR_MID
+PAYTM_MERCHANT_KEY="YOUR_MERCHANT_KEY"
+PAYTM_WEBSITE_NAME=YOUR_WEBSITE_NAME
+PAYTM_CALLBACK_BASE=http://localhost:3001
+
+# ---------------------------------------------------------------------------
+# Defaults are pre-filled for staging. Switch PAYTM_ENVIRONMENT=production
+# and replace MID / MERCHANT_KEY / WEBSITE_NAME with your live credentials
+# when going live. Everything below is optional.
+# ---------------------------------------------------------------------------
+# PAYTM_PG_DOMAIN=               # auto-derived from PAYTM_ENVIRONMENT
+# PAYTM_CALLBACK_URL=            # auto-derived from PAYTM_CALLBACK_BASE
+# PAYTM_STATUS_API_URL=          # auto-derived from PAYTM_PG_DOMAIN
+# NODE_EXTRA_CA_CERTS=./certs/zscaler.crt   # only on corp networks (Zscaler/Netskope)
+```
+
 ---
 
 ## Reference Files
