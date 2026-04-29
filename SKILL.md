@@ -288,6 +288,85 @@ Symptom-driven debugging: `references/troubleshooting.md`.
 
 ---
 
+## Common Vibe-Coded Bugs (and how to avoid them)
+
+These are real bugs Claude has produced when scaffolding Paytm integrations from prompts. Internalize the fixes — don't regenerate the broken patterns.
+
+### 1. Hard-coded absolute paths to external certs / files
+
+**Symptom:** Project ships with `NODE_EXTRA_CA_CERTS=/Users/someone-else/certs/zscaler.crt` (or similar) baked into `.env` or code. Works on author's machine, breaks on every other machine.
+**Fix:** Use **project-relative paths** for any cert / keystore / file the project owns. Place the cert inside the project (e.g. `./certs/zscaler.crt`) and reference it relatively. Document in the README that corp-network users may need to point this at their local Zscaler/Netskope cert.
+**For Node:** `NODE_EXTRA_CA_CERTS=./certs/zscaler.crt` in `.env`, loaded via `dotenv`.
+
+### 2. `https://localhost` in callback / dev URLs
+
+**Symptom:** `PAYTM_CALLBACK_URL=https://localhost:3001/paytm/callback` — Paytm POSTs the callback, browser blocks the redirect because there's no SSL on localhost. Payment "succeeds" silently with no callback.
+**Fix:** Use `http://localhost:3001` for local dev. Reserve `https://` for deployed environments where TLS is real. The reference backends already default to `http://localhost:{port}` — don't override unless you've actually set up local SSL (mkcert, Caddy, etc.).
+
+### 3. ❗ `CheckoutJS.onLoad()` wrapped inside a button click handler
+
+**This is the most common Paytm bug Claude generates.** It looks correct but never fires.
+
+**Broken pattern (do not generate):**
+```javascript
+button.addEventListener("click", function () {
+  fetch("/paytm/create-order", ...)
+    .then(function (data) {
+      window.Paytm.CheckoutJS.onLoad(function () {        // ❌ already fired
+        window.Paytm.CheckoutJS.init(config).then(...);
+      });
+    });
+});
+```
+`CheckoutJS.onLoad(cb)` fires **exactly once**, when the merchant CheckoutJS script finishes loading — which happens shortly after page load, long before the user clicks "Pay". By click time, `onLoad` has already fired and your callback never runs. The payment modal silently fails to open.
+
+**Correct pattern:**
+```javascript
+// Page-load level: enable the Pay button only once CheckoutJS is ready.
+window.Paytm.CheckoutJS.onLoad(function () {
+  payBtn.disabled = false;                                // or whatever signals readiness
+});
+
+// Click handler: CheckoutJS is already loaded, call init/invoke directly.
+button.addEventListener("click", function () {
+  fetch("/paytm/create-order", ...)
+    .then(function (data) {
+      var config = { /* ... */ };
+      return window.Paytm.CheckoutJS.init(config).then(function () {
+        window.Paytm.CheckoutJS.invoke();
+      });
+    });
+});
+```
+
+The reference frontends in `scripts/frontend/js-checkout.html` and `scripts/backend-*/public/checkout.html` follow this pattern and include an explicit comment warning against the broken one.
+
+### 4. Missing `transactionStatus` / `notifyMerchant` handlers
+
+**Symptom:** Payment completes (or fails, or is cancelled) and the page just sits there. No success message, no failure message, no UI update. User reloads, gets confused, may double-pay.
+**Fix:** Always wire up both handlers in the `init` config:
+
+```javascript
+handler: {
+  notifyMerchant: function (eventName, data) {
+    if (eventName === "APP_CLOSED")     setStatus("Payment cancelled.");
+    if (eventName === "SESSION_EXPIRED") setStatus("Session expired. Retry.");
+  },
+  transactionStatus: function (data) {
+    // data.STATUS: TXN_SUCCESS / TXN_FAILURE / PENDING
+    if (data.STATUS === "TXN_SUCCESS") setStatus("Payment successful.");
+    else if (data.STATUS === "PENDING") setStatus("Payment pending — we'll confirm shortly.");
+    else                                setStatus("Payment failed: " + data.RESPMSG);
+    window.Paytm.CheckoutJS.close();
+    // ALWAYS reconfirm server-side via /paytm/order-status before fulfilling.
+  },
+},
+```
+
+`transactionStatus` is the user-facing status. `notifyMerchant` covers the lifecycle events (popup closed, session expired) where `transactionStatus` doesn't fire. Without these, the UI is silent and the user is stuck.
+
+---
+
 ## Reference Files
 
 **Core flow**

@@ -60,6 +60,19 @@ Rule of thumb: any code that talks to your `/paytm/*` backend endpoints is clien
 
 ---
 
+## "Pay" button does nothing — modal doesn't open on click
+
+The most common cause is wrapping `CheckoutJS.init`/`invoke` inside `CheckoutJS.onLoad()` *inside* the click handler. `onLoad` fires once at script-load time; by the time the user clicks, it has already fired and your callback never runs.
+
+**Fix:** Use `onLoad` only at page level (to enable the button); call `init`/`invoke` directly in the click handler. Full pattern in `SKILL.md` → "Common Vibe-Coded Bugs" → #3, and live code in `scripts/frontend/js-checkout.html`.
+
+Other causes for the same symptom:
+- Browser popup blocker — invoke must come from a real user gesture (it does, in the click handler).
+- `txnToken` already used / expired — generate a fresh one for each click.
+- `window.Paytm` undefined — script loader didn't finish; check Network tab for the merchant `.js` file.
+
+---
+
 ## JS Checkout doesn't render
 
 | Symptom | Likely cause |

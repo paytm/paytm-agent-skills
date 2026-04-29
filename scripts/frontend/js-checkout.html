@@ -108,6 +108,11 @@
               throw new Error("Paytm.CheckoutJS not available — loader may have failed");
             }
 
+            // IMPORTANT: do NOT wrap init/invoke in CheckoutJS.onLoad() here.
+            // onLoad fires ONCE when the script first loads — by the time the user
+            // clicks Pay, it has already fired and the callback will never run.
+            // CheckoutJS is already ready at this point (we set payBtn.disabled=false
+            // from the script's onload above), so call init/invoke directly.
             var config = {
               root: "",
               flow: "DEFAULT",
@@ -117,21 +122,37 @@
                 tokenType: "TXN_TOKEN",
                 amount: amt,
               },
+              merchant: { redirect: false },
+              handler: {
+                notifyMerchant: function (eventName, data) {
+                  // Fired for lifecycle events (APP_CLOSED, SESSION_EXPIRED, etc.)
+                  if (eventName === "APP_CLOSED") {
+                    setStatus("Payment cancelled by user.", true);
+                    payBtn.disabled = false;
+                  } else if (eventName === "SESSION_EXPIRED") {
+                    setStatus("Session expired (txnToken TTL). Please retry.", true);
+                    payBtn.disabled = false;
+                  }
+                },
+                transactionStatus: function (data) {
+                  // data.STATUS: TXN_SUCCESS / TXN_FAILURE / PENDING
+                  // ALWAYS reconfirm via /paytm/order-status before fulfilling.
+                  if (data && data.STATUS === "TXN_SUCCESS") {
+                    setStatus("Payment successful. orderId=" + orderId);
+                  } else if (data && data.STATUS === "PENDING") {
+                    setStatus("Payment pending — we'll confirm shortly.");
+                  } else {
+                    setStatus("Payment failed: " + (data && data.RESPMSG ? data.RESPMSG : "unknown error"), true);
+                  }
+                  window.Paytm.CheckoutJS.close();
+                  payBtn.disabled = false;
+                },
+              },
             };
 
-            return new Promise(function (resolve, reject) {
-              window.Paytm.CheckoutJS.onLoad(function () {
-                window.Paytm.CheckoutJS.init(config)
-                  .then(function () {
-                    window.Paytm.CheckoutJS.invoke();
-                    setStatus("Checkout invoked. orderId=" + orderId);
-                    payBtn.disabled = false;
-                    resolve();
-                  })
-                  .catch(function (err) {
-                    reject(err);
-                  });
-              });
+            return window.Paytm.CheckoutJS.init(config).then(function () {
+              window.Paytm.CheckoutJS.invoke();
+              setStatus("Checkout invoked. orderId=" + orderId);
             });
           })
           .catch(function (e) {
