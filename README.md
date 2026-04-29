@@ -1,8 +1,10 @@
 # paytm-integration-skills
 
-A [Claude Skill](https://docs.anthropic.com/en/docs/claude-code/skills) for Paytm Payment Gateway integration — covering APIs, SDKs, checksums, callbacks, webhooks, refunds, subscriptions, tokenization, payment links, QR codes, and affordability products.
+A skill for Paytm Payment Gateway integration — covering JS Checkout, Subscriptions, Payment Links, and QR Codes (Dynamic QR) products.
 
-When installed, Claude loads this knowledge on demand whenever you ask a Paytm-related question, returning grounded, current answers without you digging through docs.
+When installed as skill in Claude, Claude loads this knowledge on demand whenever you ask a Paytm-related question, returning grounded, current answers without you digging through docs.
+
+This skill can be used with AI platforms such as ChatGPT and Gemini by uploading as files as context. Once loaded, it helps generate integration-ready code, debug issues, and guide end-to-end implementation of Paytm Payment Gateway.
 
 ---
 
@@ -12,16 +14,10 @@ When installed, Claude loads this knowledge on demand whenever you ask a Paytm-r
 .
 ├── SKILL.md                          # Entry point + core flow + pitfalls
 ├── references/
-│   ├── web-integration.md            # JS Checkout, callback fields, non-SDK form POST
-│   ├── mobile-sdk.md                 # Android, iOS, React Native, Flutter
-│   ├── troubleshooting.md            # Symptom → cause → fix tree, RESPCODE table
-│   ├── refunds.md                    # apply/status/webhook lifecycle, partial refunds
-│   ├── subscriptions.md              # UPI Autopay & card mandates: charge/edit/cancel
-│   ├── payment-links.md              # FIXED / REUSABLE / OPEN links
-│   ├── tokenization.md               # RBI-compliant saved cards (network tokens)
-│   ├── webhooks.md                   # S2S signature verification + event reference
-│   ├── qr-codes.md                   # Dynamic & static QR generation
-│   └── affordability.md              # EMI, No-Cost EMI, BNPL, Bank Offers
+│   ├── js-checkout.md                # Seamless website/app payment experience
+│   ├── subscriptions.md              # Automated recurring billing for customers
+│   ├── payment-links.md              # Shareable links for easy payment collection
+│   ├── qr-codes.md                   # Instant scan & pay with Dynamic QR
 └── scripts/
     ├── backend-node/                 # Express + paytmchecksum reference backend
     ├── backend-spring/               # Spring MVC + RestTemplate reference backend
@@ -56,15 +52,15 @@ You should see `paytm-integration` listed. From then on, any Paytm-related quest
 
 ## Usage examples
 
-> *"How do I generate a checksum for the Initiate Transaction API in Python?"*
+> *"How do I integrate JS Checkout for my website using Paytm?"*
 
-> *"Walk me through integrating Paytm All-in-One SDK in React Native."*
+> *"Show me the step-by-step flow to implement dynamic QR code payments."*
 
-> *"What does RESPCODE 227 mean and how do I fix it?"*
+> *"How can I create and manage subscription (UPI Autopay) for monthly billing?"*
 
-> *"Set up UPI Autopay with monthly debits of ₹499."*
+> *"What is the best way to handle payment status and callbacks for QR transactions?"*
 
-> *"Show me a working Flask backend for JS Checkout."*
+> *"How do I test end-to-end payment flow using JS Checkout with a sample frontend?"*
 
 ---
 
@@ -76,24 +72,18 @@ You'll need your own MID and Merchant Key from the [Paytm dashboard](https://das
 
 ---
 
-## Coverage
+## Coverage - edit
 
-- **Core flow** — Initiate Transaction, JS Checkout, callback verification, Transaction Status API
-- **Refunds** — Apply, status, partial refunds, webhook lifecycle
-- **Subscriptions** — UPI Autopay & card mandates, charge/edit/cancel, NPCI pre-notification
-- **Payment Links** — FIXED / REUSABLE / OPEN, fetch, expire
-- **Tokenization** — RBI-compliant saved cards, CVV-less repeat charges
-- **Webhooks** — S2S signature verification, retry/idempotency semantics, full event catalogue
-- **QR Codes** — Dynamic & static, generation and reconciliation
-- **Affordability** — Standard EMI, No-Cost EMI, Cardless EMI / BNPL, Bank Offers
-- **Mobile SDKs** — Android, iOS, React Native, Flutter
-- **Troubleshooting** — Decision tree, RESPCODE catalogue, common pitfalls
+- **Core flow:** Initiate Transaction, JS Checkout, callback verification, Transaction Status API
+- **Subscriptions:** Mandate setup, recurring charge, lifecycle management
+- **Payment Links:** FIXED / REUSABLE / OPEN, fetch, expire
+- **QR Codes:** Dynamic QR, Order-based QR, scan, pay, instant confirmation
+
 
 ---
 
-## Contributing
+## Important Notes
 
-PRs welcome. Please:
 - Keep API examples grounded in current [Paytm docs](https://www.paytmpayments.com/docs/) — link to the source where reasonable.
 - Match the existing reference-doc structure (concepts → endpoints → field tables → pitfalls).
 - Use `YOUR_MID`, `YOUR_MERCHANT_KEY`, etc. as placeholders — never commit real credentials.
