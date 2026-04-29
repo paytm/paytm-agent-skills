@@ -72,7 +72,7 @@ You'll need your own MID and Merchant Key from the [Paytm dashboard](https://das
 
 ---
 
-## Coverage - edit
+## Coverage 
 
 - **Core flow:** Initiate Transaction, JS Checkout, callback verification, Transaction Status API
 - **Subscriptions:** Mandate setup, recurring charge, lifecycle management
