@@ -23,6 +23,8 @@ For in-person, kiosk, table-top, or social-commerce flows where the customer sca
 > - **`amount` MUST be a string** with two decimals (`"499.00"`), not a number (`499` / `499.00`).
 > - **`head` requires `clientId` and `version`** in addition to `signature`.
 > - **`businessType` must be exactly `"UPI_QR_CODE"`** — case-sensitive.
+>
+> **⚠️ Don't forget post-payment polling.** Generating a QR doesn't auto-notify the browser when the customer pays — your page will be stuck on "Processing…" forever unless you poll Transaction Status (or wire up a webhook). See "Detecting payment completion" below.
 
 ```
 POST {pgDomain}/paymentservices/qr/create
@@ -132,7 +134,78 @@ POST {pgDomain}/paymentservices/qr/status
 
 Response carries `qrCodeStatus` and (once paid) the underlying `txnId` / `orderId` of the completed payment.
 
-For real-time UX (customer pays → screen shows "Paid"), **don't poll** — wire up the QR webhook (event group "QR Payment") and push to the screen via SSE/WebSocket.
+---
+
+## Detecting payment completion (the "stuck on Processing…" fix)
+
+**Symptom:** Customer scans the QR, pays via UPI, but the merchant page is stuck showing "Payment processing…" indefinitely.
+
+**Cause:** Generating a Dynamic QR doesn't open any merchant-side payment session — there's no JS Checkout, no `transactionStatus` callback, no automatic browser-side notification when payment completes. Your screen has no way of knowing the customer paid unless **your code asks**.
+
+**Two ways to close the loop, pick one:**
+
+### Option A — Frontend polling (simplest, recommended for in-store / kiosk UX)
+
+After rendering the QR, poll your backend's status endpoint every 3–5 seconds. Backend forwards the call to Paytm's `/v3/order/status` (or `/paymentservices/qr/status`).
+
+```javascript
+// Frontend, after rendering the QR image
+const orderId = "QR_ORD_001";
+const POLL_INTERVAL_MS = 3000;
+const POLL_TIMEOUT_MS = 5 * 60 * 1000;   // 5 min — match QR expiry
+const startedAt = Date.now();
+
+async function pollOnce() {
+  if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+    setUi("EXPIRED", "QR expired. Please request a new one.");
+    return;
+  }
+  const r = await fetch("/paytm/qr-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderId })
+  });
+  const data = await r.json();
+  // Paytm Transaction Status response — look at body.resultInfo.resultStatus
+  const status = data?.body?.resultInfo?.resultStatus;
+  if (status === "TXN_SUCCESS") {
+    setUi("PAID", "Payment received. Thank you!");
+    return;
+  }
+  if (status === "TXN_FAILURE") {
+    setUi("FAILED", "Payment failed. Please try again.");
+    return;
+  }
+  // PENDING or no-txn-yet — keep polling
+  setTimeout(pollOnce, POLL_INTERVAL_MS);
+}
+pollOnce();
+```
+
+The backend `/paytm/qr-status` route is just a thin wrapper that calls Paytm's Transaction Status API server-side (so the merchant key never reaches the browser):
+
+```javascript
+// Node — backend route
+app.post("/paytm/qr-status", async (req, res) => {
+  const { orderId } = req.body;
+  const body = { mid: cfg.mid, orderId };
+  const signature = await PaytmChecksum.generateSignature(JSON.stringify(body), cfg.merchantKey);
+  const r = await fetch(`${cfg.pgDomain}/v3/order/status`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ head: { signature }, body })
+  });
+  res.type("application/json").send(await r.text());
+});
+```
+
+**Always stop polling on a terminal state** (`TXN_SUCCESS` / `TXN_FAILURE`) and on timeout — runaway pollers are the second-most-common bug after the original "stuck screen".
+
+### Option B — Webhook + SSE / WebSocket push (best UX, more setup)
+
+Configure Paytm's QR Payment webhook on the dashboard. When Paytm POSTs payment confirmation to your backend, push the event over SSE / WebSocket / Pusher / Ably to the open browser session keyed by `orderId`. The screen updates instantly with no polling.
+
+Use Option A for vibe-coded kiosks and demo flows; Option B when polling cost / latency matters.
 
 ---
 
@@ -159,3 +232,4 @@ For "which customer paid?" you have to use customer-supplied context (table numb
 8. **Static QR amount changes** on the dashboard apply going forward only — in-flight scans use the value at scan time.
 9. **Refunds for QR payments** go through the standard `/refund/apply` flow using the resulting `orderId` + `txnId`.
 10. **Some UPI apps strip `displayName`** and show only the merchant VPA — don't put critical info there.
+11. **No automatic post-payment notification.** Unlike JS Checkout (which fires `transactionStatus` in the browser), QR generation gives you no client-side hook for payment completion. You must poll `/v3/order/status` from the frontend or wire up a webhook + push channel — otherwise your "Payment processing…" screen stays up forever.

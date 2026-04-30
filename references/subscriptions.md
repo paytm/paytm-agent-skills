@@ -10,6 +10,8 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 > 4. There is **no `subscriptionFrequency`** field. Use `subscriptionFrequencyUnit` only.
 > 5. `subscriptionEnableRetry` is a **string** `"1"` / `"0"`, not a boolean.
 > 6. `subscriptionStartDate` / `subscriptionExpiryDate` are `YYYY-MM-DD` strings.
+> 7. **`userInfo.custId` must be sanitized** — alphanumerics + underscore only. Spaces, special characters, and unicode are rejected with `"Invalid Customer ID"`. Always normalize before sending: `custId.replace(/[^a-zA-Z0-9_]/g, "_")`.
+> 8. **"No payment options available" on the consent screen** = subscription product is not enabled on the MID. The API call succeeds and returns a `txnToken`, but JS Checkout has nothing to render. Fix: ask Paytm support / your KAM to enable Subscription / UPI Autopay on the MID — this is a dashboard provisioning step, not a code fix.
 
 ---
 
@@ -86,6 +88,28 @@ Content-Type: application/json
 | `subscriptionMaxAmount` | conditional | **Required** when `subscriptionAmountType: "VARIABLE"` |
 | `subscriptionPaymentMode` | optional | Restrict mandate rails: `[{ "mode": "UPI" }, { "mode": "CC" }, { "mode": "DC" }]` |
 
+### Sanitize `userInfo.custId` before sending
+
+Paytm rejects custIds containing spaces, special characters, or unicode with `"Invalid Customer ID"`. Always normalize to `[A-Za-z0-9_]` before passing in:
+
+```javascript
+// Node
+const safeCustId = (rawCustId || "CUST_DEMO").replace(/[^a-zA-Z0-9_]/g, "_");
+```
+
+```python
+# Python
+import re
+safe_cust_id = re.sub(r"[^a-zA-Z0-9_]", "_", raw_cust_id or "CUST_DEMO")
+```
+
+```java
+// Java
+String safeCustId = (rawCustId == null ? "CUST_DEMO" : rawCustId).replaceAll("[^a-zA-Z0-9_]", "_");
+```
+
+So `"Rahul Sharma"` → `"Rahul_Sharma"`, `"user@example.com"` → `"user_example_com"`. Persist the sanitized form in your DB so future renew/charge calls use the same id.
+
 **Response** → `body.txnToken` (single-use, 15-min TTL). Pass it to JS Checkout in Step 2.
 
 ### Worked example — gym membership ₹499/month
@@ -150,6 +174,24 @@ Full reference, callback handling, and pitfalls are in `references/js-checkout.m
 
 ---
 
+## Troubleshooting
+
+### "No payment options available" on the consent screen
+
+The `/subscription/create` API returned a `txnToken` and JS Checkout opened, but the modal shows **"No payment options available"** (or just an empty list of methods).
+
+**This is not a code bug — it's a dashboard provisioning issue.** Subscription / UPI Autopay must be explicitly enabled on the MID by Paytm. The API and JS Checkout will let you create tokens against the MID even when the product isn't enabled, so the failure surfaces only at render time.
+
+**Fix:** Contact your Paytm KAM / support and ask them to enable the **Subscription / UPI Autopay** product on the MID. Allow up to 24h for propagation. There is no code change you can make to bypass this — the MID itself needs the entitlement.
+
+To confirm if your MID has it enabled before integrating, ask Paytm to share `fetchPaymentOptions` for that MID with `requestType: NATIVE_SUBSCRIPTION` — if no UPI/card mandate options come back, the product isn't enabled yet.
+
+### "Invalid Customer ID"
+
+Sanitize `custId` (see "Sanitize `userInfo.custId` before sending" above). Most common cause: passing the customer's name (`"Rahul Sharma"`) directly as the custId.
+
+---
+
 ## Pitfalls
 
 1. **Wrong endpoint.** `/theia/api/v1/initiateTransaction` is for one-time Payment ONLY. Subscriptions use `/subscription/create`. Different endpoint, different validator, different response.
@@ -161,3 +203,5 @@ Full reference, callback handling, and pitfalls are in `references/js-checkout.m
 7. **VARIABLE mandates** are not supported on all UPI apps; some users will fall back to FIX-only.
 8. **`subscriptionStartDate` cannot be in the past** and must be ≥ today (IST).
 9. **`txnToken` from `/subscription/create` is single-use, 15-min TTL** — same as one-time payment tokens.
+10. **`userInfo.custId` must be sanitized** to `[A-Za-z0-9_]`. Spaces / special chars / unicode → `"Invalid Customer ID"`.
+11. **"No payment options available"** at consent time means the MID doesn't have Subscription / UPI Autopay enabled — see Troubleshooting above. Not a code fix.
