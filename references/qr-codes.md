@@ -70,12 +70,50 @@ Content-Type: application/json
     "resultInfo": { "resultStatus": "SUCCESS", "resultCode": "QR_0001" },
     "qrCodeId": "<paytm qrCodeId>",
     "qrData": "upi://pay?pa=...&pn=...&am=499.00&tr=...",
-    "image": "data:image/png;base64,iVBOR..."
+    "image": "iVBORw0KGgoAAAANSUhEUgAA..."
   }
 }
 ```
 
-Render `image` directly, or generate your own QR from `qrData` using any QR library (it's a standard UPI deep-link).
+> **⚠️ `image` is RAW base64 — no data-URI prefix.** Paytm returns the string `iVBOR...` (the bare base64 payload), **not** `data:image/png;base64,iVBOR...`. Pasting it directly into an `<img src>` tag silently fails to render. You must add the prefix yourself before serving it to the browser.
+
+### Rendering the QR — the right way
+
+**Server-side** (recommended — fix once, frontend stays simple):
+
+```javascript
+// Node example — in your /paytm/create-qr handler
+const json = await paytmCreateQr(...);
+const rawImage = json.body.image;
+res.json({
+  qrCodeId: json.body.qrCodeId,
+  qrData: json.body.qrData,
+  image: `data:image/png;base64,${rawImage}`   // <-- add prefix here
+});
+```
+
+```python
+# Flask example
+out = paytm_create_qr(...)
+return jsonify({
+    "qrCodeId": out["body"]["qrCodeId"],
+    "qrData": out["body"]["qrData"],
+    "image": f"data:image/png;base64,{out['body']['image']}"
+})
+```
+
+```java
+// Spring example
+String img = "data:image/png;base64," + json.path("body").path("image").asText();
+```
+
+**Frontend** then just does:
+
+```html
+<img src="<image-from-backend>" alt="Scan to pay" />
+```
+
+Alternatively, ignore `image` entirely and generate your own QR from `qrData` using any QR library — `qrData` is a standard UPI deep-link (`upi://pay?pa=...&pn=...&am=499.00&tr=...`).
 
 ---
 
@@ -114,9 +152,10 @@ For "which customer paid?" you have to use customer-supplied context (table numb
 1. **`posId` is required** — most common cause of HTTP 400 on QR generation. Always send a non-empty value.
 2. **`amount` must be a string with two decimals.** `"499.00"` works; `499`, `499.0`, `"499"` all fail.
 3. **`head.clientId` and `head.version` are required**, not just `signature`.
-4. **`orderId` is single-use** for dynamic QRs even if the customer never pays — generate a new one for retry.
-5. **UPI deep-links are time-sensitive.** Some apps cache; always re-render on retry rather than reusing an old `qrData`.
-6. **Don't expose `qrCodeId` as a customer-facing reference** — use your own `orderId`.
-7. **Static QR amount changes** on the dashboard apply going forward only — in-flight scans use the value at scan time.
-8. **Refunds for QR payments** go through the standard `/refund/apply` flow using the resulting `orderId` + `txnId`.
-9. **Some UPI apps strip `displayName`** and show only the merchant VPA — don't put critical info there.
+4. **`image` field is raw base64 with NO `data:image/png;base64,` prefix** — pasting it straight into `<img src>` renders nothing. Prepend the prefix in your backend handler before sending the response to the frontend (see "Rendering the QR — the right way" above).
+5. **`orderId` is single-use** for dynamic QRs even if the customer never pays — generate a new one for retry.
+6. **UPI deep-links are time-sensitive.** Some apps cache; always re-render on retry rather than reusing an old `qrData`.
+7. **Don't expose `qrCodeId` as a customer-facing reference** — use your own `orderId`.
+8. **Static QR amount changes** on the dashboard apply going forward only — in-flight scans use the value at scan time.
+9. **Refunds for QR payments** go through the standard `/refund/apply` flow using the resulting `orderId` + `txnId`.
+10. **Some UPI apps strip `displayName`** and show only the merchant VPA — don't put critical info there.

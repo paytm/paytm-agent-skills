@@ -2,21 +2,19 @@
 
 Server-generated short URLs that open Paytm-hosted checkout. No client SDK; works in SMS, WhatsApp, email. Use for invoices, manual collections, social-commerce, agent-assisted sales.
 
-> **⚠️ READ THIS FIRST — common mistakes that cause "invalid link id" / 400 errors:**
+> **⚠️ READ THIS FIRST — common mistakes that cause silent failures and 400 errors:**
 >
 > 1. The link identifier **`linkId` must be sent as a JSON number (long integer)**, NOT a quoted string. `"linkId": "31309"` fails. `"linkId": 31309` works.
 > 2. The create response returns the field as **`LinkID`** (capitalized). You must convert it to **`linkId`** (lowercase `l`, lowercase `d`) for fetch / update / resend / expire calls.
 > 3. The **resend** endpoint is `/link/resendNotification`, NOT `/link/resend`.
+> 4. **Every link API call requires `head.tokenType: "AES"`**, not just `signature`. Omitting it returns `"Invalid tokenType"`. Applies to create / fetch / update / resend / expire — all of them.
+> 5. **`linkDescription` must be ≥ 3 chars and contain NO special characters** (alphanumerics + spaces only). Anything else returns a validation error.
+> 6. **Fetch response wraps the link in `body.links[0]`**, not `body` directly. Reading `json.body.linkStatus` returns `undefined` — read `json.body.links[0].linkStatus`.
+> 7. **Customer phone / email / name go inside a `customerContact` object** — they are **NOT** top-level body fields. Putting `customerMobile` / `customerEmail` at the top of `body` is silently accepted but Paytm never sends the SMS/email.
+> 8. **`amount` in create-link is a JSON number** (e.g. `100.00`), not a string — different from `txnAmount.value` in Initiate Transaction. Quoting it as a string can fail validation.
+> 9. **`head` should include a `timestamp`** (Unix epoch seconds as a string) alongside `tokenType` + `signature` per the official Create Link doc.
 
----
-
-## Link types
-
-| `linkType` | Use |
-|---|---|
-| `FIXED` | One-time link, single payment, configurable amount |
-| `REUSABLE` | Many payers can pay; each payment generates its own txn |
-| `OPEN` | Payer chooses amount (within optional min/max) |
+Reference: <https://www.paytmpayments.com/docs/api/create-link-api?ref=paymentLinks>
 
 ---
 
@@ -29,41 +27,55 @@ Content-Type: application/json
 
 ```json
 {
-  "head": { "tokenType": "AES", "signature": "<sig>" },
+  "head": {
+    "tokenType": "AES",
+    "signature": "<sig>",
+    "timestamp": "1714464000"
+  },
   "body": {
     "mid": "YOUR_MID",
-    "linkType": "FIXED",
-    "linkDescription": "Payment for Order INV-001",
-    "linkName": "INV-001",
-    "amount": "499.00",
-    "currency": "INR",
-    "expiryDate": "2026-12-30 23:59:59",
-    "orderId": "ORD_INV_001",
+    "linkType": "GENERIC",
+    "linkName": "Invoice 001",
+    "linkDescription": "Payment for Invoice 001",
+    "amount": 499.00,
     "sendSms": true,
     "sendEmail": true,
-    "customerMobile": "9999999999",
-    "customerEmail": "buyer@example.com",
-    "customerName": "Buyer Name",
+    "customerContact": {
+      "customerName": "Buyer Name",
+      "customerEmail": "buyer@example.com",
+      "customerMobile": "9999999999",
+      "customerId": "CUST_001"
+    },
+    "expiryDate": "2026-12-30 23:59:59",
+    "orderId": "ORD_INV_001",
     "callbackUrl": "https://yoursite.com/paytm/link-callback",
     "merchantUniqueReference": "INV-001-v1"
   }
 }
 ```
 
-| Field | Notes |
-|---|---|
-| `linkType` | `FIXED` / `REUSABLE` / `OPEN` |
-| `amount` | String, two decimals. Omit (or use min/max) for `OPEN` |
-| `expiryDate` | `yyyy-MM-dd HH:mm:ss` IST. Max ~1 year out |
-| `orderId` | Optional but **strongly recommended** — lets you reconcile via `/v3/order/status` |
-| `sendSms` / `sendEmail` | Paytm dispatches the link to the customer; requires `customerMobile` / `customerEmail` |
-| `callbackUrl` | Same semantics as JS Checkout callback (browser POST after payment) |
-| `merchantUniqueReference` | Echoed back; useful for invoice ↔ link mapping |
+| Field | Required | Notes |
+|---|---|---|
+| `mid` | ✅ | Merchant ID |
+| `linkName` | ✅ | Short label, alphanumerics + spaces only |
+| `linkDescription` | ✅ | **Min 3 chars, alphanumerics + spaces only — no special characters.** `!`, `@`, `#`, `$`, `&`, `-`, `_`, `.`, `/`, `:` etc. all fail validation. Keep it short and clean (`"Invoice 001"`, `"Gym membership"`) |
+| `linkType` | ✅ | `GENERIC` per official doc |
+| `amount` | conditional | **JSON number** (`499.00`), NOT a string. Required for fixed-amount links |
+| `head.tokenType` | ✅ | Always `"AES"` |
+| `head.signature` | ✅ | CHECKSUMHASH over the body |
+| `head.timestamp` | ✅ | Unix epoch seconds as string (e.g. `"1714464000"`) |
+| `sendSms` / `sendEmail` | optional | Booleans — instruct Paytm to dispatch to `customerContact.customerMobile` / `customerContact.customerEmail` |
+| `customerContact` | optional | **Nested object** — see below. Required for SMS / email dispatch |
+| `customerContact.customerName` | optional | Display name |
+| `customerContact.customerEmail` | optional | Required if `sendEmail: true` |
+| `customerContact.customerMobile` | optional | Required if `sendSms: true` |
+| `customerContact.customerId` | optional | Your customer ID for reconciliation |
+| `expiryDate` | optional | `yyyy-MM-dd HH:mm:ss` IST. Max ~1 year out |
+| `orderId` | optional | **Strongly recommended** — lets you reconcile via `/v3/order/status` |
+| `callbackUrl` | optional | Same semantics as JS Checkout callback (browser POST after payment) |
+| `merchantUniqueReference` | optional | Echoed back; useful for invoice ↔ link mapping |
 
-For `OPEN`:
-```json
-{ "amount": null, "minAmount": "10.00", "maxAmount": "10000.00" }
-```
+For payer-chosen amount: omit `amount` and provide `minAmount` / `maxAmount` as numbers (`10.00`, `10000.00`). Confirm support with your account manager — some Paytm MIDs don't allow open-amount links.
 
 ### Response
 
@@ -95,7 +107,7 @@ POST {pgDomain}/link/fetch
 
 ```json
 {
-  "head": { "signature": "<sig>" },
+  "head": { "tokenType": "AES", "signature": "<sig>" },
   "body": {
     "mid": "YOUR_MID",
     "linkId": 31309
@@ -105,7 +117,31 @@ POST {pgDomain}/link/fetch
 
 `linkId` is a **JSON number**. Quoting it (`"31309"`) returns "invalid link id".
 
-Response includes `linkStatus`, `transactions[]` (per-payer txns for REUSABLE / OPEN), expiry, and current usage count.
+### Fetch response shape — read carefully
+
+```json
+{
+  "head": { "responseTimestamp": "...", "signature": "..." },
+  "body": {
+    "resultInfo": { "resultStatus": "SUCCESS", "resultCode": "200", "resultMsg": "Success" },
+    "links": [
+      {
+        "linkId": 31309,
+        "linkType": "FIXED",
+        "linkStatus": "ACTIVE",
+        "amount": "499.00",
+        "shortUrl": "https://paytm.me/XXXXXXX",
+        "longUrl": "https://...",
+        "expiryDate": "2026-12-30 23:59:59",
+        "transactions": [],
+        "merchantUniqueReference": "INV-001-v1"
+      }
+    ]
+  }
+}
+```
+
+> **⚠️ The link is wrapped in `body.links[0]`, not `body` directly.** Reading `json.body.linkStatus` returns `undefined`. Read `json.body.links[0].linkStatus` (and similarly for every other link field). The array is always length 1 for fetch (single-link lookup) but the wrapper is always there.
 
 ---
 
@@ -117,7 +153,7 @@ POST {pgDomain}/link/update
 
 ```json
 {
-  "head": { "signature": "<sig>" },
+  "head": { "tokenType": "AES", "signature": "<sig>" },
   "body": {
     "mid": "YOUR_MID",
     "linkId": 31309,
@@ -142,7 +178,7 @@ POST {pgDomain}/link/resendNotification
 
 ```json
 {
-  "head": { "signature": "<sig>" },
+  "head": { "tokenType": "AES", "signature": "<sig>" },
   "body": {
     "mid": "YOUR_MID",
     "linkId": 31309,
@@ -167,7 +203,7 @@ POST {pgDomain}/link/expire
 
 ```json
 {
-  "head": { "signature": "<sig>" },
+  "head": { "tokenType": "AES", "signature": "<sig>" },
   "body": {
     "mid": "YOUR_MID",
     "linkId": 31309
@@ -206,10 +242,15 @@ The flow merges back into the standard one:
 
 1. **`linkId` MUST be a JSON number** in fetch / update / resend / expire calls. Quoting it as a string is the #1 cause of "invalid link id" responses.
 2. **Response field is `LinkID`, request field is `linkId`** — different casing. Convert when persisting.
-3. **Resend path is `/link/resendNotification`**, not `/link/resend`. Wrong path → 404.
-4. **`orderId` is per-link for FIXED/OPEN, but per-payment for REUSABLE.** Don't try to look up a REUSABLE link by orderId — use `linkId` and iterate `transactions[]`.
-5. **Expired links can't be charged.** Build a renewal job for unpaid invoices instead of relying on long expiry windows.
-6. **`OPEN` links** are fraud-prone — set `minAmount` / `maxAmount` realistically.
-7. **SMS dispatch requires DLT-registered templates** on the Paytm side (Indian regulation). New merchants may see SMS silently dropped until templates are approved on the dashboard.
-8. **`shortUrl` redirects to a long URL on the PG host** — link previews (WhatsApp, iMessage) hit the long URL, which can affect link analytics if you depend on click-through tracking.
-9. **Update can't change `linkType` or `orderId`** — only mutable fields (amount, expiry, description, contact).
+3. **`head.tokenType: "AES"` is required on every call.** Omitting it returns `"Invalid tokenType"`. Easy to miss because the field isn't called out in older Paytm samples.
+4. **`linkDescription` rules:** minimum 3 characters, alphanumerics + spaces only. No `-`, `_`, `.`, `#`, `@`, `&`, `/`, `:`, etc. Validation error if violated.
+5. **Fetch response wraps the link in `body.links[0]`**, not `body` directly. `json.body.linkStatus` is `undefined`; you must read `json.body.links[0].linkStatus`.
+6. **Customer details must be nested in `customerContact`.** Putting `customerMobile` / `customerEmail` / `customerName` at the top level of `body` is silently accepted but Paytm never dispatches the SMS / email. The link is created but the customer is never notified.
+7. **Create-link `amount` is a JSON number**, not a string. `499.00` works; `"499.00"` may fail validation. (Different from `txnAmount.value` in Initiate Transaction, which IS a string.)
+8. **`head.timestamp` is required on create-link** per the official doc — Unix epoch seconds as a string.
+9. **`orderId` reconciles to a single payment for one-shot links** — for reusable/multi-payer links iterate `transactions[]` from the fetch response.
+10. **Expired links can't be charged.** Build a renewal job for unpaid invoices instead of relying on long expiry windows.
+11. **Open-amount links** (no fixed `amount`, only `minAmount`/`maxAmount`) are fraud-prone — set tight bounds and verify the paid amount server-side.
+12. **SMS dispatch requires DLT-registered templates** on the Paytm side (Indian regulation). New merchants may see SMS silently dropped until templates are approved on the dashboard.
+13. **`shortUrl` redirects to a long URL on the PG host** — link previews (WhatsApp, iMessage) hit the long URL, which can affect link analytics if you depend on click-through tracking.
+14. **Update can't change `linkType` or `orderId`** — only mutable fields (amount, expiry, description, contact).

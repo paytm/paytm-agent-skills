@@ -4,12 +4,22 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 
 > **⚠️ READ THIS FIRST — common mistakes that break subscription integrations:**
 >
-> 1. The endpoint is **`/theia/api/v1/initiateSubscription`**, NOT `/theia/api/v1/initiateTransaction`.
+> 1. The endpoint is **`/subscription/create`**, NOT `/theia/api/v1/initiateTransaction`.
 > 2. `requestType` is **`"NATIVE_SUBSCRIPTION"`**, NOT `"SUBSCRIPTION"` and NOT `"Payment"`.
 > 3. Subscription fields are **flat inside `body`** — DO NOT wrap them in a `subscriptionDetails` or `subscriptionInfo` object. Wrapping returns HTTP 400.
 > 4. There is **no `subscriptionFrequency`** field. Use `subscriptionFrequencyUnit` only.
 > 5. `subscriptionEnableRetry` is a **string** `"1"` / `"0"`, not a boolean.
 > 6. `subscriptionStartDate` / `subscriptionExpiryDate` are `YYYY-MM-DD` strings.
+
+---
+
+## Scope of this skill
+
+This skill covers **only** the mandate-creation flow:
+1. Server calls `/subscription/create` to get a `txnToken`.
+2. Browser invokes JS Checkout with that `txnToken` so the user can complete the mandate consent.
+
+Subsequent operations (status check, recurring debit, edit, cancel) are intentionally **out of scope**. Do not generate code for `/subscription/status`, `/subscription/renew`, `/subscription/edit`, or `/subscription/cancel` from this skill — refer to live Paytm docs and validate paths before implementing.
 
 ---
 
@@ -19,16 +29,15 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 |---|---|
 | **Mandate** | One-time user authorization at a maximum amount, frequency, and validity window |
 | **Subscription ID** | Paytm-issued ID for the mandate, returned after user consent |
-| **Charge / Renewal** | A single debit against an active mandate; happens server-side with no user interaction |
 | **Mandate state** | `INITIATED` → `ACTIVE` → `EXPIRED` / `CANCELLED` / `REJECTED` |
 | **Pre-notification** | NPCI rule: notify user 24h before debit on UPI Autopay (Paytm handles this) |
 
 ---
 
-## Step 1 — Create the mandate (Initiate Subscription API)
+## Step 1 — Create the mandate (server-side)
 
 ```
-POST {pgDomain}/theia/api/v1/initiateSubscription?mid={MID}&orderId={ORDER_ID}
+POST {pgDomain}/subscription/create?mid={MID}&orderId={ORDER_ID}
 Content-Type: application/json
 ```
 
@@ -65,7 +74,7 @@ Content-Type: application/json
 | Field | Required | Notes |
 |---|---|---|
 | `requestType` | ✅ | **Exactly `"NATIVE_SUBSCRIPTION"`** |
-| `txnAmount.value` | ✅ | First-debit amount (often ₹1 for mandate-only flows; refund afterwards) |
+| `txnAmount.value` | ✅ | First-debit amount (often ₹1 for mandate-only flows) |
 | `subscriptionAmountType` | ✅ | `"FIX"` (same amount each cycle) or `"VARIABLE"` (variable, ≤ `subscriptionMaxAmount`) |
 | `renewalAmount` | ✅ | Recurring amount displayed on the consent screen |
 | `subscriptionFrequencyUnit` | ✅ | One of: `WEEK`, `MONTH`, `BI_MONTHLY`, `QUARTER`, `SEMI_ANNUALLY`, `YEAR`, `ONDEMAND` |
@@ -77,7 +86,7 @@ Content-Type: application/json
 | `subscriptionMaxAmount` | conditional | **Required** when `subscriptionAmountType: "VARIABLE"` |
 | `subscriptionPaymentMode` | optional | Restrict mandate rails: `[{ "mode": "UPI" }, { "mode": "CC" }, { "mode": "DC" }]` |
 
-**Response** → `body.txnToken`. The user completes consent on the JS Checkout page exactly like a one-time payment (see `references/web-integration.md`). After successful consent, the callback / webhook carries `subsId` (mandate id).
+**Response** → `body.txnToken` (single-use, 15-min TTL). Pass it to JS Checkout in Step 2.
 
 ### Worked example — gym membership ₹499/month
 
@@ -103,127 +112,52 @@ Content-Type: application/json
 }
 ```
 
-`txnAmount.value: "1.00"` is the upfront authorization debit; refund it after consent if you don't want to actually charge ₹1. `renewalAmount: "499.00"` is what the mandate debits each month.
+`txnAmount.value: "1.00"` is the upfront authorization debit. `renewalAmount: "499.00"` is what the mandate would debit each month once active.
 
 ---
 
-## Step 2 — Confirm mandate is active
+## Step 2 — Invoke JS Checkout for consent
 
-```
-POST {pgDomain}/subscription/status
-```
+Same JS Checkout flow as a one-time payment — only the `txnToken` source differs (it came from `/subscription/create`, not `/theia/api/v1/initiateTransaction`). The browser code is identical:
 
-```json
-{
-  "head": { "signature": "<sig>" },
-  "body": { "mid": "YOUR_MID", "subsId": "<paytm subsId>" }
-}
-```
-
-Wait for `subscriptionStatus == "ACTIVE"` before queueing charges. Possible values:
-`INITIATED`, `ACTIVE`, `EXPIRED`, `CANCELLED`, `REJECTED`, `SUSPENDED`.
-
----
-
-## Step 3 — Charge the mandate (recurring debit)
-
-```
-POST {pgDomain}/subscription/renew
-```
-
-```json
-{
-  "head": { "signature": "<sig>" },
-  "body": {
-    "mid": "YOUR_MID",
-    "subsId": "<paytm subsId>",
-    "orderId": "GYM_CHARGE_2026_05",
-    "txnAmount": { "value": "499.00", "currency": "INR" },
-    "renewalDate": "2026-05-01"
-  }
-}
+```html
+<script src="{pgDomain}/merchantpgpui/checkoutjs/merchants/{MID}.js"
+        type="application/javascript" crossorigin="anonymous"></script>
+<script>
+  window.Paytm.CheckoutJS.onLoad(function () {
+    window.Paytm.CheckoutJS.init({
+      root: "",
+      flow: "DEFAULT",
+      data: {
+        orderId: "GYM_SUB_2026_001",
+        token: "<txnToken from /subscription/create>",
+        tokenType: "TXN_TOKEN",
+        amount: "1.00"
+      },
+      merchant: { redirect: false },
+      handler: {
+        notifyMerchant: function (e, d) { console.log(e, d); },
+        transactionStatus: function (d) { window.Paytm.CheckoutJS.close(); }
+      }
+    }).then(function () { window.Paytm.CheckoutJS.invoke(); });
+  });
+</script>
 ```
 
-| Field | Notes |
-|---|---|
-| `orderId` | **Per-charge unique** — same uniqueness rules as one-time payments |
-| `txnAmount.value` | Must be ≤ `subscriptionMaxAmount` for VARIABLE; must equal `renewalAmount` for FIX |
-| `renewalDate` | Logical billing date; used in user-facing communications |
+Full reference, callback handling, and pitfalls are in `references/js-checkout.md`. The user sees the Paytm consent screen showing the **`renewalAmount`** + frequency, approves the mandate, then Paytm POSTs to your `callbackUrl` with the standard fields plus `subsId` (the mandate id).
 
-Asynchronous — final state via `/v3/order/status` (with this charge's `orderId`) and via webhook events `SUBSCRIPTION_RENEWAL_SUCCESS` / `SUBSCRIPTION_RENEWAL_FAILURE`.
-
-> **NPCI pre-notification (UPI Autopay):** Paytm sends the user a 24-hour heads-up before debit. Plan charge calls at least 24h ahead of the desired settlement date.
-
----
-
-## Step 4 — Modify a mandate
-
-```
-POST {pgDomain}/subscription/edit
-```
-
-```json
-{
-  "head": { "signature": "<sig>" },
-  "body": {
-    "mid": "YOUR_MID",
-    "subsId": "<paytm subsId>",
-    "subscriptionExpiryDate": "2028-05-01",
-    "renewalAmount": "599.00",
-    "subscriptionMaxAmount": "599.00"
-  }
-}
-```
-
-Editable: expiry date, renewal amount, max amount. **Some changes require a fresh mandate** (rail change, large amount increase) — Paytm returns `EDIT_NOT_ALLOWED` and you must run Step 1 again.
-
----
-
-## Step 5 — Cancel a mandate
-
-```
-POST {pgDomain}/subscription/cancel
-```
-
-```json
-{
-  "head": { "signature": "<sig>" },
-  "body": { "mid": "YOUR_MID", "subsId": "<paytm subsId>" }
-}
-```
-
-Idempotent. Cancellation is final — to resume, create a new mandate.
-
-User can also cancel from their UPI app / bank → you'll receive `SUBSCRIPTION_CANCELLED` webhook.
-
----
-
-## Webhook events
-
-Configure on dashboard → Webhook Settings → "Subscription". Events:
-
-- `SUBSCRIPTION_INITIATED`
-- `SUBSCRIPTION_ACTIVE`
-- `SUBSCRIPTION_REJECTED` (with `reason`)
-- `SUBSCRIPTION_EXPIRED`
-- `SUBSCRIPTION_CANCELLED` (with `cancelledBy: "MERCHANT" | "USER" | "SYSTEM"`)
-- `SUBSCRIPTION_RENEWAL_SUCCESS`
-- `SUBSCRIPTION_RENEWAL_FAILURE` (with `RESPCODE` / `RESPMSG`)
-- `SUBSCRIPTION_PRE_NOTIFICATION_SENT` (UPI Autopay)
-
-Verify `head.signature` exactly like a callback. Webhook is the source of truth — polling `/subscription/status` is a fallback.
+> **Verify `CHECKSUMHASH` on the callback** before treating the mandate as set up — same scheme as one-time payments. See `references/js-checkout.md` for callback-verification details.
 
 ---
 
 ## Pitfalls
 
-1. **Wrong endpoint.** `/theia/api/v1/initiateTransaction` is for one-time Payment ONLY. Subscriptions use `/theia/api/v1/initiateSubscription`. Different endpoint, different validator, different response.
+1. **Wrong endpoint.** `/theia/api/v1/initiateTransaction` is for one-time Payment ONLY. Subscriptions use `/subscription/create`. Different endpoint, different validator, different response.
 2. **Wrong `requestType`.** Must be exactly `"NATIVE_SUBSCRIPTION"`. `"SUBSCRIPTION"` and `"Payment"` both fail.
 3. **No `subscriptionDetails` wrapper.** All subscription fields are flat inside `body`. Wrapping → HTTP 400.
 4. **String, not boolean / number.** `subscriptionEnableRetry: "1"`, not `true` or `1`.
-5. **First-debit amount is real money.** Many merchants charge ₹1 to set up the mandate, then refund it.
+5. **First-debit amount is real money.** Many merchants charge ₹1 to set up the mandate, then refund it out of band.
 6. **`renewalAmount` is shown on the consent screen** — keep it identical to your marketing copy.
 7. **VARIABLE mandates** are not supported on all UPI apps; some users will fall back to FIX-only.
-8. **Charge calls need 24h lead time** on UPI Autopay due to NPCI pre-notification.
-9. **Card mandates are bound to a tokenized card** — if the card token is deleted, the mandate becomes uncharge­able. See `references/tokenization.md`.
-10. **Failed charges don't expire the mandate.** Keep retrying via `/subscription/renew` with a new `orderId` each time.
+8. **`subscriptionStartDate` cannot be in the past** and must be ≥ today (IST).
+9. **`txnToken` from `/subscription/create` is single-use, 15-min TTL** — same as one-time payment tokens.
