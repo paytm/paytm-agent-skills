@@ -18,6 +18,12 @@ For in-person, kiosk, table-top, or social-commerce flows where the customer sca
 
 ## Generate a Dynamic QR
 
+> **⚠️ Common 400 causes (read first):**
+> - **`posId` is REQUIRED** — omitting it returns HTTP 400. Use any non-empty terminal identifier (`"POS001"`, `"COUNTER_07"`, etc.) even for software-only setups.
+> - **`amount` MUST be a string** with two decimals (`"499.00"`), not a number (`499` / `499.00`).
+> - **`head` requires `clientId` and `version`** in addition to `signature`.
+> - **`businessType` must be exactly `"UPI_QR_CODE"`** — case-sensitive.
+
 ```
 POST {pgDomain}/paymentservices/qr/create
 Content-Type: application/json
@@ -25,26 +31,35 @@ Content-Type: application/json
 
 ```json
 {
-  "head": { "tokenType": "AES", "signature": "<sig>" },
+  "head": {
+    "clientId": "C11",
+    "version": "v1",
+    "signature": "<CHECKSUMHASH over JSON.stringify(body)>"
+  },
   "body": {
     "mid": "YOUR_MID",
     "orderId": "QR_ORD_001",
     "amount": "499.00",
     "businessType": "UPI_QR_CODE",
-    "posId": "TERMINAL_07",
-    "displayName": "Counter 7"
+    "posId": "POS001"
   }
 }
 ```
 
-| Field | Notes |
-|---|---|
-| `orderId` | Unique per QR (single-use semantics) |
-| `amount` | String, two decimals; INR only |
-| `businessType` | `UPI_QR_CODE` (most common) — Paytm publishes others for Bharat QR / DQR variants |
-| `posId` | Optional terminal/store id — surfaces in reports |
-| `displayName` | What the customer sees in their UPI app (≤ 30 chars) |
-| `expiryDate` | `dd/MM/yyyy HH:mm:ss` IST; optional, defaults vary by MID |
+| Field | Required | Notes |
+|---|---|---|
+| `mid` | ✅ | Merchant ID |
+| `orderId` | ✅ | Unique per QR (single-use semantics) |
+| `amount` | ✅ | **String**, two decimals; INR only (`"499.00"`, not `499`) |
+| `businessType` | ✅ | Exactly `"UPI_QR_CODE"` |
+| `posId` | ✅ | Terminal / store identifier — **must be non-empty** even if you don't have physical POS |
+| `head.clientId` | ✅ | E.g. `"C11"` — provided by Paytm during onboarding |
+| `head.version` | ✅ | `"v1"` |
+| `displayName` | optional | What the customer sees in their UPI app (≤ 30 chars) |
+| `expiryDate` | optional | `yyyy-MM-dd HH:mm:ss` IST |
+| `imageRequired` | optional | Boolean — when `true`, response includes base64 PNG |
+| `orderDetails` / `invoiceDetails` | optional | Free-form objects for receipt context |
+| `additionalInfo` / `gstInformation` | optional | Per-merchant metadata |
 
 ### Response
 
@@ -96,9 +111,12 @@ For "which customer paid?" you have to use customer-supplied context (table numb
 
 ## Pitfalls
 
-1. **`orderId` is single-use** for dynamic QRs even if the customer never pays — generate a new one for retry.
-2. **UPI deep-links are time-sensitive.** Some apps cache; always re-render on retry rather than reusing an old `qrData`.
-3. **Don't expose `qrCodeId` as a customer-facing reference** — use your own `orderId`.
-4. **Static QR amount changes** on the dashboard apply going forward only — in-flight scans use the value at scan time.
-5. **Refunds for QR payments** go through the standard `/refund/apply` flow using the resulting `orderId` + `txnId`.
-6. **Some UPI apps strip `displayName`** and show only the merchant VPA — don't put critical info there.
+1. **`posId` is required** — most common cause of HTTP 400 on QR generation. Always send a non-empty value.
+2. **`amount` must be a string with two decimals.** `"499.00"` works; `499`, `499.0`, `"499"` all fail.
+3. **`head.clientId` and `head.version` are required**, not just `signature`.
+4. **`orderId` is single-use** for dynamic QRs even if the customer never pays — generate a new one for retry.
+5. **UPI deep-links are time-sensitive.** Some apps cache; always re-render on retry rather than reusing an old `qrData`.
+6. **Don't expose `qrCodeId` as a customer-facing reference** — use your own `orderId`.
+7. **Static QR amount changes** on the dashboard apply going forward only — in-flight scans use the value at scan time.
+8. **Refunds for QR payments** go through the standard `/refund/apply` flow using the resulting `orderId` + `txnId`.
+9. **Some UPI apps strip `displayName`** and show only the merchant VPA — don't put critical info there.

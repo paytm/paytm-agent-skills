@@ -3,9 +3,9 @@ name: paytm-integration
 description: >
   Expert guide for integrating Paytm Payment Gateway APIs and SDKs into websites, mobile apps, and backend systems.
   Use this skill whenever the user is working with Paytm payments — including setting up the payment gateway,
-  generating checksums, calling Initiate Transaction / Transaction Status / Refund APIs, integrating the JS
-  Checkout or All-in-One SDK, handling webhooks/callbacks, implementing UPI Autopay subscriptions, or
-  troubleshooting Paytm PG errors. Trigger for any question containing "Paytm", "PG integration", "txnToken",
+  generating checksums, calling Initiate Transaction / Transaction Status APIs, integrating the JS
+  Checkout, handling callbacks, generating payment links, generating dynamic QR codes, implementing
+  UPI Autopay subscriptions, or troubleshooting Paytm PG errors. Trigger for any question containing "Paytm", "PG integration", "txnToken",
   "checksumhash", "MID", "merchant key", "securegw", or related payment gateway topics. Also trigger when the
   user is a Paytm merchant or payments developer asking about transaction flows, test credentials, or SDK setup,
   even if they don't say "Paytm" explicitly.
@@ -16,8 +16,7 @@ description: >
 ## Overview
 
 Paytm Payment Gateway supports UPI, Credit/Debit Cards, Net Banking, and EMI.
-Integration variants: **JS Checkout** (web), **All-in-One SDK** (mobile), **Custom UI SDK** (mobile),
-**Server-to-Server APIs** (backend), and **eCommerce Plugins** (Magento, WooCommerce, Shopify, etc.).
+Supported integration variants in this skill: **JS Checkout** (web), **Subscriptions / UPI Autopay**, **Payment Links**, and **Dynamic QR Codes** — all backed by Server-to-Server APIs.
 
 ---
 
@@ -49,19 +48,21 @@ New merchants are provisioned on `paytmpayments.com`; older MIDs may still resol
 
 > ### ⚡ Pick the right flow FIRST (read before generating any code)
 >
-> Map the user's intent to one of the four flows before writing anything. Picking wrong produces code that "works" but solves the wrong problem.
+> Map the user's intent to one of the four flows before writing anything. Picking wrong produces code that "works" but solves the wrong problem — the most expensive class of bugs in this skill.
 >
-> | User says… | Flow | Needs JS Checkout? | Reference |
-> |---|---|---|---|
-> | "checkout page", "pay button on website", "one-time payment" | **Payment** (`requestType: "Payment"`) | ✅ Yes | This file (steps below) + `references/web-integration.md` |
-> | "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew every…", "membership" | **Subscription** (`requestType: "SUBSCRIPTION"`) | ✅ Yes (for consent screen) | `references/subscriptions.md` |
-> | "shareable link", "invoice link", "payment link via SMS / WhatsApp / email" | **Payment Link** (`POST /link/create`) | ❌ No — Paytm hosts the page | `references/payment-links.md` |
-> | "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** (`POST /paymentservices/qr/create`) | ❌ No — render image, customer scans with their UPI app | `references/qr-codes.md` |
+> | User says… | Flow | Endpoint | Needs JS Checkout? | Reference |
+> |---|---|---|---|---|
+> | "checkout page", "pay button on website", "one-time payment", "buy" | **Payment** | `POST /theia/api/v1/initiateTransaction` (`requestType: "Payment"`) | ✅ Yes | Steps below + `references/js-checkout.md` |
+> | "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew every…", "membership", "plan" | **Subscription** | `POST /theia/api/v1/initiateSubscription` (`requestType: "NATIVE_SUBSCRIPTION"`) | ✅ Yes (for consent screen) | `references/subscriptions.md` ← **MUST READ** |
+> | "shareable link", "invoice link", "payment link via SMS / WhatsApp / email" | **Payment Link** | `POST /link/create` | ❌ No — Paytm hosts the page | `references/payment-links.md` |
+> | "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** | `POST /paymentservices/qr/create` | ❌ No — render image, customer scans with their UPI app | `references/qr-codes.md` |
 >
-> **The steps below describe Payment + JS Checkout only.** For Subscription / Link / QR, do **not** copy the steps below blindly — load the matching reference file and follow its flow. In particular:
-> - **Subscription** keeps the same 5-step shape but uses `requestType: "SUBSCRIPTION"` + a `subscriptionDetails` block, then a separate `/subscription/renew` call for each recurring charge.
-> - **Payment Link** is server-only — you create the link, share the returned `shortUrl`, and reconcile via webhook + Transaction Status. No JS, no HTML page.
-> - **Dynamic QR** is server-only — you generate the QR, render the returned `image` / `qrData`, and listen for the QR webhook. Again, no JS Checkout.
+> **The steps below describe Payment + JS Checkout only.** Do NOT extrapolate them to the other three flows — they have different endpoints, different request shapes, different validators. Load the matching reference file and follow its flow.
+>
+> **Critical mistakes that keep recurring:**
+> - **Subscription:** the endpoint is `initiateSubscription` (NOT `initiateTransaction`). The `requestType` is `NATIVE_SUBSCRIPTION` (NOT `SUBSCRIPTION`, NOT `Payment`). Subscription fields are **flat inside `body`** — no `subscriptionDetails` wrapper.
+> - **Payment Link:** identifier in fetch / update / resend / expire calls is `linkId` as a **JSON number**, NOT a string. Resend path is `/link/resendNotification`, NOT `/link/resend`.
+> - **Dynamic QR:** `posId` is **required** (skipping it returns 400). `amount` is a **string** with two decimals.
 
 ### Step 1 – Generate Checksum (Server-side)
 
@@ -114,7 +115,7 @@ POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
 }
 ```
 
-> **Building a subscription / recurring charge?** Do NOT use this body. Use `requestType: "SUBSCRIPTION"` plus a `subscriptionDetails` block — full payload + frequency / amount-type / mandate fields are in `references/subscriptions.md`. Re-read the decision callout at the top of this section if you're unsure.
+> **Building a subscription / recurring charge?** Do NOT use this endpoint or this body. Subscriptions use a **different endpoint** (`/theia/api/v1/initiateSubscription`) with a **different `requestType`** (`"NATIVE_SUBSCRIPTION"`) and **flat subscription fields inside `body`** (no `subscriptionDetails` wrapper). Full correct payload in `references/subscriptions.md` — read it before writing any code. Re-check the decision callout at the top of this section if you're unsure.
 
 `websiteName` is per-MID (dashboard value, e.g. `DEFAULT`, `WEBSTAGING`, `retail`). `channelId` (`WEB`/`WAP`) and `industryTypeId` are usually inherited from the dashboard but can be overridden in the body. **Response:** `body.txnToken` — single-use, **15-min TTL**.
 
@@ -146,7 +147,7 @@ POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
   });
 </script>
 ```
-Full reference + alternative config shape in `references/web-integration.md`. Working copy-paste page at `scripts/frontend/js-checkout.html`.
+Full reference + alternative config shape in `references/js-checkout.md`. Working copy-paste page at `scripts/frontend/js-checkout.html`.
 
 ---
 
@@ -236,10 +237,12 @@ SDK docs: `https://www.paytmpayments.com/docs/server-sdk/`
 
 ## UPI Autopay / Subscriptions
 
-For recurring payments use Paytm's Subscription (UPI Autopay) product.
-- Create a subscription mandate via Initiate Transaction with `requestType: "SUBSCRIPTION"`
-- Subsequent charges are deducted automatically per mandate schedule
-- Docs: `https://www.paytmpayments.com/docs/subscription`
+For recurring payments use Paytm's Subscription (UPI Autopay) product. **Different endpoint, different requestType, different field placement from one-time Payment** — see `references/subscriptions.md` for the correct payload.
+
+- Create a mandate via `POST /theia/api/v1/initiateSubscription` with `requestType: "NATIVE_SUBSCRIPTION"` and subscription fields **flat inside `body`** (no `subscriptionDetails` wrapper).
+- After consent, charge each cycle via `POST /subscription/renew`.
+- Cancel via `POST /subscription/cancel`.
+- Docs: `https://business.paytm.com/docs/api/initiate-subscription-api/`
 
 ---
 
@@ -444,20 +447,22 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 
 **This is the single highest-impact bug in the whole skill.** Picking the wrong flow produces code that *runs* but solves the wrong problem — silent, expensive, often only caught in production.
 
-**Failure modes seen:**
-- *"Gym subscription of ₹1/month"* → generated one-time Payment. Charges once, never recurs.
+**Failure modes seen in production testing:**
+- *"Gym subscription of ₹1/month"* → generated one-time Payment with `requestType: "Payment"`. Charges once, never recurs.
+- *"Monthly SaaS billing"* → generated `requestType: "SUBSCRIPTION"` against `/initiateTransaction`. Wrong endpoint AND wrong requestType — Paytm's subscription endpoint expects `"NATIVE_SUBSCRIPTION"`.
 - *"Send a payment link via WhatsApp for ₹500"* → generated full JS Checkout HTML page. User wanted a shareable URL.
 - *"QR code on the counter for customers to scan"* → generated JS Checkout modal. User wanted a printable QR image.
-- *"Monthly SaaS billing"* → generated Subscription, but with `requestType: "Payment"` because the worked example dominated.
+- *"Generate a QR for ₹100"* → omitted `posId` → HTTP 400 from Paytm.
+- *"Fetch / expire a payment link"* → sent `linkId` as a string → "invalid link id" response. Paytm expects a JSON number.
 
 **Rule — pick the flow BEFORE writing any code, by mapping prompt keywords:**
 
 | Prompt cue | Flow | Code generates… |
 |---|---|---|
-| "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew", "membership" | **Subscription** | Backend: `requestType: "SUBSCRIPTION"` + `subscriptionDetails`. Frontend: JS Checkout (for the consent screen) OR none if collecting consent on Paytm-hosted page. → `references/subscriptions.md` |
+| "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew", "membership" | **Subscription** | Backend: `POST /theia/api/v1/initiateSubscription` with `requestType: "NATIVE_SUBSCRIPTION"` and **flat** subscription fields inside `body`. Frontend: JS Checkout for the consent screen. → `references/subscriptions.md` |
 | "payment link", "shareable link", "send link via SMS/WhatsApp/email", "invoice link" | **Payment Link** | Backend: `POST /link/create`. **No frontend** — Paytm hosts the checkout page; you only share the returned `shortUrl`. → `references/payment-links.md` |
 | "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** | Backend: `POST /paymentservices/qr/create`. **No JS Checkout** — render the returned `image` (base64 PNG) or `qrData` (UPI deep-link) on a screen / print it. → `references/qr-codes.md` |
-| "checkout page", "pay button on website", "in-app payment", "one-time payment" | **JS Checkout (Payment)** | Backend: `requestType: "Payment"` + Initiate Transaction. Frontend: `scripts/frontend/js-checkout.html` pattern. → `references/web-integration.md` |
+| "checkout page", "pay button on website", "in-app payment", "one-time payment" | **JS Checkout (Payment)** | Backend: `requestType: "Payment"` + Initiate Transaction. Frontend: `scripts/frontend/js-checkout.html` pattern. → `references/js-checkout.md` |
 
 **Crucially:** Payment Link and Dynamic QR flows **do NOT require JS Checkout** at all — no merchant `.js` script, no `window.Paytm.CheckoutJS`. The customer pays on Paytm-hosted infrastructure (web link or UPI app). The merchant's only frontend job is to display the URL / QR image.
 
@@ -468,7 +473,7 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 ## Reference Files
 
 **Core flow + supported products**
-- `references/web-integration.md` — JS Checkout, non-SDK form POST, full callback field list, callback-vs-webhook
+- `references/js-checkout.md` — JS Checkout, non-SDK form POST, full callback field list, callback-vs-webhook
 - `references/troubleshooting.md` — symptom → cause → fix tree, expanded RESPCODE table, decision tree
 - `references/subscriptions.md` — UPI Autopay & card mandates, charge/edit/cancel, NPCI pre-notification rules
 - `references/payment-links.md` — FIXED / REUSABLE / OPEN links, fetch, expire, SMS dispatch
@@ -488,6 +493,8 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 - Checksum Library: `https://www.paytmpayments.com/docs/checksum/`
 - Server SDK: `https://www.paytmpayments.com/docs/server-sdk/`
 - JS Checkout: `https://www.paytmpayments.com/docs/jscheckout/`
-- All-in-One SDK: `https://www.paytmpayments.com/docs/all-in-one-sdk`
+- Subscriptions: `https://business.paytm.com/docs/api/initiate-subscription-api/`
+- Payment Links: `https://business.paytm.com/docs/api/create-link-api/`
+- Dynamic QR: `https://business.paytm.com/docs/api/create-qr-code-api/`
 - API Reference: `https://www.paytmpayments.com/docs/api/initiate-transaction-api`
 - Dashboard: `https://dashboard.paytmpayments.com`
