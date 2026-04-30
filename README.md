@@ -2,11 +2,11 @@
 
 Integrate with Paytm payments products seamlessly in one shot. 
 
-Covers products like JS Checkout, Subscriptions (UPI Autopay), Payment Links, and Dynamic QR Codes.
+**Products:**  JS Checkout, Subscriptions (UPI Autopay), Payment Links, and Dynamic QR Codes.
 
-Claude Code: Install as a skill and get instant, context-aware Paytm answers auto-loaded into every session.
+**Claude Code:** Install as a skill and get instant, context-aware Paytm answers auto-loaded into every session.
 
-Other tools (ChatGPT, Gemini): Upload SKILL.md as context to generate code, debug issues, and guide integration.
+**ChatGPT/Gemini:** Upload as a file to give context to generate code, debug issues, and guide integration.
 
 ---
 
@@ -79,7 +79,7 @@ You'll need your own MID and Merchant Key from the [Paytm dashboard](https://das
 - **Core flow:** Initiate Transaction, JS Checkout, callback verification, Transaction Status API
 - **Subscriptions:** Mandate setup, recurring payments, lifecycle management
 - **Payment Links:** FIXED / REUSABLE / OPEN, create, fetch, expire
-- **QR Codes:** Dynamic QR, Order-based QR, scan, pay
+- **QR Codes:** Dynamic QR, scan, pay
 
 
 ---
