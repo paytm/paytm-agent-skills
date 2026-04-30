@@ -47,6 +47,22 @@ New merchants are provisioned on `paytmpayments.com`; older MIDs may still resol
 
 ## Core Integration Flow
 
+> ### ⚡ Pick the right flow FIRST (read before generating any code)
+>
+> Map the user's intent to one of the four flows before writing anything. Picking wrong produces code that "works" but solves the wrong problem.
+>
+> | User says… | Flow | Needs JS Checkout? | Reference |
+> |---|---|---|---|
+> | "checkout page", "pay button on website", "one-time payment" | **Payment** (`requestType: "Payment"`) | ✅ Yes | This file (steps below) + `references/web-integration.md` |
+> | "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew every…", "membership" | **Subscription** (`requestType: "SUBSCRIPTION"`) | ✅ Yes (for consent screen) | `references/subscriptions.md` |
+> | "shareable link", "invoice link", "payment link via SMS / WhatsApp / email" | **Payment Link** (`POST /link/create`) | ❌ No — Paytm hosts the page | `references/payment-links.md` |
+> | "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** (`POST /paymentservices/qr/create`) | ❌ No — render image, customer scans with their UPI app | `references/qr-codes.md` |
+>
+> **The steps below describe Payment + JS Checkout only.** For Subscription / Link / QR, do **not** copy the steps below blindly — load the matching reference file and follow its flow. In particular:
+> - **Subscription** keeps the same 5-step shape but uses `requestType: "SUBSCRIPTION"` + a `subscriptionDetails` block, then a separate `/subscription/renew` call for each recurring charge.
+> - **Payment Link** is server-only — you create the link, share the returned `shortUrl`, and reconcile via webhook + Transaction Status. No JS, no HTML page.
+> - **Dynamic QR** is server-only — you generate the QR, render the returned `image` / `qrData`, and listen for the QR webhook. Again, no JS Checkout.
+
 ### Step 1 – Generate Checksum (Server-side)
 
 Every API call requires a `CHECKSUMHASH` in the request header (as `signature`).
@@ -82,7 +98,7 @@ Called server-side to get a `txnToken` before rendering the payment UI.
 POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
 ```
 
-**Request body** (all top-level body fields shown are required):
+**Request body for one-time payment** (all top-level body fields shown are required):
 ```json
 {
   "head": { "signature": "<CHECKSUMHASH over JSON.stringify(body)>" },
@@ -97,6 +113,8 @@ POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
   }
 }
 ```
+
+> **Building a subscription / recurring charge?** Do NOT use this body. Use `requestType: "SUBSCRIPTION"` plus a `subscriptionDetails` block — full payload + frequency / amount-type / mandate fields are in `references/subscriptions.md`. Re-read the decision callout at the top of this section if you're unsure.
 
 `websiteName` is per-MID (dashboard value, e.g. `DEFAULT`, `WEBSTAGING`, `retail`). `channelId` (`WEB`/`WAP`) and `industryTypeId` are usually inherited from the dashboard but can be overridden in the body. **Response:** `body.txnToken` — single-use, **15-min TTL**.
 
@@ -421,6 +439,29 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 # PAYTM_STATUS_API_URL=""          # auto-derived from PAYTM_PG_DOMAIN
 # NODE_EXTRA_CA_CERTS="./certs/zscaler.crt"   # corp networks (Zscaler/Netskope) only
 ```
+
+### 8. ❗ Picked the wrong flow (Payment vs Subscription vs Link vs QR)
+
+**This is the single highest-impact bug in the whole skill.** Picking the wrong flow produces code that *runs* but solves the wrong problem — silent, expensive, often only caught in production.
+
+**Failure modes seen:**
+- *"Gym subscription of ₹1/month"* → generated one-time Payment. Charges once, never recurs.
+- *"Send a payment link via WhatsApp for ₹500"* → generated full JS Checkout HTML page. User wanted a shareable URL.
+- *"QR code on the counter for customers to scan"* → generated JS Checkout modal. User wanted a printable QR image.
+- *"Monthly SaaS billing"* → generated Subscription, but with `requestType: "Payment"` because the worked example dominated.
+
+**Rule — pick the flow BEFORE writing any code, by mapping prompt keywords:**
+
+| Prompt cue | Flow | Code generates… |
+|---|---|---|
+| "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew", "membership" | **Subscription** | Backend: `requestType: "SUBSCRIPTION"` + `subscriptionDetails`. Frontend: JS Checkout (for the consent screen) OR none if collecting consent on Paytm-hosted page. → `references/subscriptions.md` |
+| "payment link", "shareable link", "send link via SMS/WhatsApp/email", "invoice link" | **Payment Link** | Backend: `POST /link/create`. **No frontend** — Paytm hosts the checkout page; you only share the returned `shortUrl`. → `references/payment-links.md` |
+| "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** | Backend: `POST /paymentservices/qr/create`. **No JS Checkout** — render the returned `image` (base64 PNG) or `qrData` (UPI deep-link) on a screen / print it. → `references/qr-codes.md` |
+| "checkout page", "pay button on website", "in-app payment", "one-time payment" | **JS Checkout (Payment)** | Backend: `requestType: "Payment"` + Initiate Transaction. Frontend: `scripts/frontend/js-checkout.html` pattern. → `references/web-integration.md` |
+
+**Crucially:** Payment Link and Dynamic QR flows **do NOT require JS Checkout** at all — no merchant `.js` script, no `window.Paytm.CheckoutJS`. The customer pays on Paytm-hosted infrastructure (web link or UPI app). The merchant's only frontend job is to display the URL / QR image.
+
+**If the prompt is ambiguous** (e.g. *"accept ₹1 payments"*, *"integrate Paytm"*), ask one clarifying question before generating: *"Is this a one-time payment, a recurring subscription, a shareable payment link, or a QR for in-store?"*
 
 ---
 
