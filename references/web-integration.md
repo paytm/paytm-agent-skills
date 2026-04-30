@@ -59,7 +59,7 @@ Content-Type: application/json
 | `txnAmount.value` | **String, two decimals**, e.g. `"1.00"` (not `1` or `1.0`) |
 | `txnAmount.currency` | INR only for domestic PG |
 | `userInfo.custId` | Required; your customer identifier |
-| `userInfo.mobile` / `email` | Strongly recommended — pre-fills payment page, drives wallet OTP |
+| `userInfo.mobile` / `email` | Strongly recommended — pre-fills payment page, used for OTP/notifications |
 
 **Optional fields worth knowing:**
 
@@ -67,7 +67,7 @@ Content-Type: application/json
 |---|---|
 | `industryTypeId` | Provisioned per MID (e.g. `Retail`); rarely needed in body if dashboard default is correct |
 | `channelId` | `WEB` (web) or `WAP` (mobile web). Most merchants leave it on dashboard default |
-| `enablePaymentMode` / `disablePaymentMode` | Restrict allowed methods; array of `{ "mode": "UPI" \| "CC" \| "DC" \| "NB" \| "PAYTM_DIGITAL_CREDIT" \| "BALANCE", "channels": [...] }` |
+| `enablePaymentMode` / `disablePaymentMode` | Restrict allowed methods; array of `{ "mode": "UPI" \| "CC" \| "DC" \| "NB" \| "PAYTM_DIGITAL_CREDIT", "channels": [...] }` |
 | `goods` / `shippingInfo` | Required for some affordability/EMI flows |
 | `extendInfo.mercUnqRef` | Echoed back in callbacks; useful for cross-system reconciliation |
 
@@ -151,7 +151,7 @@ Paytm posts an `application/x-www-form-urlencoded` payload to the URL you suppli
 | `ORDERID` | string | Echoes your `orderId` |
 | `TXNID` | string | Paytm-issued transaction id |
 | `TXNAMOUNT` | string | `"1.00"` — verify against your stored amount |
-| `PAYMENTMODE` | string | `UPI` / `CC` / `DC` / `NB` / `PPI` (wallet) |
+| `PAYMENTMODE` | string | `UPI` / `CC` / `DC` / `NB` |
 | `CURRENCY` | string | `INR` |
 | `TXNDATE` | string | `YYYY-MM-DD HH:MM:SS.s` IST |
 | `STATUS` | string | `TXN_SUCCESS` / `TXN_FAILURE` / `PENDING` |

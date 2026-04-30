@@ -15,7 +15,7 @@ description: >
 
 ## Overview
 
-Paytm Payment Gateway supports UPI, Paytm Wallet, Credit/Debit Cards, Net Banking, and EMI.
+Paytm Payment Gateway supports UPI, Credit/Debit Cards, Net Banking, and EMI.
 Integration variants: **JS Checkout** (web), **All-in-One SDK** (mobile), **Custom UI SDK** (mobile),
 **Server-to-Server APIs** (backend), and **eCommerce Plugins** (Magento, WooCommerce, Shopify, etc.).
 
@@ -130,11 +130,6 @@ POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
 ```
 Full reference + alternative config shape in `references/web-integration.md`. Working copy-paste page at `scripts/frontend/js-checkout.html`.
 
-**Mobile – All-in-One SDK:**
-- Android: Add Paytm SDK to `build.gradle`, call `PaytmSDK.getBuilder()` with `txnToken`.
-- iOS: Use `AIOCheckoutViewController` with `txnToken`.
-- See `references/mobile-sdk.md` for detailed steps.
-
 ---
 
 ### Step 4 – Handle Callback
@@ -245,9 +240,9 @@ For recurring payments use Paytm's Subscription (UPI Autopay) product.
 
 ## Test Credentials (Staging)
 
-- Paytm Wallet: Use test mobile number `7777777777`, OTP `489871`
 - Cards: Use Paytm-provided test card numbers from the dashboard's **Test Data** section
 - UPI: Any UPI ID ending in `@paytm` for staging
+- Net Banking: Use the dashboard's listed test bank options
 
 Dashboard: `https://dashboard.paytmpayments.com` → toggle **Test Data** mode
 
@@ -396,51 +391,47 @@ PAYTM_MERCHANT_KEY="ab#cd@1234XYZ"
 
 Same rule applies to any other secret with non-alphanumeric chars (DB passwords, API keys, etc.). When generating `.env` / `.env.example` files, **always** quote secrets — don't try to inspect the key and decide.
 
-### 7. `.env` ordering and placeholder conventions
+### 7. `.env` file conventions
 
-Rules:
+Rules (apply to every generated `.env` / `.env.example`):
 
-- **`PAYTM_ENVIRONMENT` must be the first variable** — everything else derives from it.
-- **Use generic placeholders** (`YOUR_MID`, not `YOUR_STAGING_MID_HERE`). The environment lives in `PAYTM_ENVIRONMENT`, not in placeholder text.
-- **All keys at the top, comments / optional overrides in a later section** — keep the active config block clean.
+- **`PAYTM_ENVIRONMENT` is always the first variable** — everything else derives from it.
+- **Pre-fill staging values** so the file works out of the box for development. Users replace with production values when going live.
+- **Wrap every value in double quotes**, not just secrets. Consistent and avoids edge cases (e.g. `#` in keys silently truncating).
+- **Generic placeholders** — `YOUR_MID`, not `YOUR_STAGING_MID_HERE`. The environment lives in `PAYTM_ENVIRONMENT`, never baked into placeholder text.
+- **All mandatory keys at the top, comments / optional overrides in a later section** — keep the active config block clean and scannable.
 
 Canonical `.env.example`:
 
 ```bash
-PAYTM_ENVIRONMENT=staging
-PAYTM_MID=YOUR_MID
+PAYTM_ENVIRONMENT="staging"
+PAYTM_MID="YOUR_MID"
 PAYTM_MERCHANT_KEY="YOUR_MERCHANT_KEY"
-PAYTM_WEBSITE_NAME=YOUR_WEBSITE_NAME
-PAYTM_CALLBACK_BASE=http://localhost:3001
+PAYTM_WEBSITE_NAME="YOUR_WEBSITE_NAME"
+PAYTM_CALLBACK_BASE="http://localhost:3001"
 
 # ---------------------------------------------------------------------------
-# Defaults are pre-filled for staging. Switch PAYTM_ENVIRONMENT=production
-# and replace MID / MERCHANT_KEY / WEBSITE_NAME with your live credentials
-# when going live. Everything below is optional.
+# Defaults are pre-filled for staging. To go live:
+#   1. Set PAYTM_ENVIRONMENT="production"
+#   2. Replace MID / MERCHANT_KEY / WEBSITE_NAME with your live credentials
+# Everything below is optional — leave commented unless you need to override.
 # ---------------------------------------------------------------------------
-# PAYTM_PG_DOMAIN=               # auto-derived from PAYTM_ENVIRONMENT
-# PAYTM_CALLBACK_URL=            # auto-derived from PAYTM_CALLBACK_BASE
-# PAYTM_STATUS_API_URL=          # auto-derived from PAYTM_PG_DOMAIN
-# NODE_EXTRA_CA_CERTS=./certs/zscaler.crt   # only on corp networks (Zscaler/Netskope)
+# PAYTM_PG_DOMAIN=""               # auto-derived from PAYTM_ENVIRONMENT
+# PAYTM_CALLBACK_URL=""            # auto-derived from PAYTM_CALLBACK_BASE
+# PAYTM_STATUS_API_URL=""          # auto-derived from PAYTM_PG_DOMAIN
+# NODE_EXTRA_CA_CERTS="./certs/zscaler.crt"   # corp networks (Zscaler/Netskope) only
 ```
 
 ---
 
 ## Reference Files
 
-**Core flow**
+**Core flow + supported products**
 - `references/web-integration.md` — JS Checkout, non-SDK form POST, full callback field list, callback-vs-webhook
-- `references/mobile-sdk.md` — All-in-One SDK and Custom UI SDK setup for Android, iOS, React Native, Flutter
 - `references/troubleshooting.md` — symptom → cause → fix tree, expanded RESPCODE table, decision tree
-
-**Per-product deep dives**
-- `references/refunds.md` — apply/status/webhook lifecycle, partial refunds, polling cadence, error codes
 - `references/subscriptions.md` — UPI Autopay & card mandates, charge/edit/cancel, NPCI pre-notification rules
 - `references/payment-links.md` — FIXED / REUSABLE / OPEN links, fetch, expire, SMS dispatch
-- `references/tokenization.md` — RBI-compliant saved cards, network tokens, CVV-less mandates
-- `references/webhooks.md` — S2S signature verification, retry/idempotency semantics, event reference
-- `references/qr-codes.md` — dynamic & static QR generation, status, reconciliation
-- `references/affordability.md` — Standard EMI, No-Cost EMI, Cardless EMI/BNPL, Bank Offers
+- `references/qr-codes.md` — Dynamic QR (DQR) generation, status, reconciliation
 
 **Reference backends + frontend**
 - `scripts/backend-node/` — Express + `paytmchecksum`

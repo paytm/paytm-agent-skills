@@ -1,6 +1,6 @@
 # Paytm Subscriptions / UPI Autopay
 
-Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay** (NPCI), **Cards** (RBI e-mandate), **Net Banking** (limited issuers), **Paytm Wallet**.
+Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay** (NPCI), **Cards** (RBI e-mandate), **Net Banking** (limited issuers).
 
 ---
 
@@ -185,7 +185,7 @@ Verify `head.signature` exactly like a callback. Webhook is the source of truth 
 2. **`renewalAmount` is shown on the consent screen** — keep it identical to your marketing copy.
 3. **VARIABLE mandates** are not supported on all UPI apps; some users will fall back to FIX-only.
 4. **Charge calls need 24h lead time** on UPI Autopay due to NPCI pre-notification.
-5. **Card mandates are bound to a tokenized card** — if the card token is deleted (RBI tokenization expiry), the mandate becomes uncharge­able. See `references/tokenization.md`.
+5. **Card mandates are bound to a tokenized card** — if the underlying RBI CoF token is revoked or expires, the mandate becomes uncharge­able and you must re-collect consent on a fresh card.
 6. **Don't mix mandate rails in a single `subscriptionPaymentMode`** unless you've tested all of them — UPI consent screen differs from card consent screen.
 7. **Retry logic is mandate-side** (`subscriptionEnableRetry`) — don't double-retry from your code.
 8. **Failed charges don't expire the mandate.** Keep retrying via `/subscription/renew` with a new `orderId` each time.
