@@ -1,6 +1,6 @@
 # paytm-integration-skills
 
-Integrate with Paytm payments products seamlessly in one shot. 
+A skill to integrate with Paytm payments products seamlessly in one shot. 
 
 **Products:**  JS Checkout, Subscriptions (UPI Autopay), Payment Links, and Dynamic QR Codes.
 
