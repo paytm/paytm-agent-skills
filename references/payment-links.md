@@ -232,6 +232,26 @@ The flow merges back into the standard one:
 3. **Verify CHECKSUMHASH**, then call `/v3/order/status` server-to-server to confirm.
 4. Webhook (if configured) gives you the same data reliably.
 
+> **⚠️ When calling `/v3/order/status` from a Payment Link flow, the head shape is DIFFERENT from `/link/*`.** Build it from scratch — do NOT carry over `tokenType: "AES"` or `timestamp` from the link API.
+>
+> ```json
+> // ✅ CORRECT — Transaction Status request
+> {
+>   "head": { "signature": "<sig>" },
+>   "body": { "mid": "YOUR_MID", "orderId": "ORD_INV_001" }
+> }
+> ```
+>
+> ```json
+> // ❌ WRONG — extra tokenType + timestamp leaked from /link/* head
+> {
+>   "head": { "tokenType": "AES", "timestamp": "1777662548", "signature": "<sig>" },
+>   "body": { "mid": "YOUR_MID", "orderId": "ORD_INV_001" }
+> }
+> ```
+>
+> The wrong head triggers checksum-mismatch errors (`227`) that look like a key problem but are actually about the extra fields being included in the signed body.
+
 ---
 
 ## Endpoint reference
@@ -262,3 +282,4 @@ The flow merges back into the standard one:
 12. **SMS dispatch requires DLT-registered templates** on the Paytm side (Indian regulation). New merchants may see SMS silently dropped until templates are approved on the dashboard.
 13. **`shortUrl` redirects to a long URL on the PG host** — link previews (WhatsApp, iMessage) hit the long URL, which can affect link analytics if you depend on click-through tracking.
 14. **Update can't change `linkType` or `orderId`** — only mutable fields (amount, expiry, description, contact).
+15. **`/v3/order/status` head shape differs from `/link/*`.** Transaction Status uses `head: { signature }` only — NO `tokenType`, NO `timestamp`. When polling order status from inside a payment-link flow, build the head from scratch instead of copying the link-API head.

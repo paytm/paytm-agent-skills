@@ -181,6 +181,8 @@ POST {pgDomain}/v3/order/status
 
 Compare `body.txnAmount` and `body.resultInfo.resultStatus` to your stored values.
 
+> **⚠️ Head shape is `{ signature }` ONLY.** Do NOT add `tokenType: "AES"` or `timestamp` — those belong to `/link/*` and `/refund/*` APIs, not to `/v3/order/status`. Mixing them in returns checksum-mismatch (`227`) errors that look like a key problem but are actually caused by the extra fields. When status-checking inside a Payment Link or Refund flow, **build the Transaction Status head from scratch, never copy from the surrounding code**.
+
 ---
 
 ## Callback vs S2S Webhook

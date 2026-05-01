@@ -212,16 +212,36 @@ Key status values:
 
 ```
 POST {BASE_URL}/v3/order/status
+Content-Type: application/json
 ```
 
 ```json
 {
-  "head": { "signature": "<CHECKSUMHASH>" },
+  "head": { "signature": "<CHECKSUMHASH over JSON.stringify(body)>" },
   "body": { "mid": "YOUR_MID", "orderId": "ORDERID_98765" }
 }
 ```
 
 Treat this response as the **final authoritative status**. Call it server-to-server, not from the browser.
+
+> **⚠️ `/v3/order/status` head shape is DIFFERENT from `/link/*` and refund APIs. Do not carry over.**
+>
+> - **`/v3/order/status`** uses `head: { signature }` ONLY. Do NOT add `tokenType` (`"AES"`) or `timestamp` — Paytm rejects them or silently ignores them, leading to checksum mismatches that look unrelated.
+> - **`/link/create` / `/link/fetch` / `/link/update` / `/link/resendNotification` / `/link/expire`** use `head: { tokenType: "AES", signature, timestamp }`.
+> - **`/refund/apply` / `/refund/status`** also use `head: { tokenType: "AES", signature }`.
+>
+> When polling Transaction Status from inside a Payment Link or Refund flow, the model often hallucinates and copies the `tokenType: "AES"` head from the surrounding link/refund code. This is wrong. **Build the `/v3/order/status` head from scratch with `signature` only**. Bad request observed in the wild:
+>
+> ```json
+> // ❌ WRONG — extra tokenType + timestamp leak from the link API
+> { "head": { "tokenType": "AES", "timestamp": "1777662548", "signature": "..." },
+>   "body": { "mid": "...", "orderId": "..." } }
+> ```
+> ```json
+> // ✅ CORRECT
+> { "head": { "signature": "..." },
+>   "body": { "mid": "...", "orderId": "..." } }
+> ```
 
 ---
 
