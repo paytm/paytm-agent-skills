@@ -5,7 +5,7 @@
 [![Claude Skill](https://img.shields.io/badge/Claude-Skill-D97757)](https://docs.anthropic.com/en/docs/claude-code/skills)
 [![Paytm PG](https://img.shields.io/badge/Paytm-Payment%20Gateway-002970)](https://www.paytmpayments.com/business-payments)
 
-This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, ChatGPT, Gemini) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/business-payments). Just describe your business in plain English, the agent generates production-ready integration code for you.
+This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, ChatGPT, Gemini) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/docs). Just describe your business in plain English, the agent generates production-ready integration code for you.
 
 The skill teaches your AI agent the full Paytm spec, integration patterns, and common pitfalls, so the code it generates works on the first try.
 
