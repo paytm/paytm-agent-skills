@@ -89,7 +89,7 @@ For payer-chosen amount: omit `amount` and provide `minAmount` / `maxAmount` as 
     "resultInfo": { "resultStatus": "SUCCESS", "resultCode": "200", "resultMsg": "Success" },
     "linkId": 31309,
     "shortUrl": "https://paytm.me/XXXXXXX",
-    "longUrl": "https://securegw.paytmpayments.com/link/...",
+    "longUrl": "https://secure.paytmpayments.com/link/...",
     "linkStatus": "ACTIVE"
   }
 }

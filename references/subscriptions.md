@@ -5,8 +5,8 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 > **⚠️ READ THIS FIRST — common mistakes that break subscription integrations:**
 >
 > 1. **Endpoints differ between staging and production:**
->    - Staging: `POST https://securegw-stage.paytm.in/subscription/create`
->    - Production: `POST https://securegw.paytm.in/theia/api/v1/subscription/create`
+>    - Staging: `POST https://securestage.paytmpayments.com/subscription/create`
+>    - Production: `POST https://secure.paytmpayments.com/theia/api/v1/subscription/create`
 >    Production has the extra `/theia/api/v1/` prefix. Most teams set this once via `PAYTM_PG_DOMAIN` and forget — double-check on first prod deploy.
 > 2. **Three query params are required:** `mid`, `orderId`, **and `traceId`**. `traceId` is alphanumeric + hyphens / underscores only.
 > 3. **`head` requires `clientId` (e.g. `"C11"`) and `channelId` (`"WEB"` / `"WAP"`)** in addition to `signature`. Missing either → request rejected before it reaches business logic.
@@ -52,8 +52,8 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 
 | Environment | Full URL |
 |---|---|
-| Staging | `POST https://securegw-stage.paytm.in/subscription/create?mid={MID}&orderId={ORDER_ID}&traceId={TRACE_ID}` |
-| Production | `POST https://securegw.paytm.in/theia/api/v1/subscription/create?mid={MID}&orderId={ORDER_ID}&traceId={TRACE_ID}` |
+| Staging | `POST https://securestage.paytmpayments.com/subscription/create?mid={MID}&orderId={ORDER_ID}&traceId={TRACE_ID}` |
+| Production | `POST https://secure.paytmpayments.com/theia/api/v1/subscription/create?mid={MID}&orderId={ORDER_ID}&traceId={TRACE_ID}` |
 
 `Content-Type: application/json`
 
