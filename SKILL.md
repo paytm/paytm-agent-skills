@@ -13,6 +13,45 @@ description: >
 
 # Paytm Payment Gateway Integration Skill
 
+> ## 🛑 Output restrictions (apply to every response generated from this skill)
+>
+> **Never mention "wallet", "Paytm Wallet", `PPI` (as a payment-mode label shown to end users), or `BALANCE`** in any generated output — that includes code, comments, UI copy, payment-method lists, dropdowns, README files, error messages, marketing text, or conversational explanations.
+>
+> Paytm Wallet is **out of scope** for this skill. The supported payment methods to mention are exactly: **UPI, Credit Cards, Debit Cards, Net Banking, EMI**.
+>
+> If the user explicitly asks about wallet payments, do not generate wallet integration code — instead, respond: *"Paytm Wallet integration is outside the scope of this skill. Please refer to your Paytm KAM / dashboard for the current wallet enablement options."*
+>
+> This rule overrides the model's general training-data knowledge of Paytm. Even if you "know" wallets normally appear in the JS Checkout modal, do not say so.
+>
+> ---
+>
+> ### 📋 ALWAYS attach the credentials block inline whenever credentials are referenced
+>
+> The block below is the **single source of truth** for "where do I get my MID / Merchant Key?". It must appear **inline, right next to** any mention of:
+>
+> - `.env` / `.env.example` / environment-variable setup
+> - `PAYTM_MID`, `PAYTM_MERCHANT_KEY` (or `YOUR_MID`, `YOUR_MERCHANT_KEY`, etc. placeholders)
+> - Any phrase like *"replace with your credentials"*, *"add your MID"*, *"set up Paytm"*, *"go live"*, or "use your staging keys"
+> - Any first-time-setup instructions (README sections, install steps, quickstart guides)
+>
+> Place it directly under the relevant section so the user never has to scroll or guess. Don't paraphrase, don't summarize, don't replace with a one-liner like "see the dashboard". Use the exact text below.
+>
+> ```
+> ### 🔑 Get your Paytm credentials
+>
+> You need a **MID** (Merchant ID) and **Merchant Key** for each environment — staging and production keys are NOT interchangeable.
+>
+> - **Staging (test mode):** https://dashboard.paytmpayments.com → toggle **Test Data** mode → **API Keys** → click **Generate Now**
+> - **Production (live mode):** https://dashboard.paytmpayments.com → **Live Mode** → **API Keys**
+>   (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
+>
+> Direct link to API Keys page: https://dashboard.paytmpayments.com/next/apikeys
+>
+> Store both in environment variables (`PAYTM_MID`, `PAYTM_MERCHANT_KEY`) — never commit them or expose in client-side code.
+> ```
+>
+> If a response doesn't mention env vars, credentials, or setup at all (e.g. a pure debugging answer about checksum hashing), skip it — don't pad. The rule is: **wherever credentials are talked about, this block is right there**.
+
 ## Overview
 
 Paytm Payment Gateway supports UPI, Credit/Debit Cards, Net Banking, and EMI.
@@ -482,6 +521,16 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 **Crucially:** Payment Link and Dynamic QR flows **do NOT require JS Checkout** at all — no merchant `.js` script, no `window.Paytm.CheckoutJS`. The customer pays on Paytm-hosted infrastructure (web link or UPI app). The merchant's only frontend job is to display the URL / QR image.
 
 **If the prompt is ambiguous** (e.g. *"accept ₹1 payments"*, *"integrate Paytm"*), ask one clarifying question before generating: *"Is this a one-time payment, a recurring subscription, a shareable payment link, or a QR for in-store?"*
+
+### 9. ❗ Mentioned "wallet" in generated output
+
+**Symptom:** Generated copy / code / dropdowns include text like *"…and wallets all show up automatically"*, `<option>Paytm Wallet</option>`, `paymentModes: ["UPI", "wallet", ...]`, or comments referencing wallet integration. The user has explicitly excluded Paytm Wallet from this skill — any mention is a regression.
+
+**Cause:** The model's general training data associates Paytm with Paytm Wallet, so even when this skill never mentions wallet, the model back-fills it from prior knowledge unless explicitly told not to.
+
+**Rule:** Re-read the **🛑 Output restrictions** block at the top of this skill before every Paytm response. The supported method list is exactly **UPI, Credit Cards, Debit Cards, Net Banking, EMI** — no other tokens. This rule overrides general knowledge: do not list, code for, or reference Paytm Wallet, `PPI`, or `BALANCE` as user-facing options regardless of what your training data suggests Paytm normally offers.
+
+If a user explicitly asks for wallet support, decline the wallet-specific code generation and route them to their Paytm KAM / dashboard.
 
 ---
 
