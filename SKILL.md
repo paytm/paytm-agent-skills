@@ -60,7 +60,7 @@ New merchants are provisioned on `paytmpayments.com`; older MIDs may still resol
 > **The steps below describe Payment + JS Checkout only.** Do NOT extrapolate them to the other three flows — they have different endpoints, different request shapes, different validators. Load the matching reference file and follow its flow.
 >
 > **Critical mistakes that keep recurring:**
-> - **Subscription:** the endpoint is `/subscription/create` (NOT `initiateTransaction`). The `requestType` is `NATIVE_SUBSCRIPTION` (NOT `SUBSCRIPTION`, NOT `Payment`). Subscription fields are **flat inside `body`** — no `subscriptionDetails` wrapper.
+> - **Subscription:** endpoint is `/subscription/create` on staging, `/theia/api/v1/subscription/create` on prod. `requestType: "NATIVE_SUBSCRIPTION"` (or `"NATIVE_MF_SIP"` for SIPs). `head` requires `clientId` + `channelId` in addition to `signature`. Query params include a required `traceId`. Subscription fields are flat in `body` — no `subscriptionDetails` wrapper. Both `subscriptionFrequency` (number) and `subscriptionFrequencyUnit` (period) are required.
 > - **Payment Link:** identifier in fetch / update / resend / expire calls is `linkId` as a **JSON number**, NOT a string. Resend path is `/link/resendNotification`, NOT `/link/resend`.
 > - **Dynamic QR:** `posId` is **required** (skipping it returns 400). `amount` is a **string** with two decimals.
 
@@ -115,7 +115,7 @@ POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
 }
 ```
 
-> **Building a subscription / recurring charge?** Do NOT use this endpoint or this body. Subscriptions use a **different endpoint** (`/subscription/create`) with a **different `requestType`** (`"NATIVE_SUBSCRIPTION"`) and **flat subscription fields inside `body`** (no `subscriptionDetails` wrapper). Full correct payload in `references/subscriptions.md` — read it before writing any code. Re-check the decision callout at the top of this section if you're unsure.
+> **Building a subscription / recurring charge?** Do NOT use this endpoint or this body. Subscriptions use a **different endpoint** (`/subscription/create`, with a `/theia/api/v1/` prefix on prod), a **different `requestType`** (`"NATIVE_SUBSCRIPTION"` or `"NATIVE_MF_SIP"`), an extra `traceId` query param, **`head.clientId` + `head.channelId`**, a required `subscriptionPaymentMode`, and **flat subscription fields inside `body`** (no `subscriptionDetails` wrapper). Full correct payload + field reference + error codes in `references/subscriptions.md` — read it before writing any code.
 
 `websiteName` is per-MID (dashboard value, e.g. `DEFAULT`, `WEBSTAGING`, `retail`). `channelId` (`WEB`/`WAP`) and `industryTypeId` are usually inherited from the dashboard but can be overridden in the body. **Response:** `body.txnToken` — single-use, **15-min TTL**.
 
@@ -239,10 +239,12 @@ SDK docs: `https://www.paytmpayments.com/docs/server-sdk/`
 
 For recurring payments use Paytm's Subscription (UPI Autopay) product. **Different endpoint, different requestType, different field placement from one-time Payment** — see `references/subscriptions.md` for the correct payload.
 
-- Create a mandate via `POST /subscription/create` with `requestType: "NATIVE_SUBSCRIPTION"` and subscription fields **flat inside `body`** (no `subscriptionDetails` wrapper).
+- Endpoint: `POST /subscription/create` (staging) / `POST /theia/api/v1/subscription/create` (production), with required query params `mid`, `orderId`, `traceId`.
+- Body: `requestType: "NATIVE_SUBSCRIPTION"` (or `"NATIVE_MF_SIP"` for SIPs); subscription fields **flat inside `body`** (no `subscriptionDetails` wrapper); `subscriptionPaymentMode` + `subscriptionAmountType` + both `subscriptionFrequency` & `subscriptionFrequencyUnit` are required.
+- Head: `clientId` + `channelId` + `signature` are all required.
 - The returned `txnToken` is consumed by JS Checkout exactly like a one-time payment, where the user approves the mandate.
 - Recurring debit / status / edit / cancel operations are **out of scope for this skill** — refer to live Paytm docs and validate paths before implementing.
-- Docs: `https://www.paytmpayments.com/docs/api/initiate-subscription-api`
+- Full field reference, error codes, and worked example: `references/subscriptions.md`.
 
 ---
 
