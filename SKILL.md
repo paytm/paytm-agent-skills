@@ -259,6 +259,19 @@ For recurring payments use Paytm's Subscription (UPI Autopay) product. **Differe
 
 ---
 
+## Getting Your MID and Merchant Key
+
+Both are issued from the same dashboard URL — staging works immediately, production needs KYC + activation.
+
+**Single source for both:** <https://dashboard.paytmpayments.com/next/apikeys>
+
+| Environment | Steps |
+|---|---|
+| **Staging** (sandbox / test data) | 1. Open the URL above and sign in. 2. You land on the **Test API Details** tab by default. 3. Click **Generate Now** — staging MID + Merchant Key appear instantly. 4. Copy into `.env`'s staging block. |
+| **Production** (live payments) | 1. Same URL, switch to the **Production API Details** tab. 2. Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding first or contact your Paytm KAM. 3. Copy into `.env`'s production block. |
+
+When generating setup instructions for users, **always link them to this URL** rather than telling them to "find their MID" — discovering the dashboard path is the #1 friction point.
+
 ## Test Credentials (Staging)
 
 - Cards: Use Paytm-provided test card numbers from the dashboard's **Test Data** section
