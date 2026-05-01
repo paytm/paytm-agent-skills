@@ -13,8 +13,8 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 > 4. **`requestType`** is **`"NATIVE_SUBSCRIPTION"`** for standard subscriptions, **`"NATIVE_MF_SIP"`** for mutual-fund SIPs. Not `"SUBSCRIPTION"`, not `"Payment"`.
 > 5. Subscription fields are **flat inside `body`** — DO NOT wrap them in a `subscriptionDetails` / `subscriptionInfo` object. Wrapping returns HTTP 400.
 > 6. **Both `subscriptionFrequency` AND `subscriptionFrequencyUnit` are required.** Frequency is the number ("2"), unit is the period ("MONTH"). Together: every 2 months. Earlier versions of this skill said "no subscriptionFrequency field" — that was wrong.
-> 7. **`subscriptionPaymentMode` is required** — one of `"CC"` / `"DC"` / `"PPI"` / `"BANK_MANDATE"`.
-> 8. `subscriptionEnableRetry` is a **string** `"1"` / `"0"`, not a boolean.
+> 7. **`subscriptionPaymentMode` — the doc says required, real merchant testing shows the field should be OMITTED for most consumer subscription flows.** Sending `BANK_MANDATE` triggers an e-mandate path that needs additional `mandateType: "E_MANDATE"` and bank-account details; sending `"UPI"` / `"CC"` etc. forces a single rail and often errors out per-MID. **Default behaviour: omit the field entirely** — Paytm then renders all enabled methods on the consent screen and the user picks. Add it back only if you specifically want to restrict to one rail and have confirmed the value works for your MID.
+> 8. **`subscriptionEnableRetry` is a string `"1"` / `"0"`** (not boolean). If you set it to `"0"`, **also omit `subscriptionRetryCount`** — sending a retry count with retry disabled returns `"Invalid subscription retry count"`. If retry is enabled (`"1"`), supply a count.
 > 9. **`autoRenewal` / `autoRetry` / `communicationManager` ARE booleans** (true/false). Inconsistent with `subscriptionEnableRetry`, but that's how the API is.
 > 10. Dates (`subscriptionStartDate`, `subscriptionExpiryDate`) are `YYYY-MM-DD`.
 > 11. `subscriptionStartDate` and `subscriptionGraceDays` are **conditionally paired** — if you send one, send both.
@@ -75,7 +75,6 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
     "websiteName": "WEBSTAGING",
     "txnAmount": { "value": "1.00", "currency": "INR" },
 
-    "subscriptionPaymentMode": "BANK_MANDATE",
     "subscriptionAmountType": "FIX",
     "subscriptionMaxAmount": "499.00",
     "subscriptionFrequency": "1",
@@ -83,9 +82,7 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
     "subscriptionStartDate": "2026-05-01",
     "subscriptionExpiryDate": "2027-05-01",
     "subscriptionGraceDays": "5",
-    "subscriptionEnableRetry": "1",
-    "subscriptionRetryCount": "3",
-    "mandateType": "E_MANDATE",
+    "subscriptionEnableRetry": "0",
 
     "userInfo": {
       "custId": "CUST_001",
@@ -100,6 +97,11 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
   }
 }
 ```
+
+> **What's NOT in this example, intentionally:**
+> - `subscriptionPaymentMode` — omitted. Paytm picks a rail based on user choice on consent screen. The doc lists this as required but real-world MID testing shows omitting is the safer default. Add `"UPI"` / `"CC"` etc. only if you have a specific restriction confirmed for your MID.
+> - `mandateType` — omitted. Only needed when `subscriptionPaymentMode: "BANK_MANDATE"`. If you don't send `subscriptionPaymentMode`, you don't need `mandateType` either.
+> - `subscriptionRetryCount` — omitted because `subscriptionEnableRetry: "0"`. Sending a count with retry disabled returns `"Invalid subscription retry count"`. To enable retry, set `subscriptionEnableRetry: "1"` AND add `subscriptionRetryCount: "3"`.
 
 ### Field reference
 
@@ -130,7 +132,7 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 
 | Field | Required | Notes |
 |---|---|---|
-| `subscriptionPaymentMode` | ✅ | `"CC"` / `"DC"` / `"PPI"` / `"BANK_MANDATE"`. For UPI Autopay use `"BANK_MANDATE"` with `mandateType: "E_MANDATE"` |
+| `subscriptionPaymentMode` | conditional | Doc says required; in practice **omit it for the default "let user choose" experience**. Send only when restricting to a single rail: `"CC"` / `"DC"` / `"PPI"` / `"BANK_MANDATE"`. `"BANK_MANDATE"` requires `mandateType` + bank details (advanced). `"UPI"` is rejected by some MIDs. Test before relying on a specific value |
 | `subscriptionAmountType` | ✅ | `"FIX"` (same amount each cycle) or `"VARIABLE"` (variable, ≤ `subscriptionMaxAmount`) |
 | `subscriptionMaxAmount` | conditional | **Required** when `subscriptionAmountType: "VARIABLE"`. For FIX, set to the per-cycle amount |
 | `subscriptionFrequency` | ✅ | The **number** of `Unit`s per cycle, as string. `"1"` + unit `MONTH` = monthly; `"15"` + `DAY` = every 15 days |
@@ -139,8 +141,8 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 | `subscriptionGraceDays` | conditional | String. Days after the renewal-cycle start during which Paytm may still attempt the debit. Required if `subscriptionStartDate` is set |
 | `subscriptionExpiryDate` | ✅ | `YYYY-MM-DD` IST |
 | `subscriptionEnableRetry` | ✅ | **String** `"1"` (enable) / `"0"` (disable) |
-| `subscriptionRetryCount` | optional | String, number of retries on failure |
-| `mandateType` | conditional | `"E_MANDATE"` or `"PAPER_MANDATE"` — required when `subscriptionPaymentMode: "BANK_MANDATE"` |
+| `subscriptionRetryCount` | conditional | String, number of retries. **Send ONLY when `subscriptionEnableRetry: "1"`.** Sending it alongside `"0"` returns `"Invalid subscription retry count"` |
+| `mandateType` | conditional | `"E_MANDATE"` or `"PAPER_MANDATE"` — required ONLY when `subscriptionPaymentMode: "BANK_MANDATE"`. Omit when `subscriptionPaymentMode` is omitted |
 | `autoRenewal` | optional | **Boolean** (true/false) |
 | `autoRetry` | optional | **Boolean** (true/false) |
 | `communicationManager` | optional | **Boolean** (true/false). Enables Paytm-side notifications |
@@ -269,6 +271,20 @@ The user sees the consent screen showing the recurring amount + frequency, appro
 
 **Fix:** Contact your Paytm KAM / support and ask them to enable the **Subscription / UPI Autopay** product on the MID. Allow up to 24h for propagation.
 
+### "Invalid subscription retry count"
+
+You sent `subscriptionRetryCount` but `subscriptionEnableRetry: "0"` (or vice versa — incompatible pair). Two valid combinations:
+
+```jsonc
+// Retry disabled — omit retryCount
+{ "subscriptionEnableRetry": "0" }
+
+// Retry enabled — supply a count
+{ "subscriptionEnableRetry": "1", "subscriptionRetryCount": "3" }
+```
+
+Don't mix `"0"` + a count.
+
 ### "Invalid Customer ID"
 
 Sanitize `custId` (see "Sanitize `userInfo.custId`" above). Most common cause: passing the customer's name (`"Rahul Sharma"`) directly as the custId.
@@ -289,12 +305,13 @@ Staging path is `/subscription/create`; production path is `/theia/api/v1/subscr
 2. **`requestType` must be `"NATIVE_SUBSCRIPTION"` or `"NATIVE_MF_SIP"`** exactly. `"SUBSCRIPTION"` and `"Payment"` both fail.
 3. **No `subscriptionDetails` wrapper** — fields are flat inside `body`. Wrapping → 400.
 4. **Both `subscriptionFrequency` AND `subscriptionFrequencyUnit` are required.** Earlier versions of this skill said "no subscriptionFrequency field" — that was wrong; restore both.
-5. **`subscriptionPaymentMode` is required** — pick one of `CC` / `DC` / `PPI` / `BANK_MANDATE`. For UPI Autopay use `BANK_MANDATE` + `mandateType: "E_MANDATE"`.
+5. **`subscriptionPaymentMode` — omit by default.** Doc says required, real-world MID testing shows omitting is safer (Paytm renders all enabled methods on consent). Add `"CC"` / `"DC"` / `"PPI"` / `"BANK_MANDATE"` only when restricting to a specific rail and confirmed working for your MID. `"BANK_MANDATE"` requires extra `mandateType` + bank-account fields.
 6. **Mixed types:** `subscriptionEnableRetry` is string `"1"`/`"0"`; `autoRenewal` / `autoRetry` / `communicationManager` are real booleans. Don't normalize one shape across the board.
-7. **`subscriptionStartDate` cannot be in the past** and is conditionally paired with `subscriptionGraceDays` — send both or neither.
-8. **`mid` and `orderId` must match** between query string and body — `2013` / `2014` errors otherwise.
-9. **`traceId` is required as a query param**, alphanumeric + hyphens / underscores only. Generate one per call.
-10. **`txnToken` is single-use, 15-min TTL** — same as one-time payment tokens.
-11. **`userInfo.custId` must be sanitized** — most teams hit `"Invalid Customer ID"` by passing real names.
-12. **"No payment options available"** at consent time means the MID doesn't have Subscription / UPI Autopay enabled — see Troubleshooting above.
-13. **`response.body.authenticated` is the string `"True"` / `"False"`**, not a boolean. Compare as strings.
+7. **`subscriptionRetryCount` only with retry enabled.** `subscriptionEnableRetry: "0"` + `subscriptionRetryCount: "3"` → `"Invalid subscription retry count"`. Omit retry count when retry is off.
+8. **`subscriptionStartDate` cannot be in the past** and is conditionally paired with `subscriptionGraceDays` — send both or neither.
+9. **`mid` and `orderId` must match** between query string and body — `2013` / `2014` errors otherwise.
+10. **`traceId` is required as a query param**, alphanumeric + hyphens / underscores only. Generate one per call.
+11. **`txnToken` is single-use, 15-min TTL** — same as one-time payment tokens.
+12. **`userInfo.custId` must be sanitized** — most teams hit `"Invalid Customer ID"` by passing real names.
+13. **"No payment options available"** at consent time means the MID doesn't have Subscription / UPI Autopay enabled — see Troubleshooting above.
+14. **`response.body.authenticated` is the string `"True"` / `"False"`**, not a boolean. Compare as strings.
