@@ -51,7 +51,7 @@ git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills
 
 Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.
 
-**Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.
+**Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.  
 **Claude API:** Copy the contents of `SKILL.md` (and reference files) into your system prompt. Claude will have the full Paytm context on every API call.
 
 ### ChatGPT, Gemini, and other LLMs
