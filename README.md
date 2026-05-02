@@ -47,12 +47,12 @@ The skill file (`SKILL.md`) acts as the instruction layer that teaches the AI ho
 ```bash
 mkdir -p ~/.claude/skills
 git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills/paytm-integration
-```
+``` 
 
 Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.
 
-Claude.ai: Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.
-Claude API: Copy the contents of `SKILL.md` (and reference files) into your system prompt. Claude will have the full Paytm context on every API call.
+**Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.
+**Claude API:** Copy the contents of `SKILL.md` (and reference files) into your system prompt. Claude will have the full Paytm context on every API call.
 
 ### ChatGPT, Gemini, and other LLMs
 
