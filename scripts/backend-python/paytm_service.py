@@ -73,9 +73,9 @@ def initiate_transaction(
         "callbackUrl": callback_url,
         "txnAmount": {"value": _normalize_amount(amount), "currency": "INR"},
         "userInfo": user_info,
-        # Wallet (PPI / BALANCE) is permanently excluded from this skill's scope.
-        # Suppressing at the API surface keeps the consent screen wallet-free even
-        # on MIDs that have wallet enabled.
+        # PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
+        # Suppressing at the API surface keeps the consent screen free of these instruments even
+        # on MIDs that have them enabled.
         "disablePaymentMode": [{"mode": "PPI"}, {"mode": "BALANCE"}],
     }
     signature = PaytmChecksum.generateSignature(json.dumps(body), cfg["merchant_key"])

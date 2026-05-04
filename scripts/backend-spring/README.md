@@ -69,12 +69,12 @@ Each setting can be supplied via `-Dpaytm.*` system property OR `PAYTM_*` env va
 | `PAYTM_STATUS_API_URL` / `paytm.status.api.url` | `<pgDomain>/v3/order/status` |
 | `PAYTM_CLIENT_ID` / `paytm.client.id` | `C11` (per-merchant — confirm with your KAM) |
 
-## Wallet exclusion
+## Excluded payment instruments
 
-This skill permanently excludes Paytm Wallet. Every service passes
-`disablePaymentMode: [{"mode": "PPI"}, {"mode": "BALANCE"}]` so wallet never
-appears on the consent screen, even on MIDs that have it enabled. Don't remove
-this when adapting these services.
+This skill permanently excludes the `PPI` and `BALANCE` payment instruments.
+Every service passes `disablePaymentMode: [{"mode": "PPI"}, {"mode": "BALANCE"}]`
+so they never appear on the consent screen, even on MIDs that have them enabled.
+Don't remove this when adapting these services.
 
 ## Idempotency
 

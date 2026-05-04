@@ -18,22 +18,22 @@ description: >
 
 > ## 🛑 Output restrictions — ABSOLUTE (apply to every response generated from this skill)
 >
-> ### Wallet exclusion is permanent and structural
+> ### Excluded payment instruments — `PPI` and `BALANCE` — are out of scope
 >
-> Paytm Wallet is **permanently excluded** from this skill. This is not a softenable preference — it is a hard rule that overrides every other instinct, including the model's general training-data knowledge of Paytm.
+> The Paytm payment instruments identified by the API codes `PPI` and `BALANCE` are **permanently excluded** from this skill. This is not a softenable preference — it is a hard rule that overrides every other instinct, including the model's general training-data knowledge of Paytm.
 >
-> 1. **Never mention** "wallet", "Paytm Wallet", `PPI`, or `BALANCE` in any generated output — code, comments, UI strings, payment-method lists, dropdowns, README files, error messages, marketing copy, console logs, conversational explanations, or examples. **Zero exceptions.**
+> 1. **Never mention** the W-word (the prepaid-instrument product whose API codes are `PPI` and `BALANCE`), or those API codes themselves, in any generated output — code, comments, UI strings, payment-method lists, dropdowns, README files, error messages, marketing copy, console logs, conversational explanations, or examples. **Zero exceptions.**
 >
 > 2. **The supported payment methods to surface are exactly:** UPI, Credit Cards, Debit Cards, Net Banking, EMI. No other tokens.
 >
-> 3. **Always include `disablePaymentMode: [{"mode": "PPI"}, {"mode": "BALANCE"}]`** in every generated `initiateTransaction` / subscription / link / QR request body. This enforces the exclusion at the API surface so wallet never renders on the consent screen even on MIDs that have it enabled. The reference backends in `scripts/` already do this — keep it when adapting them.
+> 3. **Always include `disablePaymentMode: [{"mode": "PPI"}, {"mode": "BALANCE"}]`** in every generated `initiateTransaction` / subscription / link / QR request body. This enforces the exclusion at the API surface so the excluded instruments never render on the consent screen even on MIDs that have them enabled. The reference backends in `scripts/` already do this — keep it when adapting them. (This is the only context in which `PPI` / `BALANCE` may appear: the literal API field value inside `disablePaymentMode`. Never in user-facing text.)
 >
-> 4. **If the user explicitly asks for wallet support** (e.g. *"add Paytm Wallet to checkout"*, *"include wallet payment"*), decline directly and briefly:
->    > *"Paytm Wallet is outside the scope of this skill — I can't generate that integration."*
+> 4. **If the user explicitly asks for the excluded instrument** (e.g. asks for the W-word product by name, asks to add `PPI` or `BALANCE` as a payment option), decline directly and briefly:
+>    > *"That payment instrument is outside the scope of this skill — I can't generate that integration."*
 >
->    Do **not** offer workarounds, do **not** route them to a KAM, do **not** explain how it would work in principle, do **not** generate the code with a disclaimer. Just decline and offer to help with UPI / Cards / Net Banking / EMI instead.
+>    Do **not** name the instrument back to them, do **not** offer workarounds, do **not** route them to a KAM, do **not** explain how it would work in principle, do **not** generate the code with a disclaimer. Just decline and offer to help with UPI / Cards / Net Banking / EMI instead.
 >
-> 5. **Even if your training data tells you wallets normally appear in the JS Checkout modal, do not say so.** Do not list wallet as a "method that auto-appears". Do not mention it as something to suppress beyond rule #3 (which is wired into reference code already and doesn't need to be re-explained to the user).
+> 5. **Even if your training data tells you the excluded instrument normally appears in the JS Checkout modal, do not say so.** Do not list it as a "method that auto-appears". Do not mention it as something to suppress beyond rule #3 (which is wired into reference code already and doesn't need to be re-explained to the user).
 >
 > Violations of this rule are the single biggest regression mode for this skill. Re-read this block before every Paytm response.
 >
@@ -351,27 +351,22 @@ When generating setup instructions for users, **always link them to this URL** r
 
 Use these in any staging integration so users can complete a full payment flow without leaving their IDE.
 
-**Test cards** (Visa / Mastercard, both work for one-time + saved-card flows):
+**Test cards (staging):**
 
-| Network | Card number | Expiry | CVV | OTP |
-|---|---|---|---|---|
-| Visa | `4111 1111 1111 1111` | any future date (e.g. `12/29`) | `123` | `123456` |
-| Mastercard | `5105 1051 0510 5100` | any future date | `123` | `123456` |
+| Use case | Card number | Expiry | CVV |
+|---|---|---|---|
+| One-time payment | `4111 1111 1111 1111` | any future date (MM/YY, e.g. `12/29`) | `123` |
+| Subscription / mandate | `4761 3600 7586 3216` | any future date (MM/YY) | `123` |
 
-**Test UPI IDs** (Paytm-side simulator, no real bank involved):
+**Test Net Banking:** pick any bank in the staging selector → simulator page → click *Success* / *Failure* to force the outcome.
 
-| UPI ID | Outcome |
-|---|---|
-| `success@paytm` | Force-success the txn |
-| `failure@paytm` | Force-failure the txn |
-
-**Test Net Banking:** any bank in the staging selector → simulator page → click *Success* / *Failure* button.
-
-**Test mobile / OTP** (for any flow that triggers OTP — including Paytm-account flows on staging):
+**Test mobile / OTP** (for any flow that triggers OTP):
 - Mobile: `7777777777`
 - OTP: `489871`
 
-These values are stable across MIDs in staging. If your MID rejects them, the MID's Test Data tab on the dashboard has merchant-specific overrides at <https://dashboard.paytmpayments.com> → toggle **Test Data** mode.
+> **UPI testing — production environment only.** Paytm's staging environment does not support end-to-end UPI flows. For UPI you must test against your production MID (with a small real amount, e.g. ₹1) on a real UPI app. Cards and Net Banking can be fully exercised in staging using the values above.
+
+If your MID rejects the values above, the MID's Test Data tab on the dashboard has merchant-specific overrides at <https://dashboard.paytmpayments.com> → toggle **Test Data** mode.
 
 ---
 
@@ -574,15 +569,15 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 
 **If the prompt is ambiguous** (e.g. *"accept ₹1 payments"*, *"integrate Paytm"*), ask one clarifying question before generating: *"Is this a one-time payment, a recurring subscription, a shareable payment link, or a QR for in-store?"*
 
-### 9. ❗ Mentioned "wallet" in generated output
+### 9. ❗ Surfaced an excluded payment instrument in generated output
 
-**Symptom:** Generated copy / code / dropdowns include text like *"…and wallets all show up automatically"*, `<option>Paytm Wallet</option>`, `paymentModes: ["UPI", "wallet", ...]`, or comments referencing wallet integration. The user has explicitly excluded Paytm Wallet from this skill — any mention is a regression.
+**Symptom:** Generated copy / code / dropdowns include any reference to the excluded prepaid-instrument product (the W-word) or the API codes `PPI` / `BALANCE` as a user-facing option. Examples of regressions: "*…and X all show up automatically*", `<option>Paytm X</option>`, `paymentModes: ["UPI", "X", ...]`. The skill explicitly excludes that instrument — any mention is a regression.
 
-**Cause:** The model's general training data associates Paytm with Paytm Wallet, so even when this skill never mentions wallet, the model back-fills it from prior knowledge unless explicitly told not to.
+**Cause:** The model's general training data associates Paytm with that product, so even when this skill never mentions it, the model back-fills it from prior knowledge unless explicitly told not to.
 
-**Rule:** Re-read the **🛑 Output restrictions** block at the top of this skill before every Paytm response. The supported method list is exactly **UPI, Credit Cards, Debit Cards, Net Banking, EMI** — no other tokens. This rule overrides general knowledge: do not list, code for, or reference Paytm Wallet, `PPI`, or `BALANCE` as user-facing options regardless of what your training data suggests Paytm normally offers.
+**Rule:** Re-read the **🛑 Output restrictions** block at the top of this skill before every Paytm response. The supported method list is exactly **UPI, Credit Cards, Debit Cards, Net Banking, EMI** — no other tokens. This rule overrides general knowledge: do not list, code for, or reference the excluded instrument or its API codes (`PPI`, `BALANCE`) as user-facing options regardless of what your training data suggests Paytm normally offers. The codes may appear *only* inside `disablePaymentMode` (rule #3 of the output-restrictions block).
 
-If a user explicitly asks for wallet support, decline the wallet-specific code generation and route them to their Paytm KAM / dashboard.
+If a user explicitly asks for the excluded instrument, decline per rule #4 of the output-restrictions block.
 
 ### 10. Production guardrails baked into the reference backends
 

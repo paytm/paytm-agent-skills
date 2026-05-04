@@ -1,6 +1,6 @@
 # Paytm Subscriptions / UPI Autopay (Native Create Subscription)
 
-> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no wallet / PPI / BALANCE in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
+> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no `PPI` / `BALANCE` (or any user-facing label for them) in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
 
 Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay** (NPCI), **Cards** (RBI e-mandate), **Net Banking** (limited issuers).
 
@@ -17,7 +17,7 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 > 6. **Both `subscriptionFrequency` AND `subscriptionFrequencyUnit` are required.** Frequency is the number ("2"), unit is the period ("MONTH"). Together: every 2 months. Earlier versions of this skill said "no subscriptionFrequency field" — that was wrong.
 > 7. **`subscriptionPaymentMode` — default to `"UNKNOWN"`.** Doc says required and lists `CC` / `DC` / `BANK_MANDATE`. In practice the safest cross-MID value is **`"UNKNOWN"`** — Paytm then renders all enabled rails on the consent screen and the user picks. Send a specific value (`"CC"`, `"DC"`, `"BANK_MANDATE"`, etc.) only when restricting to one rail and confirmed for your MID. `"BANK_MANDATE"` additionally needs `mandateType: "E_MANDATE"` + bank-account details.
 >
->    **Suppressing wallet on the consent screen:** `"UNKNOWN"` lets Paytm show every rail enabled on the MID — including wallet. To enforce this skill's wallet exclusion at the API surface, pass `disablePaymentMode` to filter wallet out:
+>    **Suppressing the excluded instruments on the consent screen:** `"UNKNOWN"` lets Paytm show every rail enabled on the MID — including the `PPI` / `BALANCE` instruments this skill excludes. To enforce that exclusion at the API surface, pass `disablePaymentMode` to filter them out:
 >    ```json
 >    "disablePaymentMode": [{ "mode": "PPI" }, { "mode": "BALANCE" }]
 >    ```

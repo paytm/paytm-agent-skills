@@ -36,7 +36,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  *  - subscriptionGraceDays: "3"          (CC/DC max)
  *  - subscriptionStartDate: today (IST)
  *  - subscriptionEnableRetry: "0"        (retry off; subscriptionRetryCount omitted)
- *  - disablePaymentMode for PPI / BALANCE (wallet permanently excluded from this skill)
+ *  - disablePaymentMode for PPI / BALANCE (these instruments are permanently excluded from this skill)
  */
 @Service
 public class PaytmSubscriptionService {
@@ -106,7 +106,7 @@ public class PaytmSubscriptionService {
       body.put("mandateType", req.mandateType != null ? req.mandateType : "E_MANDATE");
     }
 
-    // Wallet (PPI / BALANCE) is permanently excluded from this skill's scope.
+    // PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
     JSONArray disable = new JSONArray();
     disable.put(new JSONObject().put("mode", "PPI"));
     disable.put(new JSONObject().put("mode", "BALANCE"));

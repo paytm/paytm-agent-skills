@@ -73,9 +73,9 @@ public class PaytmInitiateTransactionService {
     }
     body.put("userInfo", userInfo);
 
-    // Wallet (PPI / BALANCE) is permanently excluded from this skill's scope.
-    // Suppressing at the API surface keeps the consent screen wallet-free even
-    // on MIDs that have wallet enabled.
+    // PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
+    // Suppressing at the API surface keeps the consent screen free of these instruments even
+    // on MIDs that have them enabled.
     org.json.JSONArray disable = new org.json.JSONArray();
     disable.put(new JSONObject().put("mode", "PPI"));
     disable.put(new JSONObject().put("mode", "BALANCE"));

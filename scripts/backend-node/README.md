@@ -53,9 +53,9 @@ See the repo-root `.env.example` for how to get your MID and Merchant Key.
 
 All secrets stay server-side; the browser only ever sees `mid` + the JS loader URL.
 
-## Wallet exclusion
+## Excluded payment instruments
 
-This skill permanently excludes Paytm Wallet. Every backend module passes
-`disablePaymentMode: [{mode: "PPI"}, {mode: "BALANCE"}]` so wallet never appears
-on the consent screen, even on MIDs that have it enabled. Don't remove this line
-when adapting these modules.
+This skill permanently excludes the `PPI` and `BALANCE` payment instruments.
+Every backend module passes `disablePaymentMode: [{mode: "PPI"}, {mode: "BALANCE"}]`
+so they never appear on the consent screen, even on MIDs that have them enabled.
+Don't remove this line when adapting these modules.

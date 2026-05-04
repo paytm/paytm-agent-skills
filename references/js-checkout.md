@@ -1,6 +1,6 @@
 # Paytm Web Integration Reference
 
-> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no wallet / PPI / BALANCE in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
+> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no `PPI` / `BALANCE` (or any user-facing label for them) in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
 
 End-to-end JS Checkout flow + non-SDK form POST + payment links + subscriptions.
 Working backends in three languages live under `scripts/backend-{node,spring,python}` and a copy-paste frontend at `scripts/frontend/checkout.html`.

@@ -36,7 +36,7 @@ import org.springframework.web.client.RestTemplate;
  *  - linkDescription must be >= 3 chars, alphanumerics + spaces only
  *  - customer details nested under customerContact (not top-level)
  *  - expiryDate format DD/MM/YYYY HH:MM:SS (most MIDs)
- *  - Wallet (PPI / BALANCE) suppressed via disablePaymentMode
+ *  - PPI / BALANCE suppressed via disablePaymentMode
  */
 @Service
 public class PaytmPaymentLinkService {
@@ -80,7 +80,7 @@ public class PaytmPaymentLinkService {
       body.put("merchantUniqueReference", req.merchantUniqueReference.trim());
     }
 
-    // Wallet (PPI / BALANCE) is permanently excluded from this skill's scope.
+    // PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
     JSONArray disable = new JSONArray();
     disable.put(new JSONObject().put("mode", "PPI"));
     disable.put(new JSONObject().put("mode", "BALANCE"));
