@@ -5,7 +5,7 @@
 [![Claude Skill](https://img.shields.io/badge/Claude-Skill-D97757)](https://docs.anthropic.com/en/docs/claude-code/skills)
 [![Paytm PG](https://img.shields.io/badge/Paytm-Payment%20Gateway-002970)](https://www.paytmpayments.com/business-payments)
 
-This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, ChatGPT, Gemini) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/docs). Just describe your business in plain English, the agent generates production-ready integration code for you.
+This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, ChatGPT) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/docs). Just describe your business in plain English, the agent generates production-ready integration code for you.
 
 The skill teaches your AI agent the full Paytm spec, integration patterns, and common pitfalls, so the code it generates works on the first try.
 
@@ -15,10 +15,10 @@ The skill teaches your AI agent the full Paytm spec, integration patterns, and c
 
 | Product | Description |
 |---|---|
-| **JS Checkout** | Hosted checkout for web/app payments |
-| **Subscriptions** | Recurring payments with auto-debit |
-| **Payment Links** | Generate and share payment links |
-| **QR Codes** | Dynamic QR for in-person UPI payments |
+| **JS Checkout** | Paytm hosted checkout page for web/app payments |
+| **Subscriptions** | Recurring payment collections through UPI Autopay, cards or eNACH |
+| **Payment Links** | Generate and share payment links for payment collections |
+| **QR Codes** | Display dynamic QR codes on your website for UPI payments |
 
 ---
 
@@ -31,10 +31,10 @@ The skill teaches your AI agent the full Paytm spec, integration patterns, and c
 > *"I am building a fitness app with a ₹499 monthly plan. Integrate Paytm so users get charged automatically every month."*
 
 **Payment Links**
-> *"I am a freelance designer. I want to generate Paytm payment links for my clients, share them, and track which ones have been paid. Build this for me."*
+> *"I am a freelance designer. I want to generate payment links for my clients, share them, and track which ones have been paid. Build this for me."*
 
 **QR Codes**
-> *"I run a small cafe. Integrate Paytm so I can show a QR at my counter and enter the bill amount for each customer."*
+> *"I run a cloud kitchen business. Integrate Paytm to display a QR code on my website with the bill amount for customers to scan and pay via UPI."*
 
 ---
 
@@ -42,22 +42,26 @@ The skill teaches your AI agent the full Paytm spec, integration patterns, and c
 
 The skill file (`SKILL.md`) acts as the instruction layer that teaches the AI how to correctly implement Paytm integrations.
 
-### Claude (Claude Code, Claude.ai, Claude API)
+### Claude (Claude Code, Claude.ai)
 
 ```bash
 mkdir -p ~/.claude/skills
 git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills/paytm-integration
-```
+``` 
+OR
 
-Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.
+Run this prompt in Claude Code to install the skill globally:
+```bash
+Install the Paytm PG integration skill globally from https://github.com/paytm/paytm-integration-skills
+``` 
 
-For Claude.ai or the API: attach `SKILL.md` and the `references/` folder as project files.
+- **Claude Code:** Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.  
+- **Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.    
 
-### ChatGPT, Gemini, and other LLMs
+### ChatGPT (Codex)
 
 Download `SKILL.md`, then:
 - **ChatGPT:** upload as a file in a Project or Custom GPT, or paste into system instructions.
-- **Gemini / others:** attach as a file, or paste into the system prompt.
 
 Optionally attach files from `references/` for deeper coverage.
 
@@ -69,24 +73,22 @@ Repository structure:
 
 ```
 .
-├── SKILL.md                  # Entry point: core flow, pitfalls
-├── references/
+├── SKILL.md                  # Main instruction file that generates correct Paytm integrations. 
+├── references/               # Detailed guides for each product flow
 │   ├── js-checkout.md
 │   ├── subscriptions.md
 │   ├── payment-links.md
 │   └── qr-codes.md
-└── scripts/                  # Runnable reference implementations
-    ├── backend-node/         # Express + paytmchecksum
-    ├── backend-spring/       # Spring Boot 3 + Jakarta + executable JAR (recommended Java)
-    ├── backend-spring-legacy/  # Spring MVC 5 + javax.servlet + WAR (Tomcat 9 only)
-    ├── backend-python/       # Flask + paytmchecksum
+└── scripts/                  # Ready to run code samples. Pick your tech stack  
+    ├── backend-node/         # Node.js backend example for payment integration  
+    ├── backend-spring/       # Java backend example for payment integration  
+    ├── backend-python/       # Python backend example for payment integration
     └── frontend/
-        ├── checkout.html      # JS Checkout demo (one-time payment)
-        ├── subscription.html  # UPI Autopay mandate demo
-        ├── payment-link.html  # Generate + share a payment link
-        └── qr.html            # Dynamic QR with auto-polling
-                               # All HTMLs depend on a backend running
-                               # (/paytm-client-config.json + /paytm/create-* endpoints).
+        ├── checkout.html      # Demo page for Paytm checkout (One Time Payment)
+        ├── subscription.html  # Demo page for recurring payment setup
+        ├── payment-link.html  # Demo page to create and share payment links with customers
+        └── qr.html            # Demo page to display a dynamic UPI QR code for payments
+                               # Note: All demo pages require the backend server to be running first
 ```
 
 ---
@@ -95,8 +97,8 @@ Repository structure:
 
 To go live with Paytm, you will need a **MID** (your unique Merchant ID) and a **Merchant Key** (your secret key) for both staging and production. Each environment has its own pair, staging keys will not work in production and vice versa.
 
-- **Staging credentials:** [Paytm Business Dashboard](https://dashboard.paytmpayments.com) → toggle **Test Data** mode → API Keys
-- **Production credentials:** [Paytm Business Dashboard](https://dashboard.paytmpayments.com) → **Live Mode** → API Keys
+- **Staging credentials:** [Paytm Business Dashboard](https://dashboard.paytmpayments.com/next/apikeys) → toggle **Test Data** mode → API Keys
+- **Production credentials:** [Paytm Business Dashboard](https://dashboard.paytmpayments.com/next/apikeys) → **Live Mode** → API Keys
 
 Store keys in environment variables. Never commit them or expose them in client-side code.
 
