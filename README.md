@@ -74,12 +74,16 @@ Repository structure:
 │   ├── subscriptions.md
 │   ├── payment-links.md
 │   └── qr-codes.md
-└── scripts/                  # Ready to run code samples. Pick your tech stack
-    ├── backend-node/         # Node.js backend example for payment integration
-    ├── backend-spring/       # Java backend example for payment integration
+└── scripts/                  # Ready to run code samples. Pick your tech stack  
+    ├── backend-node/         # Node.js backend example for payment integration  
+    ├── backend-spring/       # Java backend example for payment integration  
     ├── backend-python/       # Python backend example for payment integration
     └── frontend/
-        └── js-checkout.html  # Ready-to-use web page for Paytm checkout
+        ├── checkout.html      # Demo page for Paytm checkout (One Time Payment)
+        ├── subscription.html  # Demo page for recurring payment setup
+        ├── payment-link.html  # Demo page to create and share payment links with customers
+        └── qr.html            # Demo page to display a dynamic UPI QR code for payments
+                               # Note: All demo pages require the backend server to be running first
 ```
 
 ---
