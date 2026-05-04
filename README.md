@@ -18,7 +18,7 @@ The skill teaches your AI agent the full Paytm spec, integration patterns, and c
 | **JS Checkout** | Paytm hosted checkout page for web/app payments |
 | **Subscriptions** | Recurring payment collections through UPI Autopay, cards or eNACH |
 | **Payment Links** | Generate and share payment links for payment collections |
-| **QR Codes** | Display dynamic QR codes on your website for UPI payment |
+| **QR Codes** | Display dynamic QR codes on your website for UPI payments |
 
 ---
 
@@ -42,17 +42,15 @@ The skill teaches your AI agent the full Paytm spec, integration patterns, and c
 
 The skill file (`SKILL.md`) acts as the instruction layer that teaches the AI how to correctly implement Paytm integrations.
 
-### Claude (Claude Code, Claude.ai, Claude API)
+### Claude (Claude Code, Claude.ai)
 
 ```bash
 mkdir -p ~/.claude/skills
 git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills/paytm-integration
 ``` 
 
-Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.
-
-**Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.  
-**Claude API:** Copy the contents of `SKILL.md` (and reference files) into your system prompt. Claude will have the full Paytm context on every API call.
+**Claude Code:** Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.
+**Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.    
 
 ### ChatGPT, Gemini, and other LLMs
 
@@ -79,7 +77,7 @@ Repository structure:
 └── scripts/                  # Ready to run code samples. Pick your tech stack
     ├── backend-node/         # Node.js backend example for payment integration
     ├── backend-spring/       # Java backend example for payment integration
-    ├── backend-python/       # Python backend example for payment flows
+    ├── backend-python/       # Python backend example for payment integration
     └── frontend/
         └── js-checkout.html  # Ready-to-use web page for Paytm checkout
 ```
