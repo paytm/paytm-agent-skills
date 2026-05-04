@@ -34,7 +34,7 @@ The skill teaches your AI agent the full Paytm spec, integration patterns, and c
 > *"I am a freelance designer. I want to generate payment links for my clients, share them, and track which ones have been paid. Build this for me."*
 
 **QR Codes**
-> *"I run a cloud kitchen website. Integrate Paytm to display a QR code on my website with the bill amount for customers to scan and pay via UPI."*
+> *"I run a cloud kitchen business. Integrate Paytm to display a QR code on my website with the bill amount for customers to scan and pay via UPI."*
 
 ---
 
