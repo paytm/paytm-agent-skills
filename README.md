@@ -61,7 +61,7 @@ Install the Paytm PG integration skill globally from https://github.com/paytm/pa
 ### ChatGPT (Codex)
 
 Download `SKILL.md`, then:
-- **ChatGPT:** upload as a file in a Project or Custom GPT, or paste into system instructions.
+- **Codex:** upload as a file in a Project or Custom GPT, or paste into system instructions.
 
 Optionally attach files from `references/` for deeper coverage.
 
