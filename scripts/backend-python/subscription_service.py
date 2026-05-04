@@ -7,7 +7,6 @@ Defaults baked in:
 - subscriptionGraceDays: "3"          (CC/DC max)
 - subscriptionStartDate: today (IST)
 - subscriptionEnableRetry: "0"        (retry off; subscriptionRetryCount omitted)
-- disablePaymentMode for PPI / BALANCE (these instruments are permanently excluded from this skill)
 """
 import json
 import re
@@ -102,8 +101,6 @@ def create_subscription(
         "subscriptionEnableRetry": "0",
         "userInfo": user_info,
         "callbackUrl": callback_url,
-        # PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
-        "disablePaymentMode": [{"mode": "PPI"}, {"mode": "BALANCE"}],
     }
 
     if amount_type == "VARIABLE":

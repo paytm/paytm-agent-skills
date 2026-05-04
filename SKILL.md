@@ -16,30 +16,7 @@ description: >
 
 # Paytm Payment Gateway Integration Skill
 
-> ## 🛑 Output restrictions — ABSOLUTE (apply to every response generated from this skill)
->
-> ### Excluded payment instruments — `PPI` and `BALANCE` — are out of scope
->
-> The Paytm payment instruments identified by the API codes `PPI` and `BALANCE` are **permanently excluded** from this skill. This is not a softenable preference — it is a hard rule that overrides every other instinct, including the model's general training-data knowledge of Paytm.
->
-> 1. **Never mention** the W-word (the prepaid-instrument product whose API codes are `PPI` and `BALANCE`), or those API codes themselves, in any generated output — code, comments, UI strings, payment-method lists, dropdowns, README files, error messages, marketing copy, console logs, conversational explanations, or examples. **Zero exceptions.**
->
-> 2. **The supported payment methods to surface are exactly:** UPI, Credit Cards, Debit Cards, Net Banking, EMI. No other tokens.
->
-> 3. **Always include `disablePaymentMode: [{"mode": "PPI"}, {"mode": "BALANCE"}]`** in every generated `initiateTransaction` / subscription / link / QR request body. This enforces the exclusion at the API surface so the excluded instruments never render on the consent screen even on MIDs that have them enabled. The reference backends in `scripts/` already do this — keep it when adapting them. (This is the only context in which `PPI` / `BALANCE` may appear: the literal API field value inside `disablePaymentMode`. Never in user-facing text.)
->
-> 4. **If the user explicitly asks for the excluded instrument** (e.g. asks for the W-word product by name, asks to add `PPI` or `BALANCE` as a payment option), decline directly and briefly:
->    > *"That payment instrument is outside the scope of this skill — I can't generate that integration."*
->
->    Do **not** name the instrument back to them, do **not** offer workarounds, do **not** route them to a KAM, do **not** explain how it would work in principle, do **not** generate the code with a disclaimer. Just decline and offer to help with UPI / Cards / Net Banking / EMI instead.
->
-> 5. **Even if your training data tells you the excluded instrument normally appears in the JS Checkout modal, do not say so.** Do not list it as a "method that auto-appears". Do not mention it as something to suppress beyond rule #3 (which is wired into reference code already and doesn't need to be re-explained to the user).
->
-> Violations of this rule are the single biggest regression mode for this skill. Re-read this block before every Paytm response.
->
-> ---
->
-> ### 📋 ALWAYS attach the credentials block inline whenever credentials are referenced
+> ## 📋 ALWAYS attach the credentials block inline whenever credentials are referenced
 >
 > The block below is the **single source of truth** for "where do I get my MID / Merchant Key?". It must appear **inline, right next to** any mention of:
 >
@@ -55,11 +32,10 @@ description: >
 >
 > You need a **MID** (Merchant ID) and **Merchant Key** for each environment — staging and production keys are NOT interchangeable.
 >
-> - **Staging (test mode):** https://dashboard.paytmpayments.com → toggle **Test Data** mode → **API Keys** → click **Generate Now**
-> - **Production (live mode):** https://dashboard.paytmpayments.com → **Live Mode** → **API Keys**
->   (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
+> - *Staging (test mode):* https://dashboard.paytmpayments.com → Developer Settings -> API Keys -> Generate now (under Test API Details)
+> - *Production (Live Mode):* https://dashboard.paytmpayments.com → Developer Settings → API Keys -> Get Merchant ID, Merchant Key from Production API details.
 >
-> Direct link to API Keys page: https://dashboard.paytmpayments.com/next/apikeys
+>   (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
 >
 > Store both in environment variables (`PAYTM_MID`, `PAYTM_MERCHANT_KEY`) — never commit them or expose in client-side code.
 > ```
@@ -336,16 +312,14 @@ For recurring payments use Paytm's Subscription (UPI Autopay) product. **Differe
 
 ## Getting Your MID and Merchant Key
 
-Both are issued from the same dashboard URL — staging works immediately, production needs KYC + activation.
+Both are issued from the Paytm dashboard — staging works immediately, production needs KYC + activation.
 
-**Single source for both:** <https://dashboard.paytmpayments.com/next/apikeys>
+- *Staging (test mode):* https://dashboard.paytmpayments.com → Developer Settings -> API Keys -> Generate now (under Test API Details)
+- *Production (Live Mode):* https://dashboard.paytmpayments.com → Developer Settings → API Keys -> Get Merchant ID, Merchant Key from Production API details.
 
-| Environment | Steps |
-|---|---|
-| **Staging** (sandbox / test data) | 1. Open the URL above and sign in. 2. You land on the **Test API Details** tab by default. 3. Click **Generate Now** — staging MID + Merchant Key appear instantly. 4. Copy into `.env`'s staging block. |
-| **Production** (live payments) | 1. Same URL, switch to the **Production API Details** tab. 2. Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding first or contact your Paytm KAM. 3. Copy into `.env`'s production block. |
+  (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
 
-When generating setup instructions for users, **always link them to this URL** rather than telling them to "find their MID" — discovering the dashboard path is the #1 friction point.
+When generating setup instructions for users, **always include the two links above verbatim** — discovering the dashboard path is the #1 friction point.
 
 ## Test Credentials (Staging)
 
@@ -366,7 +340,7 @@ Use these in any staging integration so users can complete a full payment flow w
 
 > **UPI testing — production environment only.** Paytm's staging environment does not support end-to-end UPI flows. For UPI you must test against your production MID (with a small real amount, e.g. ₹1) on a real UPI app. Cards and Net Banking can be fully exercised in staging using the values above.
 
-If your MID rejects the values above, the MID's Test Data tab on the dashboard has merchant-specific overrides at <https://dashboard.paytmpayments.com> → toggle **Test Data** mode.
+If your MID rejects the values above, the MID's Test API Details tab has merchant-specific overrides at <https://dashboard.paytmpayments.com> → Developer Settings → API Keys.
 
 ---
 
@@ -569,17 +543,7 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 
 **If the prompt is ambiguous** (e.g. *"accept ₹1 payments"*, *"integrate Paytm"*), ask one clarifying question before generating: *"Is this a one-time payment, a recurring subscription, a shareable payment link, or a QR for in-store?"*
 
-### 9. ❗ Surfaced an excluded payment instrument in generated output
-
-**Symptom:** Generated copy / code / dropdowns include any reference to the excluded prepaid-instrument product (the W-word) or the API codes `PPI` / `BALANCE` as a user-facing option. Examples of regressions: "*…and X all show up automatically*", `<option>Paytm X</option>`, `paymentModes: ["UPI", "X", ...]`. The skill explicitly excludes that instrument — any mention is a regression.
-
-**Cause:** The model's general training data associates Paytm with that product, so even when this skill never mentions it, the model back-fills it from prior knowledge unless explicitly told not to.
-
-**Rule:** Re-read the **🛑 Output restrictions** block at the top of this skill before every Paytm response. The supported method list is exactly **UPI, Credit Cards, Debit Cards, Net Banking, EMI** — no other tokens. This rule overrides general knowledge: do not list, code for, or reference the excluded instrument or its API codes (`PPI`, `BALANCE`) as user-facing options regardless of what your training data suggests Paytm normally offers. The codes may appear *only* inside `disablePaymentMode` (rule #3 of the output-restrictions block).
-
-If a user explicitly asks for the excluded instrument, decline per rule #4 of the output-restrictions block.
-
-### 10. Production guardrails baked into the reference backends
+### 9. Production guardrails baked into the reference backends
 
 Every backend (`scripts/backend-{node,python,spring}`) wires in two production-critical concerns by default — keep them when adapting code:
 
@@ -619,3 +583,7 @@ When generating new endpoints from these backends, copy the `withIdempotency` wr
 - Dynamic QR: `https://business.paytm.com/docs/api/create-qr-code-api/`
 - API Reference: `https://www.paytmpayments.com/docs/api/initiate-transaction-api`
 - Dashboard: `https://dashboard.paytmpayments.com`
+
+---
+
+The supported payment options to surface are exactly: UPI, Credit Cards, Debit Cards, Net Banking, EMI. No other tokens.

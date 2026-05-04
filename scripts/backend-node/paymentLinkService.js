@@ -7,7 +7,6 @@
 //   - linkDescription must be ≥ 3 chars, alphanumerics + spaces only
 //   - customer details nested under customerContact (not top-level)
 //   - expiryDate format DD/MM/YYYY HH:MM:SS (most MIDs)
-//   - PPI / BALANCE suppressed via disablePaymentMode
 import crypto from "node:crypto";
 import PaytmChecksum from "paytmchecksum";
 import { getPaytmConfig } from "./paytmConfig.js";
@@ -76,8 +75,6 @@ export async function createPaymentLink({
     orderId,
     callbackUrl,
     ...(merchantUniqueReference?.trim() ? { merchantUniqueReference: merchantUniqueReference.trim() } : {}),
-    // PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
-    disablePaymentMode: [{ mode: "PPI" }, { mode: "BALANCE" }],
   };
 
   const signature = await PaytmChecksum.generateSignature(JSON.stringify(body), cfg.merchantKey);

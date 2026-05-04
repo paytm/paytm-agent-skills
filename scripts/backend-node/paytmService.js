@@ -47,10 +47,6 @@ export async function initiateTransaction({ amount, custId, mobile, email, order
       ...(mobile?.trim() ? { mobile: mobile.trim() } : {}),
       ...(email?.trim() ? { email: email.trim() } : {}),
     },
-    // PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
-    // Suppressing at the API surface keeps the consent screen free of these instruments even
-    // on MIDs that have them enabled.
-    disablePaymentMode: [{ mode: "PPI" }, { mode: "BALANCE" }],
   };
 
   const signature = await PaytmChecksum.generateSignature(JSON.stringify(body), cfg.merchantKey);

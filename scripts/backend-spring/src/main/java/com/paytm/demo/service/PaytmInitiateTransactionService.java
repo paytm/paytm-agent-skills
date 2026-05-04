@@ -73,14 +73,6 @@ public class PaytmInitiateTransactionService {
     }
     body.put("userInfo", userInfo);
 
-    // PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
-    // Suppressing at the API surface keeps the consent screen free of these instruments even
-    // on MIDs that have them enabled.
-    org.json.JSONArray disable = new org.json.JSONArray();
-    disable.put(new JSONObject().put("mode", "PPI"));
-    disable.put(new JSONObject().put("mode", "BALANCE"));
-    body.put("disablePaymentMode", disable);
-
     String checksum = PaytmChecksum.generateSignature(body.toString(), PaytmMerchantConfig.merchantKey());
 
     JSONObject head = new JSONObject();

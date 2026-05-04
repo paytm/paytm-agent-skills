@@ -53,9 +53,3 @@ See the repo-root `.env.example` for how to get your MID and Merchant Key.
 
 All secrets stay server-side; the browser only ever sees `mid` + the JS loader URL.
 
-## Excluded payment instruments
-
-This skill permanently excludes the `PPI` and `BALANCE` payment instruments.
-Every backend module passes `disablePaymentMode: [{mode: "PPI"}, {mode: "BALANCE"}]`
-so they never appear on the consent screen, even on MIDs that have them enabled.
-Don't remove this line when adapting these modules.

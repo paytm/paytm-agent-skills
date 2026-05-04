@@ -1,6 +1,6 @@
 # Paytm Subscriptions / UPI Autopay (Native Create Subscription)
 
-> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no `PPI` / `BALANCE` (or any user-facing label for them) in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
+> _Companion to **`SKILL.md`** — load this file alongside `SKILL.md`, never instead of it._
 
 Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay** (NPCI), **Cards** (RBI e-mandate), **Net Banking** (limited issuers).
 
@@ -16,12 +16,6 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 > 5. Subscription fields are **flat inside `body`** — DO NOT wrap them in a `subscriptionDetails` / `subscriptionInfo` object. Wrapping returns HTTP 400.
 > 6. **Both `subscriptionFrequency` AND `subscriptionFrequencyUnit` are required.** Frequency is the number ("2"), unit is the period ("MONTH"). Together: every 2 months. Earlier versions of this skill said "no subscriptionFrequency field" — that was wrong.
 > 7. **`subscriptionPaymentMode` — default to `"UNKNOWN"`.** Doc says required and lists `CC` / `DC` / `BANK_MANDATE`. In practice the safest cross-MID value is **`"UNKNOWN"`** — Paytm then renders all enabled rails on the consent screen and the user picks. Send a specific value (`"CC"`, `"DC"`, `"BANK_MANDATE"`, etc.) only when restricting to one rail and confirmed for your MID. `"BANK_MANDATE"` additionally needs `mandateType: "E_MANDATE"` + bank-account details.
->
->    **Suppressing the excluded instruments on the consent screen:** `"UNKNOWN"` lets Paytm show every rail enabled on the MID — including the `PPI` / `BALANCE` instruments this skill excludes. To enforce that exclusion at the API surface, pass `disablePaymentMode` to filter them out:
->    ```json
->    "disablePaymentMode": [{ "mode": "PPI" }, { "mode": "BALANCE" }]
->    ```
->    Add this alongside `subscriptionPaymentMode: "UNKNOWN"` so the consent screen shows UPI / Cards / Net Banking only.
 > 8. **`subscriptionEnableRetry` is a string `"1"` / `"0"`** (not boolean). If you set it to `"0"`, **also omit `subscriptionRetryCount`** — sending a retry count with retry disabled returns `"Invalid subscription retry count"`. If retry is enabled (`"1"`), supply a count.
 > 9. **`autoRenewal` / `autoRetry` / `communicationManager` ARE booleans** (true/false). Inconsistent with `subscriptionEnableRetry`, but that's how the API is.
 > 10. Dates (`subscriptionStartDate`, `subscriptionExpiryDate`) are `YYYY-MM-DD`.
@@ -171,7 +165,7 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 | `subsGoodsInfo` | conditional | Required when `communicationManager: true` |
 | `renewalAmount` | optional | Recurring amount surfaced to the user / used for auto-renewal. **Default: omit** — most flows don't need it. Only add when you specifically want a different value than `txnAmount.value` on the consent screen |
 | `subscriptionPurpose` | optional | Free text, e.g. `"Loan Payments"` |
-| `enablePaymentMode` / `disablePaymentMode` | optional | Arrays of `{ "mode": "CREDIT_CARD" \| ... }` to restrict / exclude payment instruments |
+| `enablePaymentMode` / `disablePaymentMode` | optional | Arrays of `{ "mode": "CREDIT_CARD" \| ... }` to restrict / exclude payment options |
 | `mandateAccountDetails` | optional | Bank mandate account details (advanced) |
 | `callbackUrl` | optional | Where Paytm redirects the user after consent |
 | `extendInfo.udf1` / `udf2` / `udf3` | optional | Free-form merchant fields |

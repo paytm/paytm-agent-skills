@@ -6,7 +6,6 @@
 //   - subscriptionGraceDays: "3"          (CC/DC max)
 //   - subscriptionStartDate: today (IST)
 //   - subscriptionEnableRetry: "0"        (retry off; subscriptionRetryCount omitted)
-//   - disablePaymentMode for PPI / BALANCE (these instruments are permanently excluded from this skill)
 import crypto from "node:crypto";
 import PaytmChecksum from "paytmchecksum";
 import { getPaytmConfig } from "./paytmConfig.js";
@@ -86,8 +85,6 @@ export async function createSubscription({
       ...(lastName?.trim() ? { lastName: lastName.trim() } : {}),
     },
     callbackUrl,
-    // PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
-    disablePaymentMode: [{ mode: "PPI" }, { mode: "BALANCE" }],
   };
   if (amountType === "VARIABLE") {
     if (!maxAmount) throw asError("MISSING_MAX_AMOUNT", "subscriptionMaxAmount required for VARIABLE amount type");

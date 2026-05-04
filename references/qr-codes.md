@@ -1,6 +1,6 @@
 # Paytm QR Codes (Dynamic & Static)
 
-> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no `PPI` / `BALANCE` (or any user-facing label for them) in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
+> _Companion to **`SKILL.md`** — load this file alongside `SKILL.md`, never instead of it._
 
 For in-person, kiosk, table-top, or social-commerce flows where the customer scans with any UPI app.
 

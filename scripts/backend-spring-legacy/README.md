@@ -73,9 +73,3 @@ Demo pages (one per product, all under `/paytm-backend/`):
 
 All HTML files use `new URL(..., document.baseURI)` so they work regardless of the WAR context path.
 
-## Excluded payment instruments
-
-This skill permanently excludes the `PPI` and `BALANCE` payment instruments.
-Every service passes `disablePaymentMode: [{"mode": "PPI"}, {"mode": "BALANCE"}]`
-so they never appear on the consent screen, even on MIDs that have them enabled.
-Don't remove this when adapting these services.

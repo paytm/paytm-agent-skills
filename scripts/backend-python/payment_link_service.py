@@ -8,7 +8,6 @@ Defaults & gotchas baked in:
 - linkDescription must be >= 3 chars, alphanumerics + spaces only
 - customer details nested under customerContact (not top-level)
 - expiryDate format DD/MM/YYYY HH:MM:SS (most MIDs)
-- PPI / BALANCE suppressed via disablePaymentMode
 """
 import json
 import re
@@ -90,8 +89,6 @@ def create_payment_link(
         "expiryDate": (expiry_date or "").strip() or _expiry_one_year_from_now(),
         "orderId": order_id,
         "callbackUrl": callback_url,
-        # PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
-        "disablePaymentMode": [{"mode": "PPI"}, {"mode": "BALANCE"}],
     }
     if merchant_unique_reference and merchant_unique_reference.strip():
         body["merchantUniqueReference"] = merchant_unique_reference.strip()

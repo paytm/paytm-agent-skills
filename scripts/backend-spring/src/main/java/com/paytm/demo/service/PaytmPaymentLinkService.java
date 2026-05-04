@@ -13,7 +13,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -36,7 +35,6 @@ import org.springframework.web.client.RestTemplate;
  *  - linkDescription must be >= 3 chars, alphanumerics + spaces only
  *  - customer details nested under customerContact (not top-level)
  *  - expiryDate format DD/MM/YYYY HH:MM:SS (most MIDs)
- *  - PPI / BALANCE suppressed via disablePaymentMode
  */
 @Service
 public class PaytmPaymentLinkService {
@@ -79,12 +77,6 @@ public class PaytmPaymentLinkService {
     if (notEmpty(req.merchantUniqueReference)) {
       body.put("merchantUniqueReference", req.merchantUniqueReference.trim());
     }
-
-    // PPI / BALANCE payment instruments are permanently excluded from this skill's scope.
-    JSONArray disable = new JSONArray();
-    disable.put(new JSONObject().put("mode", "PPI"));
-    disable.put(new JSONObject().put("mode", "BALANCE"));
-    body.put("disablePaymentMode", disable);
 
     String checksum = PaytmChecksum.generateSignature(body.toString(), PaytmMerchantConfig.merchantKey());
     JSONObject head = new JSONObject();

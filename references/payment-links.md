@@ -1,6 +1,6 @@
 # Paytm Payment Links
 
-> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no `PPI` / `BALANCE` (or any user-facing label for them) in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
+> _Companion to **`SKILL.md`** — load this file alongside `SKILL.md`, never instead of it._
 
 Server-generated short URLs that open Paytm-hosted checkout. No client SDK; works in SMS, WhatsApp, email. Use for invoices, manual collections, social-commerce, agent-assisted sales.
 

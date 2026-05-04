@@ -96,8 +96,10 @@ Repository structure:
 
 To go live with Paytm, you will need a **MID** (your unique Merchant ID) and a **Merchant Key** (your secret key) for both staging and production. Each environment has its own pair, staging keys will not work in production and vice versa.
 
-- **Staging credentials:** [Paytm Business Dashboard](https://dashboard.paytmpayments.com/next/apikeys) → toggle **Test Data** mode → API Keys
-- **Production credentials:** [Paytm Business Dashboard](https://dashboard.paytmpayments.com/next/apikeys) → **Live Mode** → API Keys
+- *Staging (test mode):* https://dashboard.paytmpayments.com → Developer Settings -> API Keys -> Generate now (under Test API Details)
+- *Production (Live Mode):* https://dashboard.paytmpayments.com → Developer Settings → API Keys -> Get Merchant ID, Merchant Key from Production API details.
+
+  (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
 
 Store keys in environment variables. Never commit them or expose them in client-side code.
 
