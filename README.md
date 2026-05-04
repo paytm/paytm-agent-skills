@@ -5,7 +5,7 @@
 [![Claude Skill](https://img.shields.io/badge/Claude-Skill-D97757)](https://docs.anthropic.com/en/docs/claude-code/skills)
 [![Paytm PG](https://img.shields.io/badge/Paytm-Payment%20Gateway-002970)](https://www.paytmpayments.com/business-payments)
 
-This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, ChatGPT, Gemini) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/docs). Just describe your business in plain English, the agent generates production-ready integration code for you.
+This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, ChatGPT) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/docs). Just describe your business in plain English, the agent generates production-ready integration code for you.
 
 The skill teaches your AI agent the full Paytm spec, integration patterns, and common pitfalls, so the code it generates works on the first try.
 
@@ -58,11 +58,10 @@ Install the Paytm PG integration skill globally from https://github.com/paytm/pa
 - **Claude Code:** Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.  
 - **Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.    
 
-### ChatGPT, Gemini, and other LLMs
+### ChatGPT (Codex)
 
 Download `SKILL.md`, then:
 - **ChatGPT:** upload as a file in a Project or Custom GPT, or paste into system instructions.
-- **Gemini / others:** attach as a file, or paste into the system prompt.
 
 Optionally attach files from `references/` for deeper coverage.
 
