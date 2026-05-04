@@ -25,11 +25,11 @@ export function requireCredentials() {
   return cfg;
 }
 
-export async function initiateTransaction({ amount, custId, serverBaseUrl }) {
+export async function initiateTransaction({ amount, custId, mobile, email, orderId: callerOrderId, serverBaseUrl }) {
   const cfg = requireCredentials();
-  // 20 hex chars (10 random bytes) — matches Python's secrets.token_hex(10) and avoids
-  // UUID-based truncation, which silently reduces entropy.
-  const orderId = `ORD_${crypto.randomBytes(10).toString("hex").toUpperCase()}`;
+  // Accept a merchant-supplied orderId for reconciliation against your own orders table.
+  // Falls back to a random 20-hex-char id when not supplied.
+  const orderId = callerOrderId?.trim() || `ORD_${crypto.randomBytes(10).toString("hex").toUpperCase()}`;
   const effectiveBase = (serverBaseUrl ?? "").toString().trim() || cfg.callbackBase;
   const callbackUrl = cfg.callbackUrl?.trim() || `${effectiveBase}/paytm/callback`;
 
@@ -40,7 +40,17 @@ export async function initiateTransaction({ amount, custId, serverBaseUrl }) {
     orderId,
     callbackUrl: callbackUrl,
     txnAmount: { value: normalizeAmount(amount), currency: "INR" },
-    userInfo: { custId: custId?.trim() ? custId.trim() : "CUST_DEMO" },
+    userInfo: {
+      custId: custId?.trim() ? custId.trim() : "CUST_DEMO",
+      // mobile + email are strongly recommended — pre-fill the consent screen and
+      // drive OTP / notifications. Real merchants should always pass these through.
+      ...(mobile?.trim() ? { mobile: mobile.trim() } : {}),
+      ...(email?.trim() ? { email: email.trim() } : {}),
+    },
+    // Wallet (PPI / BALANCE) is permanently excluded from this skill's scope.
+    // Suppressing at the API surface keeps the consent screen wallet-free even
+    // on MIDs that have wallet enabled.
+    disablePaymentMode: [{ mode: "PPI" }, { mode: "BALANCE" }],
   };
 
   const signature = await PaytmChecksum.generateSignature(JSON.stringify(body), cfg.merchantKey);

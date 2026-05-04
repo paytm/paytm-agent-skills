@@ -1,41 +1,63 @@
-# Paytm backend — Python (Flask)
+# Python backend (Flask) — Paytm reference
 
-Minimal reference matching `scripts/backend-node` and `scripts/backend-spring`.
+Reference Flask backend covering all four Paytm products in this skill: JS Checkout, Subscription (UPI Autopay), Payment Link, Dynamic QR.
+
+Mirrors `scripts/backend-node` and `scripts/backend-spring` — same routes, same env vars.
 
 ## Setup
+
 ```bash
+cd scripts/backend-python
 pip install -r requirements.txt
 ```
 
 ## Run
+
 ```bash
-PAYTM_MID=YOUR_MID \
-PAYTM_MERCHANT_KEY=YOUR_KEY \
-PAYTM_WEBSITE_NAME=YOUR_WEBSITE_NAME \
-PAYTM_ENVIRONMENT=staging \
+PAYTM_MID="YOUR_MID" \
+PAYTM_MERCHANT_KEY="YOUR_MERCHANT_KEY" \
+PAYTM_WEBSITE_NAME="WEBSTAGING" \
 python app.py
 ```
 
-Then drop `scripts/frontend/js-checkout.html` into `./public/checkout.html` and open `http://localhost:5001/checkout.html`.
+Demo pages:
+- <http://localhost:5001/checkout.html> — one-time payment via JS Checkout
+- <http://localhost:5001/subscription.html> — UPI Autopay subscription
+- <http://localhost:5001/payment-link.html> — generate shareable payment link
+- <http://localhost:5001/qr.html> — dynamic QR with auto-polling
+
+See the repo-root `.env.example` for how to get your MID and Merchant Key.
 
 ## Env vars
 
-| Var | Default |
-|---|---|
-| `PAYTM_MID` | required |
-| `PAYTM_MERCHANT_KEY` | required |
-| `PAYTM_WEBSITE_NAME` | `DEFAULT` (use the value from your dashboard, e.g. `WEBSTAGING` or `retail`) |
-| `PAYTM_ENVIRONMENT` | `production` (set to `staging` for sandbox) |
-| `PAYTM_PG_DOMAIN` | derived from environment |
-| `PAYTM_CALLBACK_URL` | derived from request host + `/paytm/callback` |
-| `PAYTM_STATUS_API_URL` | `<pg>/v3/order/status` |
-| `PORT` | `5001` |
+| Var | Required | Default |
+|---|---|---|
+| `PAYTM_MID` | ✅ | none |
+| `PAYTM_MERCHANT_KEY` | ✅ | none |
+| `PAYTM_ENVIRONMENT` | optional | `staging` |
+| `PAYTM_WEBSITE_NAME` | optional | `WEBSTAGING` (staging) / `DEFAULT` (production) |
+| `PAYTM_CALLBACK_BASE` | optional | `http://localhost:5001` |
+| `PAYTM_PG_DOMAIN` | optional | derived from `PAYTM_ENVIRONMENT` |
+| `PAYTM_CALLBACK_URL` | optional | derived from `PAYTM_CALLBACK_BASE` |
+| `PAYTM_STATUS_API_URL` | optional | `<pgDomain>/v3/order/status` |
+| `PAYTM_CLIENT_ID` | optional | `C11` (per-merchant; override if your KAM gave you a different value) |
+| `PORT` | optional | `5001` |
 
 ## Endpoints
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/paytm-client-config.json` | mid + JS loader URL for the browser |
-| POST | `/paytm/create-order` | initiateTransaction → `{orderId, txnToken, amount, mid}` |
+| POST | `/paytm/create-order` | initiateTransaction → `{orderId, txnToken, amount, mid}` (one-time payment) |
+| POST | `/paytm/create-subscription` | `/subscription/create` → `{orderId, txnToken, subscriptionId, ...}` |
+| POST | `/paytm/create-link` | `/link/create` → `{orderId, linkId, shortUrl, longUrl, ...}` |
+| POST | `/paytm/create-qr` | `/paymentservices/qr/create` → `{orderId, qrCodeId, qrData, image, mid}` |
 | POST | `/paytm/order-status` | server-side Transaction Status API |
 | GET\|POST | `/paytm/callback` | Paytm browser redirect; verifies CHECKSUMHASH |
+
+## Wallet exclusion
+
+This skill permanently excludes Paytm Wallet. Every backend module passes
+`disablePaymentMode: [{"mode": "PPI"}, {"mode": "BALANCE"}]` so wallet never
+appears on the consent screen, even on MIDs that have it enabled. Don't remove
+this line when adapting these modules.

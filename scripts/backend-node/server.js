@@ -4,12 +4,22 @@ import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { fetchOrderStatus, initiateTransaction, verifyCallbackChecksum } from "./paytmService.js";
+import { createSubscription } from "./subscriptionService.js";
+import { createPaymentLink } from "./paymentLinkService.js";
+import { createDynamicQr } from "./qrService.js";
 import { getPaytmConfig } from "./paytmConfig.js";
+import { getCached, setCached, readKey } from "./idempotency.js";
+import { handleWebhook } from "./webhookHandler.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-app.use(express.json());
+// Capture raw body bytes for webhook signature verification — Paytm signs the
+// body it sent, so re-serializing in your language can change key order /
+// whitespace and break the signature.
+app.use(express.json({
+  verify: (req, _res, buf) => { req.rawBody = buf?.toString("utf8") || ""; },
+}));
 app.use(express.urlencoded({ extended: false }));
 
 function requestBase(req) {
@@ -29,19 +39,69 @@ app.get("/paytm-client-config.json", (req, res) => {
   });
 });
 
-app.post("/paytm/create-order", async (req, res) => {
+// Wrap a create-handler with Idempotency-Key support so double-clicks don't
+// produce two Paytm orders. See idempotency.js for the cache contract.
+function withIdempotency(handler) {
+  return async (req, res) => {
+    const key = readKey(req);
+    if (key) {
+      const cached = getCached(key);
+      if (cached) {
+        res.setHeader("Idempotent-Replayed", "true");
+        return res.status(cached.status).json(cached.body);
+      }
+    }
+    try {
+      const body = await handler(req);
+      if (key) setCached(key, 200, body);
+      res.json(body);
+    } catch (e) {
+      const status = Number(e?.httpStatus) || 500;
+      const body = payloadFromError(e);
+      // Cache failures only if Paytm-side definitive (4xx) — never on transient
+      // 5xx so the next retry can succeed.
+      if (key && status >= 400 && status < 500) setCached(key, status, body);
+      res.status(status).json(body);
+    }
+  };
+}
+
+app.post("/paytm/create-order", withIdempotency(async (req) => {
+  const { amount, custId, mobile, email, orderId } = req.body ?? {};
+  return initiateTransaction({ amount, custId, mobile, email, orderId, serverBaseUrl: requestBase(req) });
+}));
+
+app.post("/paytm/create-subscription", withIdempotency(async (req) => {
+  return createSubscription({ ...(req.body ?? {}), serverBaseUrl: requestBase(req) });
+}));
+
+app.post("/paytm/create-link", withIdempotency(async (req) => {
+  return createPaymentLink({ ...(req.body ?? {}), serverBaseUrl: requestBase(req) });
+}));
+
+app.post("/paytm/create-qr", withIdempotency(async (req) => {
+  return createDynamicQr({ ...(req.body ?? {}) });
+}));
+
+// S2S webhook from Paytm. Verifies head.signature, dedupes on (orderId, status),
+// and applies a stub fulfillment hook. See webhookHandler.js for the contract.
+app.post("/paytm/webhook", async (req, res) => {
   try {
-    const { amount, custId } = req.body ?? {};
-    const out = await initiateTransaction({ amount, custId, serverBaseUrl: requestBase(req) });
-    res.json(out);
+    const result = await handleWebhook({ rawBody: req.rawBody, parsed: req.body });
+    res.status(result.httpStatus).json({ ok: result.ok, ...(result.detail || {}) });
   } catch (e) {
-    const httpStatus = Number(e?.httpStatus) || 500;
-    const out = { error: true, code: e?.code || "INTERNAL_ERROR", message: e?.message || String(e) };
-    if (e?.orderId) out.orderId = e.orderId;
-    if (e?.paytm) out.paytm = e.paytm;
-    res.status(httpStatus).json(out);
+    // 5xx so Paytm retries — never silently swallow a webhook we couldn't process.
+    console.error("[paytm webhook] handler crash", e);
+    res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 });
+
+function payloadFromError(e) {
+  const out = { error: true, code: e?.code || "INTERNAL_ERROR", message: e?.message || String(e) };
+  if (e?.orderId) out.orderId = e.orderId;
+  if (e?.paytm) out.paytm = e.paytm;
+  return out;
+}
 
 app.post("/paytm/order-status", async (req, res) => {
   try {
@@ -54,8 +114,21 @@ app.post("/paytm/order-status", async (req, res) => {
   }
 });
 
+// Paytm posts callback fields directly from the user's browser, so EVERY value is
+// untrusted input. HTML-escape before rendering or you've shipped reflected XSS.
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function callbackHtml(params, checksumOk) {
-  const lines = Object.entries(params || {}).map(([k, v]) => `${k}=${Array.isArray(v) ? v.join(",") : v}`).join("\n");
+  const lines = Object.entries(params || {})
+    .map(([k, v]) => `${escapeHtml(k)}=${escapeHtml(Array.isArray(v) ? v.join(",") : v)}`)
+    .join("\n");
   return [
     "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Paytm callback</title></head><body>",
     "<h1>Paytm callback</h1>",
@@ -78,7 +151,9 @@ app.get("/paytm/callback", (req, res) => {
   res.type("text/html").send(callbackHtml(params, ok));
 });
 
-app.use(express.static(path.join(__dirname, "public")));
+// Single source of truth for frontend HTMLs lives at scripts/frontend/. Each
+// backend serves it directly to avoid maintaining duplicate copies.
+app.use(express.static(path.join(__dirname, "..", "frontend")));
 
 const PORT = Number(process.env.PORT) || 3001;
 app.listen(PORT, "127.0.0.1", () => {

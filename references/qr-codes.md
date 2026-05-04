@@ -1,5 +1,7 @@
 # Paytm QR Codes (Dynamic & Static)
 
+> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no wallet / PPI / BALANCE in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
+
 For in-person, kiosk, table-top, or social-commerce flows where the customer scans with any UPI app.
 
 ---
@@ -55,7 +57,7 @@ Content-Type: application/json
 | `amount` | ✅ | **String**, two decimals; INR only (`"499.00"`, not `499`) |
 | `businessType` | ✅ | Exactly `"UPI_QR_CODE"` |
 | `posId` | ✅ | Terminal / store identifier — **must be non-empty** even if you don't have physical POS |
-| `head.clientId` | ✅ | E.g. `"C11"` — provided by Paytm during onboarding |
+| `head.clientId` | ✅ | **Per-merchant — issued by Paytm during onboarding.** `"C11"` is common for single-merchant-key setups but NOT a universal default. Confirm yours with your Paytm KAM; staging often accepts `"C11"` even when prod rejects it |
 | `head.version` | ✅ | `"v1"` |
 | `displayName` | optional | What the customer sees in their UPI app (≤ 30 chars) |
 | `expiryDate` | optional | `yyyy-MM-dd HH:mm:ss` IST |

@@ -1,31 +1,61 @@
-# Node backend (Express) — Paytm JS Checkout demo API
+# Node backend (Express) — Paytm reference
 
-This is an **optional** backend stack for the same Paytm JS Checkout flow:
+Reference Express backend covering all four Paytm products in this skill: JS Checkout, Subscription (UPI Autopay), Payment Link, Dynamic QR.
 
-`initiateTransaction (server) → txnToken → CheckoutJS (browser) → callback → verify via order status`.
+Mirrors `scripts/backend-python` and `scripts/backend-spring` — same routes, same env vars.
 
-It mirrors the routes in the Spring MVC WAR:
+## Routes
 
-- `POST /paytm/create-order`
-- `POST /paytm/order-status`
-- `GET|POST /paytm/callback`
-- `GET /paytm-client-config.json`
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/paytm-client-config.json` | mid + JS loader URL for the browser |
+| POST | `/paytm/create-order` | initiateTransaction → `{orderId, txnToken, amount, mid}` (one-time payment) |
+| POST | `/paytm/create-subscription` | `/subscription/create` → `{orderId, txnToken, subscriptionId, amount, mid}` (UPI Autopay mandate) |
+| POST | `/paytm/create-link` | `/link/create` → `{orderId, linkId, shortUrl, longUrl, ...}` (shareable URL) |
+| POST | `/paytm/create-qr` | `/paymentservices/qr/create` → `{orderId, qrCodeId, qrData, image, mid}` (image is data-URI prefixed) |
+| POST | `/paytm/order-status` | server-side Transaction Status API |
+| GET\|POST | `/paytm/callback` | Paytm browser redirect; verifies CHECKSUMHASH |
 
-## Run (local)
+## Run
 
 ```bash
-cd backend-node
+cd scripts/backend-node
 npm install
+
+PAYTM_MID="YOUR_MID" \
+PAYTM_MERCHANT_KEY="YOUR_MERCHANT_KEY" \
+PAYTM_WEBSITE_NAME="WEBSTAGING" \
 npm start
 ```
 
-Then open `http://localhost:3001/checkout.html`.
+Demo pages (one per product, all under the same backend):
+- <http://localhost:3001/checkout.html> — one-time payment via JS Checkout
+- <http://localhost:3001/subscription.html> — UPI Autopay subscription
+- <http://localhost:3001/payment-link.html> — generate shareable payment link
+- <http://localhost:3001/qr.html> — dynamic QR with auto-polling
 
-## Config
+See the repo-root `.env.example` for how to get your MID and Merchant Key.
 
-All secrets stay server-side. Provide credentials via env vars:
+## Env vars
 
-- `PAYTM_MID` (optional; defaults to the QA demo MID used in this repo)
-- `PAYTM_MERCHANT_KEY`
-- `PAYTM_CALLBACK_URL`
-- Optional: `PAYTM_PG_DOMAIN` (defaults to QA `https://pgp-qa12.paytm.in`)
+| Var | Required | Default |
+|---|---|---|
+| `PAYTM_MID` | ✅ | none — server throws on missing |
+| `PAYTM_MERCHANT_KEY` | ✅ | none — server throws on missing |
+| `PAYTM_ENVIRONMENT` | optional | `staging` |
+| `PAYTM_WEBSITE_NAME` | optional | `WEBSTAGING` (staging) / `DEFAULT` (production) |
+| `PAYTM_CALLBACK_BASE` | optional | `http://localhost:3001` |
+| `PAYTM_PG_DOMAIN` | optional | derived from `PAYTM_ENVIRONMENT` |
+| `PAYTM_CALLBACK_URL` | optional | derived from `PAYTM_CALLBACK_BASE` |
+| `PAYTM_STATUS_API_URL` | optional | `<pgDomain>/v3/order/status` |
+| `PAYTM_CLIENT_ID` | optional | `C11` (per-merchant; override if your KAM gave you a different value) |
+| `PORT` | optional | `3001` |
+
+All secrets stay server-side; the browser only ever sees `mid` + the JS loader URL.
+
+## Wallet exclusion
+
+This skill permanently excludes Paytm Wallet. Every backend module passes
+`disablePaymentMode: [{mode: "PPI"}, {mode: "BALANCE"}]` so wallet never appears
+on the consent screen, even on MIDs that have it enabled. Don't remove this line
+when adapting these modules.

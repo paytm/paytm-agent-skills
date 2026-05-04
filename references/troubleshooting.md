@@ -1,5 +1,7 @@
 # Paytm PG Troubleshooting
 
+> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no wallet / PPI / BALANCE in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
+
 Symptom → most-likely cause → fix. Work top-down per section.
 
 ---
@@ -64,7 +66,7 @@ Rule of thumb: any code that talks to your `/paytm/*` backend endpoints is clien
 
 The most common cause is wrapping `CheckoutJS.init`/`invoke` inside `CheckoutJS.onLoad()` *inside* the click handler. `onLoad` fires once at script-load time; by the time the user clicks, it has already fired and your callback never runs.
 
-**Fix:** Use `onLoad` only at page level (to enable the button); call `init`/`invoke` directly in the click handler. Full pattern in `SKILL.md` → "Common Vibe-Coded Bugs" → #3, and live code in `scripts/frontend/js-checkout.html`.
+**Fix:** Use `onLoad` only at page level (to enable the button); call `init`/`invoke` directly in the click handler. Full pattern in `SKILL.md` → "Common Vibe-Coded Bugs" → #3, and live code in `scripts/frontend/checkout.html`.
 
 Other causes for the same symptom:
 - Browser popup blocker — invoke must come from a real user gesture (it does, in the click handler).

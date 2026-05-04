@@ -77,10 +77,16 @@ Repository structure:
 │   └── qr-codes.md
 └── scripts/                  # Runnable reference implementations
     ├── backend-node/         # Express + paytmchecksum
-    ├── backend-spring/       # Spring MVC + RestTemplate
+    ├── backend-spring/       # Spring Boot 3 + Jakarta + executable JAR (recommended Java)
+    ├── backend-spring-legacy/  # Spring MVC 5 + javax.servlet + WAR (Tomcat 9 only)
     ├── backend-python/       # Flask + paytmchecksum
     └── frontend/
-        └── js-checkout.html  # Copy-paste browser page
+        ├── checkout.html      # JS Checkout demo (one-time payment)
+        ├── subscription.html  # UPI Autopay mandate demo
+        ├── payment-link.html  # Generate + share a payment link
+        └── qr.html            # Dynamic QR with auto-polling
+                               # All HTMLs depend on a backend running
+                               # (/paytm-client-config.json + /paytm/create-* endpoints).
 ```
 
 ---

@@ -44,11 +44,26 @@ def _require_credentials() -> dict:
     return cfg
 
 
-def initiate_transaction(amount: Any, cust_id: Optional[str], server_base_url: str) -> dict:
+def initiate_transaction(
+    amount: Any,
+    cust_id: Optional[str],
+    server_base_url: str,
+    mobile: Optional[str] = None,
+    email: Optional[str] = None,
+    order_id: Optional[str] = None,
+) -> dict:
     cfg = _require_credentials()
-    # 20 hex chars (10 random bytes), uppercased — matches Node + Spring backends.
-    order_id = "ORD_" + secrets.token_hex(10).upper()
+    # Accept a merchant-supplied orderId for reconciliation; fall back to a random one.
+    order_id = (order_id or "").strip() or ("ORD_" + secrets.token_hex(10).upper())
     callback_url = cfg["callback_url"] or f"{server_base_url.rstrip('/')}/paytm/callback"
+
+    user_info = {"custId": (cust_id or "").strip() or "CUST_DEMO"}
+    # mobile + email are strongly recommended — pre-fill the consent screen and
+    # drive OTP / notifications. Real merchants should always pass these through.
+    if mobile and mobile.strip():
+        user_info["mobile"] = mobile.strip()
+    if email and email.strip():
+        user_info["email"] = email.strip()
 
     body = {
         "requestType": "Payment",
@@ -57,7 +72,11 @@ def initiate_transaction(amount: Any, cust_id: Optional[str], server_base_url: s
         "orderId": order_id,
         "callbackUrl": callback_url,
         "txnAmount": {"value": _normalize_amount(amount), "currency": "INR"},
-        "userInfo": {"custId": (cust_id or "").strip() or "CUST_DEMO"},
+        "userInfo": user_info,
+        # Wallet (PPI / BALANCE) is permanently excluded from this skill's scope.
+        # Suppressing at the API surface keeps the consent screen wallet-free even
+        # on MIDs that have wallet enabled.
+        "disablePaymentMode": [{"mode": "PPI"}, {"mode": "BALANCE"}],
     }
     signature = PaytmChecksum.generateSignature(json.dumps(body), cfg["merchant_key"])
     payload = {"body": body, "head": {"signature": signature}}

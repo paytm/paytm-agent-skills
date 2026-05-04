@@ -1,5 +1,7 @@
 # Paytm Subscriptions / UPI Autopay (Native Create Subscription)
 
+> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no wallet / PPI / BALANCE in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
+
 Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay** (NPCI), **Cards** (RBI e-mandate), **Net Banking** (limited issuers).
 
 > **⚠️ READ THIS FIRST — common mistakes that break subscription integrations:**
@@ -13,7 +15,13 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 > 4. **`requestType`** is **`"NATIVE_SUBSCRIPTION"`** for standard subscriptions, **`"NATIVE_MF_SIP"`** for mutual-fund SIPs. Not `"SUBSCRIPTION"`, not `"Payment"`.
 > 5. Subscription fields are **flat inside `body`** — DO NOT wrap them in a `subscriptionDetails` / `subscriptionInfo` object. Wrapping returns HTTP 400.
 > 6. **Both `subscriptionFrequency` AND `subscriptionFrequencyUnit` are required.** Frequency is the number ("2"), unit is the period ("MONTH"). Together: every 2 months. Earlier versions of this skill said "no subscriptionFrequency field" — that was wrong.
-> 7. **`subscriptionPaymentMode` — default to `"UNKNOWN"`.** Doc says required and lists `CC` / `DC` / `PPI` / `BANK_MANDATE`. In practice the safest cross-MID value is **`"UNKNOWN"`** — Paytm then renders all enabled rails on the consent screen and the user picks. Send a specific value (`"CC"`, `"DC"`, `"BANK_MANDATE"`, etc.) only when restricting to one rail and confirmed for your MID. `"BANK_MANDATE"` additionally needs `mandateType: "E_MANDATE"` + bank-account details.
+> 7. **`subscriptionPaymentMode` — default to `"UNKNOWN"`.** Doc says required and lists `CC` / `DC` / `BANK_MANDATE`. In practice the safest cross-MID value is **`"UNKNOWN"`** — Paytm then renders all enabled rails on the consent screen and the user picks. Send a specific value (`"CC"`, `"DC"`, `"BANK_MANDATE"`, etc.) only when restricting to one rail and confirmed for your MID. `"BANK_MANDATE"` additionally needs `mandateType: "E_MANDATE"` + bank-account details.
+>
+>    **Suppressing wallet on the consent screen:** `"UNKNOWN"` lets Paytm show every rail enabled on the MID — including wallet. To enforce this skill's wallet exclusion at the API surface, pass `disablePaymentMode` to filter wallet out:
+>    ```json
+>    "disablePaymentMode": [{ "mode": "PPI" }, { "mode": "BALANCE" }]
+>    ```
+>    Add this alongside `subscriptionPaymentMode: "UNKNOWN"` so the consent screen shows UPI / Cards / Net Banking only.
 > 8. **`subscriptionEnableRetry` is a string `"1"` / `"0"`** (not boolean). If you set it to `"0"`, **also omit `subscriptionRetryCount`** — sending a retry count with retry disabled returns `"Invalid subscription retry count"`. If retry is enabled (`"1"`), supply a count.
 > 9. **`autoRenewal` / `autoRetry` / `communicationManager` ARE booleans** (true/false). Inconsistent with `subscriptionEnableRetry`, but that's how the API is.
 > 10. Dates (`subscriptionStartDate`, `subscriptionExpiryDate`) are `YYYY-MM-DD`.
@@ -123,7 +131,7 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 
 | Field | Required | Notes |
 |---|---|---|
-| `clientId` | ✅ | `"C11"` for single-merchant-key setups; provided by Paytm during onboarding |
+| `clientId` | ✅ | **Per-merchant — issued by Paytm during onboarding.** `"C11"` is the common value for single-merchant-key setups but is NOT a universal default. Multi-key merchants get a different `clientId` per key. Confirm yours with your Paytm KAM before going live; staging often accepts `"C11"` even when prod rejects it |
 | `channelId` | ✅ | `"WEB"` (web server) or `"WAP"` (mobile) |
 | `signature` | ✅ | CHECKSUMHASH over `JSON.stringify(body)` |
 | `version` | optional | `"v1"` |
@@ -146,7 +154,7 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 
 | Field | Required | Notes |
 |---|---|---|
-| `subscriptionPaymentMode` | ✅ | **Default `"UNKNOWN"`** — Paytm renders all enabled rails on consent. Send a specific value (`"CC"` / `"DC"` / `"PPI"` / `"BANK_MANDATE"`) only when restricting to one rail. `"BANK_MANDATE"` requires `mandateType: "E_MANDATE"` + bank details (advanced) |
+| `subscriptionPaymentMode` | ✅ | **Default `"UNKNOWN"`** — Paytm renders all enabled rails on consent. Send a specific value (`"CC"` / `"DC"` / `"BANK_MANDATE"`) only when restricting to one rail. `"BANK_MANDATE"` requires `mandateType: "E_MANDATE"` + bank details (advanced) |
 | `subscriptionAmountType` | ✅ | `"FIX"` (same amount each cycle) or `"VARIABLE"` (variable, ≤ `subscriptionMaxAmount`) |
 | `subscriptionMaxAmount` | conditional | **Required** when `subscriptionAmountType: "VARIABLE"`. For FIX, set to the per-cycle amount |
 | `subscriptionFrequency` | ✅ | The **number** of `Unit`s per cycle, as string. `"1"` + unit `MONTH` = monthly; `"15"` + `DAY` = every 15 days |
@@ -319,7 +327,7 @@ Staging path is `/subscription/create`; production path is `/theia/api/v1/subscr
 2. **`requestType` must be `"NATIVE_SUBSCRIPTION"` or `"NATIVE_MF_SIP"`** exactly. `"SUBSCRIPTION"` and `"Payment"` both fail.
 3. **No `subscriptionDetails` wrapper** — fields are flat inside `body`. Wrapping → 400.
 4. **Both `subscriptionFrequency` AND `subscriptionFrequencyUnit` are required.** Earlier versions of this skill said "no subscriptionFrequency field" — that was wrong; restore both.
-5. **`subscriptionPaymentMode` default is `"UNKNOWN"`.** Lets Paytm render all enabled rails on consent. Send `"CC"` / `"DC"` / `"PPI"` / `"BANK_MANDATE"` only when restricting to a specific rail. `"BANK_MANDATE"` requires extra `mandateType` + bank-account fields.
+5. **`subscriptionPaymentMode` default is `"UNKNOWN"`.** Lets Paytm render all enabled rails on consent. Send `"CC"` / `"DC"` / `"BANK_MANDATE"` only when restricting to a specific rail. `"BANK_MANDATE"` requires extra `mandateType` + bank-account fields.
 6. **Mixed types:** `subscriptionEnableRetry` is string `"1"`/`"0"`; `autoRenewal` / `autoRetry` / `communicationManager` are real booleans. Don't normalize one shape across the board.
 7. **`subscriptionRetryCount` only with retry enabled.** `subscriptionEnableRetry: "0"` + `subscriptionRetryCount: "3"` → `"Invalid subscription retry count"`. Omit retry count when retry is off.
 8. **`subscriptionStartDate` cannot be in the past** and is conditionally paired with `subscriptionGraceDays` — send both or neither.

@@ -1,7 +1,9 @@
 # Paytm Web Integration Reference
 
+> _Companion to **`SKILL.md`** — see SKILL.md for output restrictions (no wallet / PPI / BALANCE in any generated text) and the global credentials block. Load this file alongside `SKILL.md`, never instead of it._
+
 End-to-end JS Checkout flow + non-SDK form POST + payment links + subscriptions.
-Working backends in three languages live under `scripts/backend-{node,spring,python}` and a copy-paste frontend at `scripts/frontend/js-checkout.html`.
+Working backends in three languages live under `scripts/backend-{node,spring,python}` and a copy-paste frontend at `scripts/frontend/checkout.html`.
 
 ---
 
@@ -244,24 +246,7 @@ Response → `longUrl` and `shortUrl` (e.g. `https://paytm.me/XXXXXXX`).
 
 ## Subscriptions (UPI Autopay) — Web
 
-Pass these inside the standard `initiateTransaction` body:
-
-```json
-{
-  "requestType": "SUBSCRIPTION",
-  "subscriptionDetails": {
-    "subscriptionId": "SUB_001",
-    "subscriptionAmountType": "FIXED",
-    "subscriptionFrequency": "MONTH",
-    "subscriptionFrequencyUnit": "1",
-    "subscriptionStartDate": "2025-01-01",
-    "subscriptionEndDate": "2026-01-01",
-    "subscriptionMaxAmount": "500.00"
-  }
-}
-```
-
-Subsequent debits are deducted automatically per the mandate. Docs: <https://www.paytmpayments.com/docs/subscription>.
+Subscriptions use a **different endpoint** (`/subscription/create`) and a **different request shape** from one-time payments. Do NOT extrapolate from the JS Checkout `initiateTransaction` body — full correct contract (endpoint, head, flat-body fields, error codes, cross-rail defaults) is in **`references/subscriptions.md`**. Read that file before generating any subscription code.
 
 ---
 

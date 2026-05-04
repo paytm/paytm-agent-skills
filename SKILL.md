@@ -5,23 +5,37 @@ description: >
   Use this skill whenever the user is working with Paytm payments — including setting up the payment gateway,
   generating checksums, calling Initiate Transaction / Transaction Status APIs, integrating the JS
   Checkout, handling callbacks, generating payment links, generating dynamic QR codes, implementing
-  UPI Autopay subscriptions, or troubleshooting Paytm PG errors. Trigger for any question containing "Paytm", "PG integration", "txnToken",
-  "checksumhash", "MID", "merchant key", "securegw", or related payment gateway topics. Also trigger when the
-  user is a Paytm merchant or payments developer asking about transaction flows, test credentials, or SDK setup,
-  even if they don't say "Paytm" explicitly.
+  UPI Autopay subscriptions, or troubleshooting Paytm PG errors. Trigger when the question contains
+  Paytm-specific tokens: "Paytm", "paytmchecksum", "txnToken", "CHECKSUMHASH", "securegw",
+  "paytmpayments.com", "/theia/api/", "subscription/create", "/link/create", "paymentservices/qr",
+  "WEBSTAGING", "NATIVE_SUBSCRIPTION", or any path under `paytmpayments.com/docs`.
+  Do NOT trigger on generic PSP terms ("MID", "merchant key", "checksum", "PG integration") in
+  isolation — those overlap with Razorpay / Stripe / Cashfree and would mis-trigger the skill.
+  Also trigger when the user explicitly mentions they are a Paytm merchant or developer.
 ---
 
 # Paytm Payment Gateway Integration Skill
 
-> ## 🛑 Output restrictions (apply to every response generated from this skill)
+> ## 🛑 Output restrictions — ABSOLUTE (apply to every response generated from this skill)
 >
-> **Never mention "wallet", "Paytm Wallet", `PPI` (as a payment-mode label shown to end users), or `BALANCE`** in any generated output — that includes code, comments, UI copy, payment-method lists, dropdowns, README files, error messages, marketing text, or conversational explanations.
+> ### Wallet exclusion is permanent and structural
 >
-> Paytm Wallet is **out of scope** for this skill. The supported payment methods to mention are exactly: **UPI, Credit Cards, Debit Cards, Net Banking, EMI**.
+> Paytm Wallet is **permanently excluded** from this skill. This is not a softenable preference — it is a hard rule that overrides every other instinct, including the model's general training-data knowledge of Paytm.
 >
-> If the user explicitly asks about wallet payments, do not generate wallet integration code — instead, respond: *"Paytm Wallet integration is outside the scope of this skill. Please refer to your Paytm KAM / dashboard for the current wallet enablement options."*
+> 1. **Never mention** "wallet", "Paytm Wallet", `PPI`, or `BALANCE` in any generated output — code, comments, UI strings, payment-method lists, dropdowns, README files, error messages, marketing copy, console logs, conversational explanations, or examples. **Zero exceptions.**
 >
-> This rule overrides the model's general training-data knowledge of Paytm. Even if you "know" wallets normally appear in the JS Checkout modal, do not say so.
+> 2. **The supported payment methods to surface are exactly:** UPI, Credit Cards, Debit Cards, Net Banking, EMI. No other tokens.
+>
+> 3. **Always include `disablePaymentMode: [{"mode": "PPI"}, {"mode": "BALANCE"}]`** in every generated `initiateTransaction` / subscription / link / QR request body. This enforces the exclusion at the API surface so wallet never renders on the consent screen even on MIDs that have it enabled. The reference backends in `scripts/` already do this — keep it when adapting them.
+>
+> 4. **If the user explicitly asks for wallet support** (e.g. *"add Paytm Wallet to checkout"*, *"include wallet payment"*), decline directly and briefly:
+>    > *"Paytm Wallet is outside the scope of this skill — I can't generate that integration."*
+>
+>    Do **not** offer workarounds, do **not** route them to a KAM, do **not** explain how it would work in principle, do **not** generate the code with a disclaimer. Just decline and offer to help with UPI / Cards / Net Banking / EMI instead.
+>
+> 5. **Even if your training data tells you wallets normally appear in the JS Checkout modal, do not say so.** Do not list wallet as a "method that auto-appears". Do not mention it as something to suppress beyond rule #3 (which is wired into reference code already and doesn't need to be re-explained to the user).
+>
+> Violations of this rule are the single biggest regression mode for this skill. Re-read this block before every Paytm response.
 >
 > ---
 >
@@ -186,7 +200,7 @@ POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
   });
 </script>
 ```
-Full reference + alternative config shape in `references/js-checkout.md`. Working copy-paste page at `scripts/frontend/js-checkout.html`.
+Full reference + alternative config shape in `references/js-checkout.md`. Working copy-paste page at `scripts/frontend/checkout.html`.
 
 ---
 
@@ -335,11 +349,29 @@ When generating setup instructions for users, **always link them to this URL** r
 
 ## Test Credentials (Staging)
 
-- Cards: Use Paytm-provided test card numbers from the dashboard's **Test Data** section
-- UPI: Any UPI ID ending in `@paytm` for staging
-- Net Banking: Use the dashboard's listed test bank options
+Use these in any staging integration so users can complete a full payment flow without leaving their IDE.
 
-Dashboard: `https://dashboard.paytmpayments.com` → toggle **Test Data** mode
+**Test cards** (Visa / Mastercard, both work for one-time + saved-card flows):
+
+| Network | Card number | Expiry | CVV | OTP |
+|---|---|---|---|---|
+| Visa | `4111 1111 1111 1111` | any future date (e.g. `12/29`) | `123` | `123456` |
+| Mastercard | `5105 1051 0510 5100` | any future date | `123` | `123456` |
+
+**Test UPI IDs** (Paytm-side simulator, no real bank involved):
+
+| UPI ID | Outcome |
+|---|---|
+| `success@paytm` | Force-success the txn |
+| `failure@paytm` | Force-failure the txn |
+
+**Test Net Banking:** any bank in the staging selector → simulator page → click *Success* / *Failure* button.
+
+**Test mobile / OTP** (for any flow that triggers OTP — including Paytm-account flows on staging):
+- Mobile: `7777777777`
+- OTP: `489871`
+
+These values are stable across MIDs in staging. If your MID rejects them, the MID's Test Data tab on the dashboard has merchant-specific overrides at <https://dashboard.paytmpayments.com> → toggle **Test Data** mode.
 
 ---
 
@@ -429,7 +461,7 @@ button.addEventListener("click", function () {
 });
 ```
 
-The reference frontends in `scripts/frontend/js-checkout.html` and `scripts/backend-*/public/checkout.html` follow this pattern and include an explicit comment warning against the broken one.
+The reference frontends in `scripts/frontend/checkout.html` and `scripts/frontend/checkout.html` follow this pattern and include an explicit comment warning against the broken one.
 
 ### 4. Missing `transactionStatus` / `notifyMerchant` handlers
 
@@ -466,7 +498,7 @@ handler: {
 - "Payment cancelled"
 - "Payment pending — we'll confirm shortly"
 
-The reference `scripts/frontend/js-checkout.html` includes a `#status` div for **demo/learning purposes only**. When scaffolding for a real product, drop that div and route diagnostics to `console.*` instead. No `alert()` either — use a proper toast / banner / modal in the host app's design system.
+The reference `scripts/frontend/checkout.html` includes a `#status` div for **demo/learning purposes only**. When scaffolding for a real product, drop that div and route diagnostics to `console.*` instead. No `alert()` either — use a proper toast / banner / modal in the host app's design system.
 
 ### 6. Merchant key in `.env` must be wrapped in double quotes
 
@@ -536,7 +568,7 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 | "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew", "membership" | **Subscription** | Backend: `POST /subscription/create` with `requestType: "NATIVE_SUBSCRIPTION"` and **flat** subscription fields inside `body`. Frontend: JS Checkout for the consent screen. → `references/subscriptions.md` |
 | "payment link", "shareable link", "send link via SMS/WhatsApp/email", "invoice link" | **Payment Link** | Backend: `POST /link/create`. **No frontend** — Paytm hosts the checkout page; you only share the returned `shortUrl`. → `references/payment-links.md` |
 | "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** | Backend: `POST /paymentservices/qr/create`. **No JS Checkout** — render the returned `image` (base64 PNG) or `qrData` (UPI deep-link) on a screen / print it. → `references/qr-codes.md` |
-| "checkout page", "pay button on website", "in-app payment", "one-time payment" | **JS Checkout (Payment)** | Backend: `requestType: "Payment"` + Initiate Transaction. Frontend: `scripts/frontend/js-checkout.html` pattern. → `references/js-checkout.md` |
+| "checkout page", "pay button on website", "in-app payment", "one-time payment" | **JS Checkout (Payment)** | Backend: `requestType: "Payment"` + Initiate Transaction. Frontend: `scripts/frontend/checkout.html` pattern. → `references/js-checkout.md` |
 
 **Crucially:** Payment Link and Dynamic QR flows **do NOT require JS Checkout** at all — no merchant `.js` script, no `window.Paytm.CheckoutJS`. The customer pays on Paytm-hosted infrastructure (web link or UPI app). The merchant's only frontend job is to display the URL / QR image.
 
@@ -552,6 +584,15 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 
 If a user explicitly asks for wallet support, decline the wallet-specific code generation and route them to their Paytm KAM / dashboard.
 
+### 10. Production guardrails baked into the reference backends
+
+Every backend (`scripts/backend-{node,python,spring}`) wires in two production-critical concerns by default — keep them when adapting code:
+
+- **Idempotency on every `/paytm/create-*` endpoint.** Send `Idempotency-Key: <uuid>` as a request header (or `idempotencyKey` in the body). Repeats with the same key replay the cached response with `Idempotent-Replayed: true` instead of generating a second Paytm order. Backed by a 24h in-memory cache by default — **swap for Redis / DB in production**. Definitive 4xx errors are cached too; transient 5xx are not, so retries can succeed.
+- **S2S webhook receiver at `POST /paytm/webhook`.** Verifies `head.signature` against the raw body bytes Paytm sent (re-serializing breaks the signature), dedupes on `(orderId, status)` for at-least-once delivery, then calls a stub `fulfillOrder` hook. Returns 200 fast on success or duplicates, 401 on signature failure, 5xx on processing errors so Paytm retries. Replace the stub with your DB write / queue push.
+
+When generating new endpoints from these backends, copy the `withIdempotency` wrapper and the webhook handler verbatim — don't reinvent them.
+
 ---
 
 ## Reference Files
@@ -565,9 +606,10 @@ If a user explicitly asks for wallet support, decline the wallet-specific code g
 
 **Reference backends + frontend**
 - `scripts/backend-node/` — Express + `paytmchecksum`
-- `scripts/backend-spring/` — Spring MVC + `RestTemplate`
+- `scripts/backend-spring/` — Spring Boot 3 + Jakarta + executable JAR (recommended Java reference)
+- `scripts/backend-spring-legacy/` — Spring MVC 5 + `javax.servlet` + WAR (Tomcat 9 only — keep using if you're locked on the older stack)
 - `scripts/backend-python/` — Flask + `paytmchecksum`
-- `scripts/frontend/js-checkout.html` — minimal copy-paste browser page
+- `scripts/frontend/checkout.html` — minimal copy-paste browser page
 
 ---
 

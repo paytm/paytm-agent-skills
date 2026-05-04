@@ -3,7 +3,7 @@ package com.paytm.demo.web;
 import com.paytm.demo.config.PaytmMerchantConfig;
 import com.paytm.pg.merchant.PaytmChecksum;
 import java.util.TreeMap;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Validates CHECKSUMHASH on Paytm callback / redirect payloads (form parameters).
