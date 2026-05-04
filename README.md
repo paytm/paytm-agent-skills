@@ -31,7 +31,7 @@ The skill teaches your AI agent the full Paytm spec, integration patterns, and c
 > *"I am building a fitness app with a ₹499 monthly plan. Integrate Paytm so users get charged automatically every month."*
 
 **Payment Links**
-> *"I am a freelance designer. I want to generate Paytm payment links for my clients, share them, and track which ones have been paid. Build this for me."*
+> *"I am a freelance designer. I want to generate payment links for my clients, share them, and track which ones have been paid. Build this for me."*
 
 **QR Codes**
 > *"I run a cloud kitchen website. Integrate Paytm to display a QR code on my website with the bill amount for customers to scan and pay via UPI."*
@@ -49,8 +49,8 @@ mkdir -p ~/.claude/skills
 git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills/paytm-integration
 ``` 
 
-**Claude Code:** Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.  
-**Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.    
+- **Claude Code:** Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.  
+- **Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.    
 
 ### ChatGPT, Gemini, and other LLMs
 
