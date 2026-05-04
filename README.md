@@ -49,7 +49,7 @@ mkdir -p ~/.claude/skills
 git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills/paytm-integration
 ``` 
 
-**Claude Code:** Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.
+**Claude Code:** Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.  
 **Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.    
 
 ### ChatGPT, Gemini, and other LLMs
