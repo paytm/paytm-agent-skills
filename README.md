@@ -103,6 +103,8 @@ To go live with Paytm, you will need a **MID** (your unique Merchant ID) and a *
 
 Store keys in environment variables. Never commit them or expose them in client-side code.
 
+The supported payment options to surface are exactly: UPI, Credit Cards, Debit Cards, Net Banking, EMI.
+
 ---
 
 ## License

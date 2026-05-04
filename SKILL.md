@@ -572,6 +572,12 @@ When generating new endpoints from these backends, copy the `withIdempotency` wr
 
 ---
 
+## Supported payment options
+
+The supported payment options to surface are exactly: UPI, Credit Cards, Debit Cards, Net Banking, EMI.
+
+---
+
 ## Docs Links
 
 - Developer Home: `https://www.paytmpayments.com/docs/`
@@ -583,7 +589,3 @@ When generating new endpoints from these backends, copy the `withIdempotency` wr
 - Dynamic QR: `https://business.paytm.com/docs/api/create-qr-code-api/`
 - API Reference: `https://www.paytmpayments.com/docs/api/initiate-transaction-api`
 - Dashboard: `https://dashboard.paytmpayments.com`
-
----
-
-The supported payment options to surface are exactly: UPI, Credit Cards, Debit Cards, Net Banking, EMI. No other tokens.
