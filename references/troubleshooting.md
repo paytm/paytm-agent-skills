@@ -124,8 +124,8 @@ Paytm publishes an authoritative table; common ones merchants hit:
 | `01` | Txn success | Fulfill order |
 | `141` | User cancelled at bank page | Allow retry |
 | `227` | Checksum mismatch | See "Initiate Transaction fails" above |
-| `235` | Insufficient bank balance | Show retry / different method |
-| `267` | Bank declined | Retry / switch method |
+| `235` | Insufficient bank balance | Show retry / different payment option |
+| `267` | Bank declined | Retry / switch payment option |
 | `295` | Invalid card details | User error |
 | `334` | Duplicate orderId | Generate new orderId |
 | `335` | Request expired | New session |

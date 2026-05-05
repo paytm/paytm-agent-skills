@@ -10,7 +10,7 @@ description: >
   "paytmpayments.com", "/theia/api/", "subscription/create", "/link/create", "paymentservices/qr",
   "WEBSTAGING", "NATIVE_SUBSCRIPTION", or any path under `paytmpayments.com/docs`.
   Do NOT trigger on generic PSP terms ("MID", "merchant key", "checksum", "PG integration") in
-  isolation — those overlap with Razorpay / Stripe / Cashfree and would mis-trigger the skill.
+  isolation — those overlap with other payment gateways and would mis-trigger the skill.
   Also trigger when the user explicitly mentions they are a Paytm merchant or developer.
 ---
 
@@ -315,10 +315,11 @@ If your MID rejects the values above, the MID's Test API Details tab has merchan
 | API | Endpoint |
 |---|---|
 | Initiate Transaction | `POST /theia/api/v1/initiateTransaction` |
-| Fetch Payment Options | `POST /theia/api/v2/fetchPaymentOptions` |
-| Process Transaction | `POST /theia/api/v1/processTransaction` |
 | Transaction Status | `POST /v3/order/status` |
 | Create Subscription | `POST /subscription/create` |
+| Create Payment Link | `POST /link/create` |
+| Fetch Link Transactions | `POST /link/fetchTransaction` |
+| Create Dynamic QR | `POST /paymentservices/qr/create` |
 
 All endpoints prefixed with the environment base URL.
 
@@ -349,9 +350,9 @@ These are real bugs Claude has produced when scaffolding Paytm integrations from
 
 ### 1. Hard-coded absolute paths to external certs / files
 
-**Symptom:** Project ships with `NODE_EXTRA_CA_CERTS=/Users/someone-else/certs/zscaler.crt` (or similar) baked into `.env` or code. Works on author's machine, breaks on every other machine.
-**Fix:** Use **project-relative paths** for any cert / keystore / file the project owns. Place the cert inside the project (e.g. `./certs/zscaler.crt`) and reference it relatively. Document in the README that corp-network users may need to point this at their local Zscaler/Netskope cert.
-**For Node:** `NODE_EXTRA_CA_CERTS=./certs/zscaler.crt` in `.env`, loaded via `dotenv`.
+**Symptom:** Project ships with `NODE_EXTRA_CA_CERTS=/Users/someone-else/certs/corp-proxy-ca.crt` (or similar) baked into `.env` or code. Works on author's machine, breaks on every other machine.
+**Fix:** Use **project-relative paths** for any cert / keystore / file the project owns. Place the cert inside the project (e.g. `./certs/corp-proxy-ca.crt`) and reference it relatively. Document in the README that users behind a corporate proxy may need to point this at their local proxy's CA bundle.
+**For Node:** `NODE_EXTRA_CA_CERTS=./certs/corp-proxy-ca.crt` in `.env`, loaded via `dotenv`.
 
 ### 2. `https://localhost` in callback / dev URLs
 
@@ -479,7 +480,7 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 # PAYTM_PG_DOMAIN=""               # auto-derived from PAYTM_ENVIRONMENT
 # PAYTM_CALLBACK_URL=""            # auto-derived from PAYTM_CALLBACK_BASE
 # PAYTM_STATUS_API_URL=""          # auto-derived from PAYTM_PG_DOMAIN
-# NODE_EXTRA_CA_CERTS="./certs/zscaler.crt"   # corp networks (Zscaler/Netskope) only
+# NODE_EXTRA_CA_CERTS="./certs/corp-proxy-ca.crt"   # only when behind a corporate proxy with a custom CA
 ```
 
 ### 8. ❗ Picked the wrong flow (Payment vs Subscription vs Link vs QR)

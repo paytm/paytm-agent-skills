@@ -69,7 +69,7 @@ Content-Type: application/json
 |---|---|
 | `industryTypeId` | Provisioned per MID (e.g. `Retail`); rarely needed in body if dashboard default is correct |
 | `channelId` | `WEB` (web) or `WAP` (mobile web). Most merchants leave it on dashboard default |
-| `enablePaymentMode` / `disablePaymentMode` | Restrict allowed methods; array of `{ "mode": "UPI" \| "CC" \| "DC" \| "NB" \| "PAYTM_DIGITAL_CREDIT", "channels": [...] }` |
+| `enablePaymentMode` / `disablePaymentMode` | Restrict allowed payment options; array of `{ "mode": "UPI" \| "CC" \| "DC" \| "NB", "channels": [...] }` |
 | `goods` / `shippingInfo` | Required for some affordability/EMI flows |
 | `extendInfo.mercUnqRef` | Echoed back in callbacks; useful for cross-system reconciliation |
 
@@ -231,7 +231,7 @@ POST {pgDomain}/link/create
     "linkName": "Invoice-001",
     "linkType": "FIXED",
     "linkDescription": "Payment for order 001",
-    "expiryDate": "30/12/2025 23:59:59",
+    "expiryDate": "30/12/2027 23:59:59",
     "sendSms": true,
     "sendEmail": false,
     "customerMobile": "9999999999",

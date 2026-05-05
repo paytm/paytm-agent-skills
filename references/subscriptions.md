@@ -281,7 +281,7 @@ The user sees the consent screen showing the recurring amount + frequency, appro
 
 ### "No payment options available" on the consent screen
 
-`/subscription/create` returned a `txnToken` and JS Checkout opened, but the modal shows **"No payment options available"** (or an empty list of methods).
+`/subscription/create` returned a `txnToken` and JS Checkout opened, but the modal shows **"No payment options available"** (or an empty list of payment options).
 
 **This is not a code bug — it's a dashboard provisioning issue.** Subscription / UPI Autopay must be explicitly enabled on the MID by Paytm. The API and JS Checkout will let you create tokens against the MID even when the product isn't enabled, so the failure surfaces only at render time.
 
