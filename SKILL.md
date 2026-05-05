@@ -62,7 +62,7 @@ Supported integration variants in this skill: **JS Checkout** (web), **Subscript
 >
 > **Critical mistakes that keep recurring:**
 > - **Subscription:** endpoint is `/subscription/create` on staging, `/theia/api/v1/subscription/create` on prod. `requestType: "NATIVE_SUBSCRIPTION"` (or `"NATIVE_MF_SIP"` for SIPs). `head` requires `clientId` + `channelId` + `signature`. Query params include a required `traceId`. Subscription fields are flat in `body` - no `subscriptionDetails` wrapper. Both `subscriptionFrequency` (number) and `subscriptionFrequencyUnit` (period) are required. **Safe defaults:** `subscriptionPaymentMode: "UNKNOWN"`, `txnAmount.value: "2.00"` (min for CC/DC), `subscriptionGraceDays: "3"` (max for CC/DC), `subscriptionStartDate` = today, `subscriptionEnableRetry: "0"` with `subscriptionRetryCount` omitted, no `renewalAmount`.
-> - **Payment Link:** identifier in fetch / update / resend / expire calls is `linkId` as a **JSON number**, NOT a string. Resend path is `/link/resendNotification`, NOT `/link/resend`.
+> - **Payment Link:** identifier in fetch / update / resend / expire calls is `linkId` as a **JSON number**, NOT a string. Resend path is `/link/resendNotification`, NOT `/link/resend`. **BOTH `linkName` AND `linkDescription` must be alphanumerics + spaces only** (≥ 3 chars) — sanitize both fields on the server before sending; raw user input with `#`, `@`, `-`, `_`, `.`, `'` etc. fails validation. Reconcile via `/link/fetchTransaction`, NOT `/v3/order/status`.
 > - **Dynamic QR:** `posId` is **required** (skipping it returns 400). `amount` is a **string** with two decimals.
 
 ### Step 1 – Generate Checksum (Server-side)

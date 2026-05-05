@@ -4,7 +4,8 @@
 //   - head requires tokenType: "AES" + timestamp (Unix epoch SECONDS as string)
 //   - linkType: "FIXED" by default (GENERIC ignores amount)
 //   - amount is a JSON number, NOT a string
-//   - linkDescription must be ≥ 3 chars, alphanumerics + spaces only
+//   - linkName AND linkDescription must each be ≥ 3 chars, alphanumerics + spaces
+//     only (same rule for both fields). Sanitize via sanitizeDescription() below.
 //   - customer details nested under customerContact (not top-level)
 //   - expiryDate format DD/MM/YYYY HH:MM:SS (most MIDs)
 import crypto from "node:crypto";
