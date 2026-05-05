@@ -6,7 +6,7 @@ description: >
   generating checksums, calling Initiate Transaction / Transaction Status APIs, integrating the JS
   Checkout, handling callbacks, generating payment links, generating dynamic QR codes, implementing
   UPI Autopay subscriptions, or troubleshooting Paytm PG errors. Trigger when the question contains
-  Paytm-specific tokens: "Paytm", "paytmchecksum", "txnToken", "CHECKSUMHASH", "securegw",
+  Paytm-specific tokens: "Paytm", "paytmchecksum", "txnToken", "CHECKSUMHASH",
   "paytmpayments.com", "/theia/api/", "subscription/create", "/link/create", "paymentservices/qr",
   "WEBSTAGING", "NATIVE_SUBSCRIPTION", or any path under `paytmpayments.com/docs`.
   Do NOT trigger on generic PSP terms ("MID", "merchant key", "checksum", "PG integration") in
@@ -38,12 +38,10 @@ Supported integration variants in this skill: **JS Checkout** (web), **Subscript
 
 ## Environments
 
-| Environment | Base URL (newer MIDs — default) | Legacy host |
-|---|---|---|
-| Staging | `https://securestage.paytmpayments.com` | `https://securegw-stage.paytm.in` |
-| Production | `https://secure.paytmpayments.com` | `https://securegw.paytm.in` |
-
-New merchants are provisioned on `paytmpayments.com`; older MIDs may still resolve only on `paytm.in`. Use whichever the dashboard shows for your MID — the two are not interchangeable per MID. Always build and test against staging first.
+| Environment | Base URL |
+|---|---|
+| Staging | `https://securestage.paytmpayments.com` |
+| Production | `https://secure.paytmpayments.com` |
 
 ---
 

@@ -9,14 +9,10 @@ Working backends in three languages live under `scripts/backend-{node,spring,pyt
 
 ## PG domains
 
-Newer merchants are provisioned on `paytmpayments.com`; older MIDs may still be on `paytm.in`. Use whichever the dashboard shows for your MID.
-
-| Environment | Newer (default) | Legacy |
-|---|---|---|
-| Production | `https://secure.paytmpayments.com` | `https://securegw.paytm.in` |
-| Staging | `https://securestage.paytmpayments.com` | `https://securegw-stage.paytm.in` |
-
-`pgDomain` is used for: `initiateTransaction` API, Transaction Status API, and the merchant CheckoutJS loader URL.
+| Environment | Base URL |
+|---|---|
+| Production | `https://secure.paytmpayments.com` |
+| Staging | `https://securestage.paytmpayments.com` |
 
 ---
 

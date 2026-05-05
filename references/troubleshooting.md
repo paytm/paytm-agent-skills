@@ -83,7 +83,7 @@ Other causes for the same symptom:
 | Blank popup, immediate close | Browser blocked the popup. Use `redirect: true` or trigger from a user gesture (click handler) |
 | `init` resolves but `invoke` does nothing | `txnToken` already used / expired (15-min TTL) — generate a fresh one |
 | `SESSION_EXPIRED` event | `txnToken` past its 15-minute TTL — call `/paytm/create-order` again |
-| Loader 403 / 404 | Wrong host (`securegw.paytm.in` vs `secure.paytmpayments.com`) for that MID. Check the dashboard for the correct PG domain |
+| Loader 403 / 404 | PG domain mismatch — check Developer Settings → API Keys on the dashboard for the correct host |
 | Mixed-content blocked | Page on HTTP loading HTTPS Paytm script; serve your page over HTTPS |
 
 ---
@@ -142,7 +142,7 @@ For unfamiliar codes: query Transaction Status API with the orderId — `body.re
 
 ## Environment / config gotchas
 
-- **PG domain.** New merchants are provisioned on `secure.paytmpayments.com` (prod) / `securestage.paytmpayments.com` (staging). Older merchants may still be on `securegw.paytm.in` / `securegw-stage.paytm.in`. Check your dashboard; both are documented but not interchangeable per MID.
+- **PG domain.** Use `https://secure.paytmpayments.com` (prod) and `https://securestage.paytmpayments.com` (staging). The exact host provisioned for your MID is shown under Developer Settings → API Keys on the dashboard.
 - **One environment per MID.** Staging MID will not authenticate against prod host (and gives `401`/checksum errors that look like a key mismatch).
 - **`websiteName` is per-MID.** Defaults seen: `DEFAULT`, `WEB_STAGING`, `WEBSTAGING`, `retail`. Wrong value → `initiateTransaction` succeeds with a token that fails to render.
 - **Currency is INR-only** for domestic Paytm PG. Cross-border requires a separate account.
