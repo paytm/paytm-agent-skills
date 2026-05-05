@@ -28,6 +28,17 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 >     If you don't know which rail the user will pick (i.e. `subscriptionPaymentMode: "UNKNOWN"`), use the stricter limits to stay compatible with all rails: amount ≥ `"2.00"`, graceDays ≤ `"3"`.
 > 15. **Don't send `renewalAmount`** by default. It's optional in the API and most flows don't need it; sending it can cause unexpected behaviour at consent time. Only add it if you explicitly want to surface a different recurring amount on the consent screen than `txnAmount.value`.
 > 16. **`subscriptionStartDate` defaults to today (IST).** Paytm rejects past dates; tomorrow / future is fine but pushes the first debit out. Today (`new Date()` formatted `YYYY-MM-DD` in IST) is the safest default.
+> 17. **`subscriptionGraceDays` must be STRICTLY LESS than the cycle length** (cycle = `subscriptionFrequency × subscriptionFrequencyUnit` in days). Violating this returns error `4001` with message `Grace days cannot be greater than the frequency set against the subscription`. The skill's default `graceDays: "3"` works for monthly / yearly cycles but **breaks for any cycle ≤ 3 days**:
+>
+>     | frequency × unit | cycle (days) | safe graceDays |
+>     |---|---|---|
+>     | `"1"` × `DAY` | 1 | omit (or `"0"`) |
+>     | `"2"` × `DAY` | 2 | `"1"` |
+>     | `"1"` × `WEEK` | 7 | up to `"6"` (or `"3"` for CC/DC compat) |
+>     | `"1"` × `MONTH` | ~30 | `"3"` (CC/DC cap) or up to `"29"` for UPI |
+>     | `"1"` × `YEAR` | ~365 | `"3"` (CC/DC cap) or higher for UPI |
+>
+>     When you change `subscriptionFrequencyUnit` from `MONTH` to anything shorter, **also drop `graceDays` to ≤ cycle − 1**. Daily mandates: omit `graceDays` entirely.
 
 ---
 
@@ -110,7 +121,7 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 > **Defaults baked into this example (applied unless the user explicitly overrides):**
 > - `subscriptionPaymentMode: "UNKNOWN"` - lets Paytm render all enabled rails on consent. Don't hard-code a specific rail unless you want to restrict.
 > - `txnAmount.value: "2.00"` - first-debit amount must be **> ₹1** for CC/DC mandates. `"2.00"` is the safe minimum that works across all rails.
-> - `subscriptionGraceDays: "3"` - CC/DC reject values > 3. `"3"` is the safe maximum across all rails.
+> - `subscriptionGraceDays: "3"` - CC/DC reject values > 3, AND must be < cycle length (`subscriptionFrequency × unit-in-days`). Safe for monthly+ cycles. **Drop or omit for daily / sub-3-day cycles** (else Paytm returns `4001: Grace days cannot be greater than the frequency`).
 > - `subscriptionStartDate` - today (IST), formatted `YYYY-MM-DD`. Generate at request time, don't hard-code.
 > - `subscriptionEnableRetry: "0"` - retry disabled.
 >
@@ -272,7 +283,7 @@ The user sees the consent screen showing the recurring amount + frequency, appro
 | `2009` | Duplicate request, same orderId already in progress | Generate a fresh `orderId` |
 | `2013` | Mid in query param doesn't match Mid in request | `mid` value must be identical in `?mid=` and in `body.mid` |
 | `2014` | OrderId in query param doesn't match OrderId in request | Same - keep `?orderId=` and `body.orderId` identical |
-| `4001` | Invalid Frequency Unit / Invalid Subscription Amount Type | `subscriptionFrequencyUnit` or `subscriptionAmountType` value not recognized - verify enum |
+| `4001` | `Invalid Frequency Unit` / `Invalid Subscription Amount Type` / **`Grace days cannot be greater than the frequency set against the subscription`** | Verify `subscriptionFrequencyUnit` enum value; verify `subscriptionAmountType` is `FIX`/`VARIABLE`; **verify `subscriptionGraceDays` < cycle length** (`subscriptionFrequency × unit-in-days`) — see warning #17. Daily mandates: omit `graceDays`. |
 | `900` | System error | Paytm-side; retry with the same `orderId` |
 
 ---
