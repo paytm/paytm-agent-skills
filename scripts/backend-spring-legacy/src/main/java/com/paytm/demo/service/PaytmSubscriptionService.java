@@ -25,7 +25,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Native Create Subscription — POST /subscription/create.
+ * Native Create Subscription - POST /subscription/create.
  *
  * Doc: https://www.paytmpayments.com/docs/api/initiate-subscription-api
  *
@@ -55,7 +55,7 @@ public class PaytmSubscriptionService {
   }
 
   /**
-   * Overload that accepts a per-request {@code requestBaseUrl} for callback derivation —
+   * Overload that accepts a per-request {@code requestBaseUrl} for callback derivation -
    * matches the {@code serverBaseUrl} parameter on Node/Python.
    */
   public CreateResult create(CreateRequest req, String requestBaseUrl) throws Exception {
@@ -224,7 +224,7 @@ public class PaytmSubscriptionService {
     public String expiryDate;      // YYYY-MM-DD; defaults to start + 1y
     public String graceDays;       // default "3"
     public String paymentMode;     // CC | DC | BANK_MANDATE | UNKNOWN (default)
-    public String mandateType;     // E_MANDATE | PAPER_MANDATE — only with BANK_MANDATE
+    public String mandateType;     // E_MANDATE | PAPER_MANDATE - only with BANK_MANDATE
     public String orderId;         // optional caller-supplied
   }
 

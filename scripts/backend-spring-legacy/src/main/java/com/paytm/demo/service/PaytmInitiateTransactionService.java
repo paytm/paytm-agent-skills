@@ -38,7 +38,7 @@ public class PaytmInitiateTransactionService {
   }
 
   /**
-   * Overload that accepts a per-request {@code requestBaseUrl} for callback derivation —
+   * Overload that accepts a per-request {@code requestBaseUrl} for callback derivation -
    * matches the {@code serverBaseUrl} parameter on Node/Python.
    */
   public InitiateResult initiate(String amount, String custId, String mobile, String email,
@@ -72,7 +72,7 @@ public class PaytmInitiateTransactionService {
 
     JSONObject userInfo = new JSONObject();
     userInfo.put("custId", custId != null && !custId.isEmpty() ? custId : "CUST_DEMO");
-    // mobile + email are strongly recommended — pre-fill the consent screen and
+    // mobile + email are strongly recommended - pre-fill the consent screen and
     // drive OTP / notifications. Real merchants should always pass these through.
     if (mobile != null && !mobile.trim().isEmpty()) {
       userInfo.put("mobile", mobile.trim());
@@ -133,7 +133,7 @@ public class PaytmInitiateTransactionService {
       return "1.00";
     }
     try {
-      // Use BigDecimal — never double — for currency math. Binary float drift breaks
+      // Use BigDecimal - never double - for currency math. Binary float drift breaks
       // exactly at two-decimal boundaries (e.g. 0.1 + 0.2). HALF_UP matches accounting.
       BigDecimal v = new BigDecimal(amount.trim()).setScale(2, RoundingMode.HALF_UP);
       if (v.signum() <= 0) {

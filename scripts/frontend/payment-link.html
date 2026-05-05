@@ -26,7 +26,7 @@
       Server calls <code>/paytm/create-link</code> → Paytm returns a short URL you can
       share via SMS / WhatsApp / email. The customer pays on a Paytm-hosted page.
       Reconcile via <code>/paytm/link-transactions</code> (which calls Paytm's
-      <code>/link/fetchTransaction</code>) — not <code>/v3/order/status</code>.
+      <code>/link/fetchTransaction</code>) - not <code>/v3/order/status</code>.
     </p>
 
     <label>Amount (INR)</label>
@@ -95,7 +95,7 @@
           }),
         })
           .then(function (r) {
-            if (!r.ok) return r.text().then(function (t) { throw new Error("HTTP " + r.status + " — " + t); });
+            if (!r.ok) return r.text().then(function (t) { throw new Error("HTTP " + r.status + " - " + t); });
             return r.json();
           })
           .then(function (data) {
@@ -131,7 +131,7 @@
           }),
         })
           .then(function (r) {
-            if (!r.ok) return r.text().then(function (t) { throw new Error("HTTP " + r.status + " — " + t); });
+            if (!r.ok) return r.text().then(function (t) { throw new Error("HTTP " + r.status + " - " + t); });
             return r.json();
           })
           .then(function (data) {

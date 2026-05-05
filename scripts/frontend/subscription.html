@@ -21,7 +21,7 @@
       <code>txnToken</code> → JS Checkout for the user mandate consent.
     </p>
 
-    <button type="button" id="subscribeBtn" disabled>Subscribe — first debit ₹2.00</button>
+    <button type="button" id="subscribeBtn" disabled>Subscribe - first debit ₹2.00</button>
     <div id="payment-result" role="status" aria-live="polite"></div>
 
     <script>
@@ -60,19 +60,19 @@
           body: JSON.stringify({
             // Defaults baked in on the server side; override here if needed.
             // amount:        first-debit amount (>= 2.00 for cross-rail safety)
-            // renewalAmount: optional — what you want shown on the consent screen
+            // renewalAmount: optional - what you want shown on the consent screen
             // frequencyUnit: DAY | WEEK | MONTH | YEAR | ONDEMAND
             amount: "2.00",
             frequency: "1",
             frequencyUnit: "MONTH",
             custId: "CUST_DEMO",
-            // mobile / email pre-fill the consent screen — strongly recommended in real flows
+            // mobile / email pre-fill the consent screen - strongly recommended in real flows
             // mobile: "9999999999",
             // email: "buyer@example.com",
           }),
         })
           .then(function (r) {
-            if (!r.ok) return r.text().then(function (t) { throw new Error("HTTP " + r.status + " — " + t); });
+            if (!r.ok) return r.text().then(function (t) { throw new Error("HTTP " + r.status + " - " + t); });
             return r.json();
           })
           .then(function (data) {
@@ -105,7 +105,7 @@
                   if (data && data.STATUS === "TXN_SUCCESS") {
                     showResult("success", "Subscription set up. Mandate is active.");
                   } else if (data && data.STATUS === "PENDING") {
-                    showResult("pending", "Mandate pending — we'll confirm shortly.");
+                    showResult("pending", "Mandate pending - we'll confirm shortly.");
                   } else {
                     showResult("failure", "Subscription setup failed. Please try again.");
                   }

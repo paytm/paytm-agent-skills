@@ -87,18 +87,18 @@
           .then(function (r) {
             if (!r.ok) {
               return r.text().then(function (t) {
-                throw new Error("HTTP " + r.status + " — " + t);
+                throw new Error("HTTP " + r.status + " - " + t);
               });
             }
             return r.json();
           })
           .then(function (data) {
             if (!window.Paytm || !window.Paytm.CheckoutJS) {
-              throw new Error("Paytm.CheckoutJS not available — loader may have failed");
+              throw new Error("Paytm.CheckoutJS not available - loader may have failed");
             }
 
             // IMPORTANT: do NOT wrap init/invoke in CheckoutJS.onLoad() here.
-            // onLoad fires ONCE when the script first loads — by the time the user
+            // onLoad fires ONCE when the script first loads - by the time the user
             // clicks Pay, it has already fired and the callback will never run.
             // CheckoutJS is already ready at this point (we set payBtn.disabled=false
             // from the script's onload above), so call init/invoke directly.
@@ -130,7 +130,7 @@
                   if (status && status.STATUS === "TXN_SUCCESS") {
                     showResult("success", "Payment successful.");
                   } else if (status && status.STATUS === "PENDING") {
-                    showResult("pending", "Payment pending — we'll confirm shortly.");
+                    showResult("pending", "Payment pending - we'll confirm shortly.");
                   } else {
                     showResult("failure", "Payment failed. Please try again.");
                   }

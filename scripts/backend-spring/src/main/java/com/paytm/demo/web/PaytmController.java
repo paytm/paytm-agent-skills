@@ -73,7 +73,7 @@ public class PaytmController {
       if (e.orderId != null) err.put("orderId", e.orderId);
       if (e.paytm != null) err.put("paytm", e.paytm);
       int s = e.httpStatus.value();
-      // Cache definitive 4xx only — never 5xx so retries can succeed.
+      // Cache definitive 4xx only - never 5xx so retries can succeed.
       if (key != null && !key.isEmpty() && s >= 400 && s < 500) idempotency.put(key, s, err);
       return ResponseEntity.status(s).body(err);
     } catch (Exception e) {
@@ -174,7 +174,7 @@ public class PaytmController {
   }
 
   /**
-   * Transaction Status API (server-side verification) — recommended in JS Checkout docs before fulfilling orders.
+   * Transaction Status API (server-side verification) - recommended in JS Checkout docs before fulfilling orders.
    *
    * @see <a href="https://www.paytmpayments.com/docs/jscheckout-verify-payment">Verify Payment Status</a>
    */
@@ -209,7 +209,7 @@ public class PaytmController {
     b.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Paytm callback</title></head><body>");
     b.append("<h1>Paytm callback</h1>");
     b.append("<p><strong>CHECKSUMHASH validation:</strong> ");
-    b.append(checksumOk ? "OK (signature verified)" : "FAILED or CHECKSUMHASH missing — do not treat as paid");
+    b.append(checksumOk ? "OK (signature verified)" : "FAILED or CHECKSUMHASH missing - do not treat as paid");
     b.append("</p>");
     b.append("<p>Per <a href=\"https://www.paytmpayments.com/docs/jscheckout-verify-payment\">Verify Payment Status</a>, ");
     b.append("also call Transaction Status API (or webhook) before confirming the order.</p>");

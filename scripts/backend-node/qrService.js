@@ -1,10 +1,10 @@
-// Create Dynamic QR — POST /paymentservices/qr/create
+// Create Dynamic QR - POST /paymentservices/qr/create
 // Doc: https://www.paytmpayments.com/docs/api/create-qr-code-api
 // Defaults & gotchas baked in:
 //   - posId is REQUIRED (omitting it returns 400)
 //   - amount must be a STRING with two decimals
 //   - head requires clientId + version + signature
-//   - Response `image` is RAW base64 — we prepend `data:image/png;base64,` here
+//   - Response `image` is RAW base64 - we prepend `data:image/png;base64,` here
 //     so the frontend can drop it straight into <img src>.
 import crypto from "node:crypto";
 import PaytmChecksum from "paytmchecksum";

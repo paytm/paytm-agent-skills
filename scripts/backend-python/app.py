@@ -1,4 +1,4 @@
-"""Flask backend for Paytm JS Checkout — mirrors backend-node/server.js routes.
+"""Flask backend for Paytm JS Checkout - mirrors backend-node/server.js routes.
 
 Endpoints:
   GET  /paytm-client-config.json     mid + loader_url for the browser
@@ -84,7 +84,7 @@ def _with_idempotency(handler):
             resp_body = {"error": True, "code": e.code, "message": str(e)}
             if e.order_id: resp_body["orderId"] = e.order_id
             if e.paytm: resp_body["paytm"] = e.paytm
-            # Cache only definitive 4xx — never 5xx so retries can succeed.
+            # Cache only definitive 4xx - never 5xx so retries can succeed.
             if key and 400 <= e.http_status < 500:
                 set_cached(key, e.http_status, resp_body)
             return jsonify(resp_body), e.http_status
@@ -156,7 +156,7 @@ app.add_url_rule("/paytm/create-qr",           view_func=_with_idempotency(_do_c
 def link_transactions():
     """Reconcile a Payment Link via /link/fetchTransaction.
 
-    Use this for Payment Link flows instead of /v3/order/status — the response
+    Use this for Payment Link flows instead of /v3/order/status - the response
     wraps each payer's order under body.orders[].
     """
     payload = request.get_json(silent=True) or {}
@@ -174,7 +174,7 @@ def link_transactions():
 
 @app.post("/paytm/webhook")
 def webhook():
-    """Paytm S2S webhook receiver — verifies head.signature, dedupes,
+    """Paytm S2S webhook receiver - verifies head.signature, dedupes,
     applies state transition. See webhook_handler.py for the contract."""
     raw_body = request.get_data(as_text=True)
     parsed = request.get_json(silent=True) or {}
@@ -182,7 +182,7 @@ def webhook():
         status, body = handle_webhook(raw_body, parsed)
         return jsonify(body), status
     except Exception as e:
-        # 5xx so Paytm retries — never silently swallow a webhook we couldn't process.
+        # 5xx so Paytm retries - never silently swallow a webhook we couldn't process.
         app.logger.exception("[paytm webhook] handler crash")
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -203,7 +203,7 @@ def _callback_html(params: dict, ok: bool) -> str:
     # is untrusted input. HTML-escape before rendering or you've shipped reflected XSS.
     from html import escape
     lines = "\n".join(f"{escape(str(k))}={escape(str(v))}" for k, v in params.items())
-    verdict = "OK (signature verified)" if ok else "FAILED or CHECKSUMHASH missing — do not treat as paid"
+    verdict = "OK (signature verified)" if ok else "FAILED or CHECKSUMHASH missing - do not treat as paid"
     return (
         '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Paytm callback</title></head><body>'
         f'<h1>Paytm callback</h1><p><strong>CHECKSUMHASH validation:</strong> {verdict}</p>'

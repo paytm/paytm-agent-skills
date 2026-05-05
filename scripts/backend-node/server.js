@@ -14,7 +14,7 @@ import { handleWebhook } from "./webhookHandler.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-// Capture raw body bytes for webhook signature verification — Paytm signs the
+// Capture raw body bytes for webhook signature verification - Paytm signs the
 // body it sent, so re-serializing in your language can change key order /
 // whitespace and break the signature.
 app.use(express.json({
@@ -58,7 +58,7 @@ function withIdempotency(handler) {
     } catch (e) {
       const status = Number(e?.httpStatus) || 500;
       const body = payloadFromError(e);
-      // Cache failures only if Paytm-side definitive (4xx) — never on transient
+      // Cache failures only if Paytm-side definitive (4xx) - never on transient
       // 5xx so the next retry can succeed.
       if (key && status >= 400 && status < 500) setCached(key, status, body);
       res.status(status).json(body);
@@ -83,7 +83,7 @@ app.post("/paytm/create-qr", withIdempotency(async (req) => {
   return createDynamicQr({ ...(req.body ?? {}) });
 }));
 
-// Reconcile a Payment Link — POST /link/fetchTransaction. Use this for Payment
+// Reconcile a Payment Link - POST /link/fetchTransaction. Use this for Payment
 // Link flows instead of /v3/order/status; the response wraps each payer's
 // order under body.orders[].
 app.post("/paytm/link-transactions", async (req, res) => {
@@ -102,7 +102,7 @@ app.post("/paytm/webhook", async (req, res) => {
     const result = await handleWebhook({ rawBody: req.rawBody, parsed: req.body });
     res.status(result.httpStatus).json({ ok: result.ok, ...(result.detail || {}) });
   } catch (e) {
-    // 5xx so Paytm retries — never silently swallow a webhook we couldn't process.
+    // 5xx so Paytm retries - never silently swallow a webhook we couldn't process.
     console.error("[paytm webhook] handler crash", e);
     res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
@@ -144,7 +144,7 @@ function callbackHtml(params, checksumOk) {
   return [
     "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Paytm callback</title></head><body>",
     "<h1>Paytm callback</h1>",
-    `<p><strong>CHECKSUMHASH validation:</strong> ${checksumOk ? "OK (signature verified)" : "FAILED or CHECKSUMHASH missing — do not treat as paid"}</p>`,
+    `<p><strong>CHECKSUMHASH validation:</strong> ${checksumOk ? "OK (signature verified)" : "FAILED or CHECKSUMHASH missing - do not treat as paid"}</p>`,
     "<p>Also verify via Transaction Status API (or webhook) before confirming an order.</p>",
     `<pre>${lines}</pre>`,
     "</body></html>",

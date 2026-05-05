@@ -1,4 +1,4 @@
-"""Native Create Subscription — POST /subscription/create.
+"""Native Create Subscription - POST /subscription/create.
 
 Doc: https://www.paytmpayments.com/docs/api/initiate-subscription-api
 Defaults baked in:
@@ -70,7 +70,7 @@ def create_subscription(
     expiry_date: Optional[str] = None,
     grace_days: str = "3",
     payment_mode: str = "UNKNOWN",  # CC | DC | BANK_MANDATE | UNKNOWN
-    mandate_type: Optional[str] = None,  # E_MANDATE | PAPER_MANDATE — only with BANK_MANDATE
+    mandate_type: Optional[str] = None,  # E_MANDATE | PAPER_MANDATE - only with BANK_MANDATE
     order_id: Optional[str] = None,
     server_base_url: str = "",
 ) -> dict:

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 /**
  * Minimal in-process idempotency cache for the reference create endpoints.
  *
- * <p>PRODUCTION NOTE: in-memory and per-process — fine for the demo, NOT for a
+ * <p>PRODUCTION NOTE: in-memory and per-process - fine for the demo, NOT for a
  * real merchant deployment. Replace with Redis / a DB row keyed on the
  * idempotency key before going live.
  */

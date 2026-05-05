@@ -1,6 +1,6 @@
 """Minimal in-process idempotency cache for the reference create endpoints.
 
-PRODUCTION NOTE: this is in-memory and per-process — fine for the demo, NOT
+PRODUCTION NOTE: this is in-memory and per-process - fine for the demo, NOT
 fine for a real merchant deployment. Replace with Redis / DynamoDB / a DB row
 keyed on (idempotency_key -> {status, body, created_at}) before going live.
 The interface here is deliberately small so the swap is straightforward.
@@ -51,7 +51,7 @@ def set_cached(key: Optional[str], status: int, body) -> None:
 
 def read_key(headers, body) -> Optional[str]:
     """Header `Idempotency-Key` is the convention; some clients pass
-    `idempotencyKey` in the JSON body — accept both for ergonomics."""
+    `idempotencyKey` in the JSON body - accept both for ergonomics."""
     h = headers.get("Idempotency-Key") or headers.get("idempotency-key")
     if isinstance(h, str) and h.strip():
         return h.strip()

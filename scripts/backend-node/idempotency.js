@@ -1,6 +1,6 @@
 // Minimal in-process idempotency cache for the reference create endpoints.
 //
-// PRODUCTION NOTE: this is in-memory and per-process — fine for the demo, NOT
+// PRODUCTION NOTE: this is in-memory and per-process - fine for the demo, NOT
 // fine for a real merchant deployment. Replace with Redis / DynamoDB / a DB
 // table keyed on (idempotencyKey -> { status, body, createdAt }) before going
 // live. The interface here is deliberately small so the swap is straightforward.
@@ -38,7 +38,7 @@ export function setCached(key, status, body) {
 /**
  * Read the idempotency key from headers OR body.
  * Header `Idempotency-Key` is the recommended convention; some clients pass
- * `idempotencyKey` in the JSON body — accept both for ergonomics.
+ * `idempotencyKey` in the JSON body - accept both for ergonomics.
  */
 export function readKey(req) {
   const fromHeader = req.headers["idempotency-key"];

@@ -128,7 +128,7 @@ public final class PaytmMerchantConfig {
 
   /**
    * Per-request override of the callback URL. If {@code requestBaseUrl} is non-null
-   * (e.g. derived from the inbound HTTP request), it wins over the static config —
+   * (e.g. derived from the inbound HTTP request), it wins over the static config -
    * matches the Node/Python backends' {@code serverBaseUrl} parameter.
    */
   public static String callbackUrl(String requestBaseUrl) {
@@ -202,7 +202,7 @@ public final class PaytmMerchantConfig {
   }
 
   /**
-   * clientId is per-merchant — issued by Paytm during onboarding. "C11" works for most
+   * clientId is per-merchant - issued by Paytm during onboarding. "C11" works for most
    * single-merchant-key setups. Override via env {@code PAYTM_CLIENT_ID} or system property
    * {@code paytm.client.id}.
    */

@@ -1,4 +1,4 @@
-// Native Create Subscription — POST /subscription/create
+// Native Create Subscription - POST /subscription/create
 // Doc: https://www.paytmpayments.com/docs/api/initiate-subscription-api
 // Defaults baked in:
 //   - subscriptionPaymentMode: "UNKNOWN"  (Paytm renders all enabled rails)
@@ -51,7 +51,7 @@ export async function createSubscription({
   expiryDate,                       // YYYY-MM-DD; defaults to startDate + 1 year
   graceDays = "3",
   paymentMode = "UNKNOWN",          // CC | DC | BANK_MANDATE | UNKNOWN
-  mandateType,                      // E_MANDATE | PAPER_MANDATE — only with BANK_MANDATE
+  mandateType,                      // E_MANDATE | PAPER_MANDATE - only with BANK_MANDATE
   orderId: callerOrderId,
   serverBaseUrl,
 }) {

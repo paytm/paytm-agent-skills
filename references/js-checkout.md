@@ -1,6 +1,6 @@
 # Paytm Web Integration Reference
 
-> _Companion to **`SKILL.md`** — load this file alongside `SKILL.md`, never instead of it._
+> _Companion to **`SKILL.md`** - load this file alongside `SKILL.md`, never instead of it._
 
 End-to-end JS Checkout flow + non-SDK form POST + payment links + subscriptions.
 Working backends in three languages live under `scripts/backend-{node,spring,python}` and a copy-paste frontend at `scripts/frontend/checkout.html`.
@@ -16,7 +16,7 @@ Working backends in three languages live under `scripts/backend-{node,spring,pyt
 
 ---
 
-## JS Checkout — full flow
+## JS Checkout - full flow
 
 ### 1. Server: `initiateTransaction` → `txnToken`
 
@@ -57,7 +57,7 @@ Content-Type: application/json
 | `txnAmount.value` | **String, two decimals**, e.g. `"1.00"` (not `1` or `1.0`) |
 | `txnAmount.currency` | INR only for domestic PG |
 | `userInfo.custId` | Required; your customer identifier |
-| `userInfo.mobile` / `email` | Strongly recommended — pre-fills payment page, used for OTP/notifications |
+| `userInfo.mobile` / `email` | Strongly recommended - pre-fills payment page, used for OTP/notifications |
 
 **Optional fields worth knowing:**
 
@@ -91,11 +91,11 @@ Content-Type: application/json
         type="application/javascript" crossorigin="anonymous"></script>
 ```
 
-The loader URL **embeds your MID** — there is no shared script.
+The loader URL **embeds your MID** - there is no shared script.
 
 ### 3. Browser: `init` → `invoke`
 
-> **Browser-only.** This snippet touches `window.Paytm` and `document` — it cannot run in Next.js / Remix / RSC server components, in Node test scripts, or during SSR. Wrap in `"use client"` (Next.js), `onMount` (Svelte), or `typeof window !== "undefined"` guards.
+> **Browser-only.** This snippet touches `window.Paytm` and `document` - it cannot run in Next.js / Remix / RSC server components, in Node test scripts, or during SSR. Wrap in `"use client"` (Next.js), `onMount` (Svelte), or `typeof window !== "undefined"` guards.
 
 ```javascript
 var config = {
@@ -128,13 +128,13 @@ window.Paytm.CheckoutJS.onLoad(function () {
 });
 ```
 
-> **Note on shape:** Paytm docs show two slightly different config shapes. Modern merchants use the `data: { orderId, token, tokenType, amount }` form shown above (matches the working snippets in `scripts/`). Older docs show `merchant: { mid, name }` + `order: { id, token, amount }` — both work, but don't mix.
+> **Note on shape:** Paytm docs show two slightly different config shapes. Modern merchants use the `data: { orderId, token, tokenType, amount }` form shown above (matches the working snippets in `scripts/`). Older docs show `merchant: { mid, name }` + `order: { id, token, amount }` - both work, but don't mix.
 
 ### 4. CheckoutJS events (`notifyMerchant`)
 
 | Event | Trigger |
 |---|---|
-| `SESSION_EXPIRED` | `txnToken` past its 15-min TTL — request a new one |
+| `SESSION_EXPIRED` | `txnToken` past its 15-min TTL - request a new one |
 | `APP_CLOSED` | User closed the popup before paying |
 | `CHECK_ORDER_STATUS` | Paytm tells merchant to call Transaction Status API |
 | `BANK_REDIRECT` | User redirected to bank/UPI app |
@@ -148,7 +148,7 @@ Paytm posts an `application/x-www-form-urlencoded` payload to the URL you suppli
 | `MID` | string | Echoes your MID |
 | `ORDERID` | string | Echoes your `orderId` |
 | `TXNID` | string | Paytm-issued transaction id |
-| `TXNAMOUNT` | string | `"1.00"` — verify against your stored amount |
+| `TXNAMOUNT` | string | `"1.00"` - verify against your stored amount |
 | `PAYMENTMODE` | string | `UPI` / `CC` / `DC` / `NB` |
 | `CURRENCY` | string | `INR` |
 | `TXNDATE` | string | `YYYY-MM-DD HH:MM:SS.s` IST |
@@ -160,13 +160,13 @@ Paytm posts an `application/x-www-form-urlencoded` payload to the URL you suppli
 | `BANKNAME` | string | Issuer / acquirer bank |
 | `CHECKSUMHASH` | string | **Always verify before trusting** |
 
-Verification differs from API checksum — pass the form params **minus `CHECKSUMHASH`** as a sorted map:
+Verification differs from API checksum - pass the form params **minus `CHECKSUMHASH`** as a sorted map:
 
 ```python
 PaytmChecksum.verifySignature(form_params_without_checksum, MERCHANT_KEY, checksumhash)
 ```
 
-Implement **both `POST` and `GET`** on the callback URL — some browsers re-submit as GET when the user hits Back.
+Implement **both `POST` and `GET`** on the callback URL - some browsers re-submit as GET when the user hits Back.
 
 ### 6. Server-to-server status verification (mandatory)
 
@@ -179,7 +179,7 @@ POST {pgDomain}/v3/order/status
 
 Compare `body.txnAmount` and `body.resultInfo.resultStatus` to your stored values.
 
-> **⚠️ Head shape is `{ signature }` ONLY.** Do NOT add `tokenType: "AES"` or `timestamp` — those belong to `/link/*` and `/refund/*` APIs, not to `/v3/order/status`. Mixing them in returns checksum-mismatch (`227`) errors that look like a key problem but are actually caused by the extra fields. When status-checking inside a Payment Link or Refund flow, **build the Transaction Status head from scratch, never copy from the surrounding code**.
+> **⚠️ Head shape is `{ signature }` ONLY.** Do NOT add `tokenType: "AES"` or `timestamp` - those belong to `/link/*` and `/refund/*` APIs, not to `/v3/order/status`. Mixing them in returns checksum-mismatch (`227`) errors that look like a key problem but are actually caused by the extra fields. When status-checking inside a Payment Link or Refund flow, **build the Transaction Status head from scratch, never copy from the surrounding code**.
 
 ---
 
@@ -240,9 +240,9 @@ Response → `longUrl` and `shortUrl` (e.g. `https://paytm.me/XXXXXXX`).
 
 ---
 
-## Subscriptions (UPI Autopay) — Web
+## Subscriptions (UPI Autopay) - Web
 
-Subscriptions use a **different endpoint** (`/subscription/create`) and a **different request shape** from one-time payments. Do NOT extrapolate from the JS Checkout `initiateTransaction` body — full correct contract (endpoint, head, flat-body fields, error codes, cross-rail defaults) is in **`references/subscriptions.md`**. Read that file before generating any subscription code.
+Subscriptions use a **different endpoint** (`/subscription/create`) and a **different request shape** from one-time payments. Do NOT extrapolate from the JS Checkout `initiateTransaction` body - full correct contract (endpoint, head, flat-body fields, error codes, cross-rail defaults) is in **`references/subscriptions.md`**. Read that file before generating any subscription code.
 
 ---
 
@@ -268,7 +268,7 @@ All plugins require MID, Merchant Key, Industry Type, Website Name from the dash
 4. **`txnToken` is single-use and 15-min TTL.** Don't cache or pre-fetch.
 5. **Don't mix PG hosts.** A staging MID against a prod host returns confusing 401/checksum errors.
 6. **Popup blockers** kill the modal flow. Always invoke from a user gesture; offer `redirect: true` as a fallback on mobile.
-7. **Callback ≠ webhook.** Never fulfill from the browser callback alone — verify with Transaction Status API or wait for the S2S webhook.
+7. **Callback ≠ webhook.** Never fulfill from the browser callback alone - verify with Transaction Status API or wait for the S2S webhook.
 8. **Field-name case** matters for callback verification: Paytm sends UPPERCASE keys; pass them through to `verifySignature` exactly as received.
 9. **JSON serialization order**: hash and send the *same* string. Re-serializing between hash and POST breaks the signature.
 10. **INR only.** Cross-border or multi-currency needs a different Paytm product.

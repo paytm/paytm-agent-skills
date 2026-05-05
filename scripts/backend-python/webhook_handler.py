@@ -1,6 +1,6 @@
 """Paytm S2S webhook receiver.
 
-See backend-node/webhookHandler.js for the same contract notes — production
+See backend-node/webhookHandler.js for the same contract notes - production
 expectations are identical (Redis dedup, IP whitelist, 5xx on processing
 errors, fast 200 with heavy work queued).
 """
@@ -14,7 +14,7 @@ from paytmchecksum import PaytmChecksum
 
 from paytm_config import get_paytm_config
 
-_seen: set = set()                       # "{orderId}|{status}" — at-least-once dedup
+_seen: set = set()                       # "{orderId}|{status}" - at-least-once dedup
 _SEEN_MAX = 50_000
 _event_log = deque(maxlen=200)
 _lock = threading.Lock()
@@ -28,7 +28,7 @@ def recent_events():
 def _extract_body_bytes(raw_body: str) -> Optional[str]:
     """Substring of the raw body that corresponds to "body": {...}.
 
-    Paytm signs those bytes verbatim — re-serializing here would change key
+    Paytm signs those bytes verbatim - re-serializing here would change key
     order / whitespace and break the signature.
     """
     if not raw_body:
@@ -73,7 +73,7 @@ def handle_webhook(raw_body: str, parsed: Any) -> Tuple[int, dict]:
 
     body_bytes = _extract_body_bytes(raw_body)
     if body_bytes is None:
-        # Fallback — but this is best-effort and may fail signature check.
+        # Fallback - but this is best-effort and may fail signature check.
         import json
         body_bytes = json.dumps((parsed or {}).get("body") or {})
 
@@ -108,7 +108,7 @@ def handle_webhook(raw_body: str, parsed: Any) -> Tuple[int, dict]:
 
 
 def _fulfill_order(order_id, status, parsed):
-    """Replace with your real DB write / queue push. Keep it FAST — webhook
+    """Replace with your real DB write / queue push. Keep it FAST - webhook
     timeout is 10s; queue heavy work (emails, accounting) if needed."""
     print("[paytm webhook] fulfill stub", {
         "orderId": order_id,

@@ -19,7 +19,7 @@ import org.springframework.web.client.RestTemplate;
  *
  * <p><strong>Head shape gotcha:</strong> {@code /v3/order/status} accepts
  * {@code head: { signature }} ONLY. Do NOT add {@code tokenType: "AES"} or
- * {@code timestamp} — those belong to {@code /link/*} and {@code /refund/*}
+ * {@code timestamp} - those belong to {@code /link/*} and {@code /refund/*}
  * APIs, not to Transaction Status. Mixing them in returns checksum-mismatch
  * errors that look like a key problem.
  */
@@ -57,11 +57,11 @@ public class PaytmOrderStatusService {
     } catch (RestClientResponseException e) {
       // Wrap upstream errors so the controller / global exception handler can
       // return a consistent JSON envelope ({error, code, message, orderId, paytm})
-      // — matches the Node + Python service shape.
+      // - matches the Node + Python service shape.
       throw new PaytmUpstreamException(
           HttpStatus.BAD_GATEWAY,
           "STATUS_HTTP_ERROR",
-          "order status HTTP " + e.getRawStatusCode() + " — " + e.getResponseBodyAsString(),
+          "order status HTTP " + e.getRawStatusCode() + " - " + e.getResponseBodyAsString(),
           orderId,
           null);
     }

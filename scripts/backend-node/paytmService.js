@@ -5,7 +5,7 @@ import { getPaytmConfig } from "./paytmConfig.js";
 function normalizeAmount(amount) {
   // Two-decimal currency normalization. We round via integer paise (×100,
   // round-half-up via Number.EPSILON, ÷100) to avoid binary-float drift, then
-  // emit as a string with exactly two decimals — Paytm's `txnAmount.value`
+  // emit as a string with exactly two decimals - Paytm's `txnAmount.value`
   // contract.
   const raw = (amount ?? "").toString().trim();
   if (!raw) return "1.00";
@@ -47,7 +47,7 @@ export async function initiateTransaction({ amount, custId, mobile, email, order
     txnAmount: { value: normalizeAmount(amount), currency: "INR" },
     userInfo: {
       custId: custId?.trim() ? custId.trim() : "CUST_DEMO",
-      // mobile + email are strongly recommended — pre-fill the consent screen and
+      // mobile + email are strongly recommended - pre-fill the consent screen and
       // drive OTP / notifications. Real merchants should always pass these through.
       ...(mobile?.trim() ? { mobile: mobile.trim() } : {}),
       ...(email?.trim() ? { email: email.trim() } : {}),
@@ -94,7 +94,7 @@ export async function fetchOrderStatus({ orderId }) {
     body: JSON.stringify(payload),
   });
   const text = await r.text();
-  if (!r.ok) throw new Error(`order status HTTP ${r.status} — ${text}`);
+  if (!r.ok) throw new Error(`order status HTTP ${r.status} - ${text}`);
   return text;
 }
 
@@ -108,7 +108,7 @@ export function verifyCallbackChecksum(params) {
   try {
     return PaytmChecksum.verifySignature(toVerify, cfg.merchantKey, signature);
   } catch {
-    // Library can throw on malformed/empty input — treat as failed verification.
+    // Library can throw on malformed/empty input - treat as failed verification.
     return false;
   }
 }

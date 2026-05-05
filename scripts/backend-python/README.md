@@ -1,8 +1,8 @@
-# Python backend (Flask) — Paytm reference
+# Python backend (Flask) - Paytm reference
 
 Reference Flask backend covering all four Paytm products in this skill: JS Checkout, Subscription (UPI Autopay), Payment Link, Dynamic QR.
 
-Mirrors `scripts/backend-node` and `scripts/backend-spring` — same routes, same env vars.
+Mirrors `scripts/backend-node` and `scripts/backend-spring` - same routes, same env vars.
 
 ## Setup
 
@@ -21,10 +21,10 @@ python app.py
 ```
 
 Demo pages:
-- <http://localhost:5001/checkout.html> — one-time payment via JS Checkout
-- <http://localhost:5001/subscription.html> — UPI Autopay subscription
-- <http://localhost:5001/payment-link.html> — generate shareable payment link
-- <http://localhost:5001/qr.html> — dynamic QR with auto-polling
+- <http://localhost:5001/checkout.html> - one-time payment via JS Checkout
+- <http://localhost:5001/subscription.html> - UPI Autopay subscription
+- <http://localhost:5001/payment-link.html> - generate shareable payment link
+- <http://localhost:5001/qr.html> - dynamic QR with auto-polling
 
 See the repo-root `.env.example` for how to get your MID and Merchant Key.
 

@@ -1,4 +1,4 @@
-// Create Payment Link — POST /link/create
+// Create Payment Link - POST /link/create
 // Doc: https://www.paytmpayments.com/docs/api/create-link-api
 // Defaults & gotchas baked in:
 //   - head requires tokenType: "AES" + timestamp (Unix epoch SECONDS as string)
@@ -29,7 +29,7 @@ function normalizeAmount(amount) {
   // Payment Link API takes `amount` as a JSON number (not a string).
   //
   // To stay precision-safe we do the rounding via integer paise (×100, round to
-  // nearest, ÷100) instead of `Number.toFixed()` directly — this guarantees
+  // nearest, ÷100) instead of `Number.toFixed()` directly - this guarantees
   // bit-exact two-decimal currency math without depending on string conversion
   // for the rounding step. Float conversion only happens at the final ÷100, so
   // typical INR amounts are exact (the float error budget kicks in well above
@@ -109,7 +109,7 @@ export async function createPaymentLink({
   if (status && status !== "SUCCESS" && status !== "S") {
     throw upstream("LINK_FAILED", json?.body?.resultInfo?.resultMsg || "link/create failed", orderId, text);
   }
-  // Read defensively — current Paytm returns linkId; older docs LinkID.
+  // Read defensively - current Paytm returns linkId; older docs LinkID.
   const linkId = json?.body?.linkId ?? json?.body?.LinkID;
 
   return {
@@ -124,11 +124,11 @@ export async function createPaymentLink({
 }
 
 /**
- * Fetch transactions for a Payment Link — POST /link/fetchTransaction.
+ * Fetch transactions for a Payment Link - POST /link/fetchTransaction.
  * Doc: https://www.paytmpayments.com/docs/api/fetch-transaction-link-api
  *
  * USE THIS for Payment Link reconciliation, NOT /v3/order/status.
- * Returns {orders: [...]} — always an array, may be empty (404 from Paytm
+ * Returns {orders: [...]} - always an array, may be empty (404 from Paytm
  * is normalised to an empty array here so callers don't have to special-case
  * "not paid yet").
  */
@@ -172,7 +172,7 @@ export async function fetchLinkTransactions({
 
   const json = JSON.parse(text);
   const info = json?.body?.resultInfo;
-  // 404 = "Data Not Found" — link exists but no transactions yet. Normalise
+  // 404 = "Data Not Found" - link exists but no transactions yet. Normalise
   // to an empty list so callers can treat all valid responses uniformly.
   if (info?.resultCode === "404" || /not\s*found/i.test(info?.resultMessage || info?.resultMsg || "")) {
     return { linkId: numericLinkId, orders: [], resultInfo: info };

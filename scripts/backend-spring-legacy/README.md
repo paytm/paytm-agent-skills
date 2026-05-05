@@ -1,6 +1,6 @@
-# Paytm backend — Spring MVC 5 (WAR) — LEGACY
+# Paytm backend - Spring MVC 5 (WAR) - LEGACY
 
-> **The recommended Java reference is `scripts/backend-spring/`** — Spring Boot 3
+> **The recommended Java reference is `scripts/backend-spring/`** - Spring Boot 3
 > + Jakarta + executable JAR. Use this legacy WAR variant only if you're stuck on
 > Tomcat 9 / Java EE 8 / `javax.servlet`.
 
@@ -51,7 +51,7 @@ Each setting can be supplied via `-Dpaytm.*` system property OR `PAYTM_*` env va
 | `PAYTM_CALLBACK_URL` / `paytm.callback.url` | derived from base + `/paytm/callback` |
 | `PAYTM_STATUS_API_URL` / `paytm.status.api.url` | `<pg>/v3/order/status` |
 
-`websiteName` and `channelId` are class constants in `PaytmMerchantConfig` (`retail` / `WEB`) — change them if your dashboard uses different values.
+`websiteName` and `channelId` are class constants in `PaytmMerchantConfig` (`retail` / `WEB`) - change them if your dashboard uses different values.
 
 ## Endpoints
 
@@ -67,10 +67,10 @@ Each setting can be supplied via `-Dpaytm.*` system property OR `PAYTM_*` env va
 | GET\|POST | `/paytm/callback` | Paytm browser redirect; verifies CHECKSUMHASH |
 
 Demo pages (one per product, all under `/paytm-backend/`):
-- `/checkout.html` — one-time payment via JS Checkout
-- `/subscription.html` — UPI Autopay subscription
-- `/payment-link.html` — generate shareable payment link
-- `/qr.html` — dynamic QR with auto-polling
+- `/checkout.html` - one-time payment via JS Checkout
+- `/subscription.html` - UPI Autopay subscription
+- `/payment-link.html` - generate shareable payment link
+- `/qr.html` - dynamic QR with auto-polling
 
 All HTML files use `new URL(..., document.baseURI)` so they work regardless of the WAR context path.
 

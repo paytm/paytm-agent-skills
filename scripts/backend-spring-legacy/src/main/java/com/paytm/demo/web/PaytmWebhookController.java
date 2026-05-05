@@ -30,10 +30,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
  *  1. Read raw body bytes (we read from the servlet input stream verbatim).
  *  2. Extract head.signature; verify against the body bytes Paytm signed.
  *     Re-serializing here would change key order / whitespace and break the
- *     signature — use the bytes Paytm sent.
- *  3. Idempotency check on (orderId, status) — Paytm retries at-least-once.
+ *     signature - use the bytes Paytm sent.
+ *  3. Idempotency check on (orderId, status) - Paytm retries at-least-once.
  *  4. Persist event for audit (here, in-memory ring buffer).
- *  5. Apply state transition (here, a stub log — replace with your DB write).
+ *  5. Apply state transition (here, a stub log - replace with your DB write).
  *  6. Return 200 fast. Heavy lifting goes to a queue.
  */
 @Controller
@@ -41,7 +41,7 @@ public class PaytmWebhookController {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
-  // (orderId|status) — at-least-once dedup. Replace with Redis in production.
+  // (orderId|status) - at-least-once dedup. Replace with Redis in production.
   private final Set<String> seen = ConcurrentHashMap.newKeySet();
 
   // Bounded ring buffer of recent webhook events for in-process audit / debugging.
@@ -61,7 +61,7 @@ public class PaytmWebhookController {
     eventLog.addLast(new LoggedEvent(Instant.now(), parsed));
   }
 
-  /** Audit-log entry shape — timestamp + parsed payload. */
+  /** Audit-log entry shape - timestamp + parsed payload. */
   public static final class LoggedEvent {
     public final Instant at;
     public final JsonNode payload;
@@ -147,7 +147,7 @@ public class PaytmWebhookController {
 
   /**
    * Substring of the raw body that corresponds to "body": {...}. Paytm signs
-   * those bytes verbatim — re-serializing would change key order / whitespace.
+   * those bytes verbatim - re-serializing would change key order / whitespace.
    */
   static String extractBodyBytes(String raw) {
     if (raw == null) return null;
@@ -180,7 +180,7 @@ public class PaytmWebhookController {
     return null;
   }
 
-  /** Replace with your real DB write / queue push. Keep it fast — webhook timeout is 10s. */
+  /** Replace with your real DB write / queue push. Keep it fast - webhook timeout is 10s. */
   private void fulfillOrder(String orderId, String status, JsonNode parsed) {
     System.out.println("[paytm webhook] fulfill stub orderId=" + orderId
         + " status=" + status + " mid=" + parsed.path("body").path("mid").asText("?"));

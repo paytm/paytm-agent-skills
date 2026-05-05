@@ -24,7 +24,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * Create Payment Link — POST /link/create.
+ * Create Payment Link - POST /link/create.
  *
  * Doc: https://www.paytmpayments.com/docs/api/create-link-api
  *
@@ -56,7 +56,7 @@ public class PaytmPaymentLinkService {
   }
 
   /**
-   * Overload that accepts a per-request {@code requestBaseUrl} for callback derivation —
+   * Overload that accepts a per-request {@code requestBaseUrl} for callback derivation -
    * matches the {@code serverBaseUrl} parameter on Node/Python.
    */
   public CreateResult create(CreateRequest req, String requestBaseUrl) throws Exception {
@@ -121,7 +121,7 @@ public class PaytmPaymentLinkService {
     }
 
     JsonNode bodyResp = root.path("body");
-    // Read defensively — current Paytm returns linkId; older docs LinkID.
+    // Read defensively - current Paytm returns linkId; older docs LinkID.
     long linkId = bodyResp.path("linkId").asLong(bodyResp.path("LinkID").asLong(0L));
 
     return new CreateResult(
@@ -135,12 +135,12 @@ public class PaytmPaymentLinkService {
   }
 
   /**
-   * Fetch transactions for a Payment Link — POST /link/fetchTransaction.
+   * Fetch transactions for a Payment Link - POST /link/fetchTransaction.
    * Doc: https://www.paytmpayments.com/docs/api/fetch-transaction-link-api
    *
    * <p>USE THIS for Payment Link reconciliation, NOT /v3/order/status. Returns
    * a {@link FetchTransactionsResult} with {@code orders} as a list (may be
-   * empty when no payments yet — Paytm's 404 / "Data Not Found" is normalised
+   * empty when no payments yet - Paytm's 404 / "Data Not Found" is normalised
    * to an empty list so callers can treat all valid responses uniformly).
    */
   public FetchTransactionsResult fetchTransactions(FetchTransactionsRequest req) throws Exception {

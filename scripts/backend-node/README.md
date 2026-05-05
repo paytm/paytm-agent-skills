@@ -1,8 +1,8 @@
-# Node backend (Express) — Paytm reference
+# Node backend (Express) - Paytm reference
 
 Reference Express backend covering all four Paytm products in this skill: JS Checkout, Subscription (UPI Autopay), Payment Link, Dynamic QR.
 
-Mirrors `scripts/backend-python` and `scripts/backend-spring` — same routes, same env vars.
+Mirrors `scripts/backend-python` and `scripts/backend-spring` - same routes, same env vars.
 
 ## Routes
 
@@ -30,10 +30,10 @@ npm start
 ```
 
 Demo pages (one per product, all under the same backend):
-- <http://localhost:3001/checkout.html> — one-time payment via JS Checkout
-- <http://localhost:3001/subscription.html> — UPI Autopay subscription
-- <http://localhost:3001/payment-link.html> — generate shareable payment link
-- <http://localhost:3001/qr.html> — dynamic QR with auto-polling
+- <http://localhost:3001/checkout.html> - one-time payment via JS Checkout
+- <http://localhost:3001/subscription.html> - UPI Autopay subscription
+- <http://localhost:3001/payment-link.html> - generate shareable payment link
+- <http://localhost:3001/qr.html> - dynamic QR with auto-polling
 
 See the repo-root `.env.example` for how to get your MID and Merchant Key.
 
@@ -41,8 +41,8 @@ See the repo-root `.env.example` for how to get your MID and Merchant Key.
 
 | Var | Required | Default |
 |---|---|---|
-| `PAYTM_MID` | ✅ | none — server throws on missing |
-| `PAYTM_MERCHANT_KEY` | ✅ | none — server throws on missing |
+| `PAYTM_MID` | ✅ | none - server throws on missing |
+| `PAYTM_MERCHANT_KEY` | ✅ | none - server throws on missing |
 | `PAYTM_ENVIRONMENT` | optional | `staging` |
 | `PAYTM_WEBSITE_NAME` | optional | `WEBSTAGING` (staging) / `DEFAULT` (production) |
 | `PAYTM_CALLBACK_BASE` | optional | `http://localhost:3001` |

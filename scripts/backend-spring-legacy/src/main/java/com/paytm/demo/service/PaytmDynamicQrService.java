@@ -21,7 +21,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * Create Dynamic QR — POST /paymentservices/qr/create.
+ * Create Dynamic QR - POST /paymentservices/qr/create.
  *
  * Doc: https://www.paytmpayments.com/docs/api/create-qr-code-api
  *
@@ -29,7 +29,7 @@ import org.springframework.web.client.RestTemplate;
  *  - posId is REQUIRED (Paytm returns 400 without it)
  *  - amount must be a STRING with two decimals
  *  - head requires clientId + version + signature
- *  - Response `image` is RAW base64 — we prepend `data:image/png;base64,` here so
+ *  - Response `image` is RAW base64 - we prepend `data:image/png;base64,` here so
  *    the frontend can drop it straight into <img src>.
  */
 @Service
@@ -153,7 +153,7 @@ public class PaytmDynamicQrService {
 
   public static final class CreateRequest {
     public String amount;
-    public String posId;          // REQUIRED — Paytm 400s without it
+    public String posId;          // REQUIRED - Paytm 400s without it
     public String displayName;
     public String expiryDate;
     public Boolean imageRequired;

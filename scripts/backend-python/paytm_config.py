@@ -1,4 +1,4 @@
-"""Paytm merchant config — env-driven, mirrors backend-node/paytmConfig.js."""
+"""Paytm merchant config - env-driven, mirrors backend-node/paytmConfig.js."""
 import os
 from typing import Optional
 
@@ -18,7 +18,7 @@ def get_paytm_config() -> dict:
 
     mid = (os.environ.get("PAYTM_MID") or "").strip()
     merchant_key = (os.environ.get("PAYTM_MERCHANT_KEY") or "").strip()
-    # Default mirrors PAYTM_ENVIRONMENT — "WEBSTAGING" for staging, "DEFAULT" for prod.
+    # Default mirrors PAYTM_ENVIRONMENT - "WEBSTAGING" for staging, "DEFAULT" for prod.
     website_name = (
         os.environ.get("PAYTM_WEBSITE_NAME")
         or ("DEFAULT" if env == "production" else "WEBSTAGING")
@@ -44,7 +44,7 @@ def get_paytm_config() -> dict:
         "link_create_url": f"{pg_domain}/link/create",
         "link_fetch_transaction_url": f"{pg_domain}/link/fetchTransaction",
         "qr_create_url": f"{pg_domain}/paymentservices/qr/create",
-        # clientId is per-merchant — issued by Paytm during onboarding. "C11" works for
+        # clientId is per-merchant - issued by Paytm during onboarding. "C11" works for
         # most single-merchant-key setups; override via env if your KAM gave you a different value.
         "client_id": (os.environ.get("PAYTM_CLIENT_ID") or "C11").strip(),
         "checkout_js_loader_url": (

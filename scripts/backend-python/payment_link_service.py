@@ -1,4 +1,4 @@
-"""Create Payment Link — POST /link/create.
+"""Create Payment Link - POST /link/create.
 
 Doc: https://www.paytmpayments.com/docs/api/create-link-api
 Defaults & gotchas baked in:
@@ -43,7 +43,7 @@ def _normalize_amount(amount: Any) -> float:
     """Two-decimal currency normalization using Decimal to avoid binary-float drift.
 
     Paytm's Create Link API requires `amount` as a JSON number (not a string),
-    so we must emit a float at the end — but we do all the rounding in Decimal
+    so we must emit a float at the end - but we do all the rounding in Decimal
     space first, then convert at the very last step. For typical INR amounts
     this gives bit-exact two-decimal precision; the float conversion only loses
     significance well above the rupee-amount range any real merchant will use.
@@ -128,7 +128,7 @@ def create_payment_link(
         raise _upstream("LINK_FAILED", info.get("resultMsg") or "link/create failed", order_id, text)
 
     body_resp = data.get("body") or {}
-    # Read defensively — current Paytm returns linkId; older docs LinkID.
+    # Read defensively - current Paytm returns linkId; older docs LinkID.
     link_id = body_resp.get("linkId") if body_resp.get("linkId") is not None else body_resp.get("LinkID")
 
     return {
@@ -149,7 +149,7 @@ def fetch_link_transactions(
     page_size: int = 10,
     fetch_all_txns: bool = True,
 ) -> dict:
-    """Fetch transactions for a Payment Link — POST /link/fetchTransaction.
+    """Fetch transactions for a Payment Link - POST /link/fetchTransaction.
 
     Doc: https://www.paytmpayments.com/docs/api/fetch-transaction-link-api
 
@@ -166,7 +166,7 @@ def fetch_link_transactions(
     if link_id in (None, ""):
         raise PaytmError("MISSING_LINK_ID", "linkId is required")
 
-    # linkId MUST be a JSON number — coerce defensively.
+    # linkId MUST be a JSON number - coerce defensively.
     try:
         numeric_link_id = int(link_id)
     except (TypeError, ValueError):
@@ -200,7 +200,7 @@ def fetch_link_transactions(
     data = json.loads(text)
     info = (data.get("body") or {}).get("resultInfo") or {}
     msg = info.get("resultMessage") or info.get("resultMsg") or ""
-    # 404 = "Data Not Found" — link exists, no txns yet. Normalise to empty list.
+    # 404 = "Data Not Found" - link exists, no txns yet. Normalise to empty list.
     if info.get("resultCode") == "404" or "not found" in msg.lower():
         return {"linkId": numeric_link_id, "orders": [], "resultInfo": info}
     status = info.get("resultStatus")

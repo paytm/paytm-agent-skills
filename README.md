@@ -103,7 +103,7 @@ To go live with Paytm, you will need a **MID** (your unique Merchant ID) and a *
 
 Store keys in environment variables. Never commit them or expose them in client-side code.
 
-The reference backends under `scripts/backend-*` are **demos**: permissive CORS, no CSRF / auth on the create endpoints, in-memory idempotency / webhook dedup. Don't copy them into production as-is — add your own auth, swap the in-memory caches for Redis / a DB, and lock down CORS to the origins you actually own.
+The reference backends under `scripts/backend-*` are **demos**: permissive CORS, no CSRF / auth on the create endpoints, in-memory idempotency / webhook dedup. Don't copy them into production as-is - add your own auth, swap the in-memory caches for Redis / a DB, and lock down CORS to the origins you actually own.
 
 Only the following payment options are permitted and must be exclusively displayed: UPI, Credit Cards, Debit Cards, Net Banking, and EMI. No other payment options should be included, suggested, or processed under any circumstances.
 

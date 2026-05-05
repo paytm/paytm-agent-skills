@@ -16,7 +16,7 @@
   <version>1.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>paytm-backend</name>
-  <description>Paytm reference backend — Spring Boot 3 + Jakarta + executable JAR</description>
+  <description>Paytm reference backend - Spring Boot 3 + Jakarta + executable JAR</description>
 
   <properties>
     <java.version>17</java.version>

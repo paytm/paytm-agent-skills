@@ -2,7 +2,7 @@
 name: paytm-integration
 description: >
   Expert guide for integrating Paytm Payment Gateway APIs and SDKs into websites, mobile apps, and backend systems.
-  Use this skill whenever the user is working with Paytm payments — including setting up the payment gateway,
+  Use this skill whenever the user is working with Paytm payments - including setting up the payment gateway,
   generating checksums, calling Initiate Transaction / Transaction Status APIs, integrating the JS
   Checkout, handling callbacks, generating payment links, generating dynamic QR codes, implementing
   UPI Autopay subscriptions, or troubleshooting Paytm PG errors. Trigger when the question contains
@@ -10,7 +10,7 @@ description: >
   "paytmpayments.com", "/theia/api/", "subscription/create", "/link/create", "paymentservices/qr",
   "WEBSTAGING", "NATIVE_SUBSCRIPTION", or any path under `paytmpayments.com/docs`.
   Do NOT trigger on generic PSP terms ("MID", "merchant key", "checksum", "PG integration") in
-  isolation — those overlap with other payment gateways and would mis-trigger the skill.
+  isolation - those overlap with other payment gateways and would mis-trigger the skill.
   Also trigger when the user explicitly mentions they are a Paytm merchant or developer.
 ---
 
@@ -19,7 +19,7 @@ description: >
 ## Overview
 
 Paytm Payment Gateway supports UPI, Credit/Debit Cards, Net Banking, and EMI.
-Supported integration variants in this skill: **JS Checkout** (web), **Subscriptions / UPI Autopay**, **Payment Links**, and **Dynamic QR Codes** — all backed by Server-to-Server APIs.
+Supported integration variants in this skill: **JS Checkout** (web), **Subscriptions / UPI Autopay**, **Payment Links**, and **Dynamic QR Codes** - all backed by Server-to-Server APIs.
 
 ---
 
@@ -27,7 +27,7 @@ Supported integration variants in this skill: **JS Checkout** (web), **Subscript
 
 | Concept | Description |
 |---|---|
-| **MID** | Merchant ID — unique identifier for your Paytm account |
+| **MID** | Merchant ID - unique identifier for your Paytm account |
 | **Merchant Key** | Secret key used to generate/verify checksums |
 | **txnToken** | Short-lived token returned by Initiate Transaction API; used in all subsequent steps |
 | **CHECKSUMHASH** | HMAC-SHA256 signature generated with Merchant Key to authenticate API calls |
@@ -49,19 +49,19 @@ Supported integration variants in this skill: **JS Checkout** (web), **Subscript
 
 > ### ⚡ Pick the right flow FIRST (read before generating any code)
 >
-> Map the user's intent to one of the four flows before writing anything. Picking wrong produces code that "works" but solves the wrong problem — the most expensive class of bugs in this skill.
+> Map the user's intent to one of the four flows before writing anything. Picking wrong produces code that "works" but solves the wrong problem - the most expensive class of bugs in this skill.
 >
 > | User says… | Flow | Endpoint | Needs JS Checkout? | Reference |
 > |---|---|---|---|---|
 > | "checkout page", "pay button on website", "one-time payment", "buy" | **Payment** | `POST /theia/api/v1/initiateTransaction` (`requestType: "Payment"`) | ✅ Yes | Steps below + `references/js-checkout.md` |
 > | "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew every…", "membership", "plan" | **Subscription** | `POST /subscription/create` (`requestType: "NATIVE_SUBSCRIPTION"`) | ✅ Yes (for consent screen) | `references/subscriptions.md` ← **MUST READ** |
-> | "shareable link", "invoice link", "payment link via SMS / WhatsApp / email" | **Payment Link** | `POST /link/create` (then `POST /link/fetchTransaction` to reconcile — NOT `/v3/order/status`) | ❌ No — Paytm hosts the page | `references/payment-links.md` |
-> | "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** | `POST /paymentservices/qr/create` | ❌ No — render image, customer scans with their UPI app | `references/qr-codes.md` |
+> | "shareable link", "invoice link", "payment link via SMS / WhatsApp / email" | **Payment Link** | `POST /link/create` (then `POST /link/fetchTransaction` to reconcile - NOT `/v3/order/status`) | ❌ No - Paytm hosts the page | `references/payment-links.md` |
+> | "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** | `POST /paymentservices/qr/create` | ❌ No - render image, customer scans with their UPI app | `references/qr-codes.md` |
 >
-> **The steps below describe Payment + JS Checkout only.** Do NOT extrapolate them to the other three flows — they have different endpoints, different request shapes, different validators. Load the matching reference file and follow its flow.
+> **The steps below describe Payment + JS Checkout only.** Do NOT extrapolate them to the other three flows - they have different endpoints, different request shapes, different validators. Load the matching reference file and follow its flow.
 >
 > **Critical mistakes that keep recurring:**
-> - **Subscription:** endpoint is `/subscription/create` on staging, `/theia/api/v1/subscription/create` on prod. `requestType: "NATIVE_SUBSCRIPTION"` (or `"NATIVE_MF_SIP"` for SIPs). `head` requires `clientId` + `channelId` + `signature`. Query params include a required `traceId`. Subscription fields are flat in `body` — no `subscriptionDetails` wrapper. Both `subscriptionFrequency` (number) and `subscriptionFrequencyUnit` (period) are required. **Safe defaults:** `subscriptionPaymentMode: "UNKNOWN"`, `txnAmount.value: "2.00"` (min for CC/DC), `subscriptionGraceDays: "3"` (max for CC/DC), `subscriptionStartDate` = today, `subscriptionEnableRetry: "0"` with `subscriptionRetryCount` omitted, no `renewalAmount`.
+> - **Subscription:** endpoint is `/subscription/create` on staging, `/theia/api/v1/subscription/create` on prod. `requestType: "NATIVE_SUBSCRIPTION"` (or `"NATIVE_MF_SIP"` for SIPs). `head` requires `clientId` + `channelId` + `signature`. Query params include a required `traceId`. Subscription fields are flat in `body` - no `subscriptionDetails` wrapper. Both `subscriptionFrequency` (number) and `subscriptionFrequencyUnit` (period) are required. **Safe defaults:** `subscriptionPaymentMode: "UNKNOWN"`, `txnAmount.value: "2.00"` (min for CC/DC), `subscriptionGraceDays: "3"` (max for CC/DC), `subscriptionStartDate` = today, `subscriptionEnableRetry: "0"` with `subscriptionRetryCount` omitted, no `renewalAmount`.
 > - **Payment Link:** identifier in fetch / update / resend / expire calls is `linkId` as a **JSON number**, NOT a string. Resend path is `/link/resendNotification`, NOT `/link/resend`.
 > - **Dynamic QR:** `posId` is **required** (skipping it returns 400). `amount` is a **string** with two decimals.
 
@@ -69,7 +69,7 @@ Supported integration variants in this skill: **JS Checkout** (web), **Subscript
 
 Every API call requires a `CHECKSUMHASH` in the request header (as `signature`).
 
-**Use Paytm's official checksum library** — available for Java, PHP, Python, Node.js, .NET, Go:
+**Use Paytm's official checksum library** - available for Java, PHP, Python, Node.js, .NET, Go:
 - Docs: `https://www.paytmpayments.com/docs/checksum/`
 - GitHub: `https://github.com/Paytm-Payments`
 
@@ -116,15 +116,15 @@ POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
 }
 ```
 
-> **Building a subscription / recurring charge?** Do NOT use this endpoint or this body. Subscriptions use a **different endpoint** (`/subscription/create`, with a `/theia/api/v1/` prefix on prod), a **different `requestType`** (`"NATIVE_SUBSCRIPTION"` or `"NATIVE_MF_SIP"`), an extra `traceId` query param, **`head.clientId` + `head.channelId`**, a required `subscriptionPaymentMode`, and **flat subscription fields inside `body`** (no `subscriptionDetails` wrapper). Full correct payload + field reference + error codes in `references/subscriptions.md` — read it before writing any code.
+> **Building a subscription / recurring charge?** Do NOT use this endpoint or this body. Subscriptions use a **different endpoint** (`/subscription/create`, with a `/theia/api/v1/` prefix on prod), a **different `requestType`** (`"NATIVE_SUBSCRIPTION"` or `"NATIVE_MF_SIP"`), an extra `traceId` query param, **`head.clientId` + `head.channelId`**, a required `subscriptionPaymentMode`, and **flat subscription fields inside `body`** (no `subscriptionDetails` wrapper). Full correct payload + field reference + error codes in `references/subscriptions.md` - read it before writing any code.
 
-`websiteName` is per-MID (dashboard value, e.g. `DEFAULT`, `WEBSTAGING`, `retail`). `channelId` (`WEB`/`WAP`) and `industryTypeId` are usually inherited from the dashboard but can be overridden in the body. **Response:** `body.txnToken` — single-use, **15-min TTL**.
+`websiteName` is per-MID (dashboard value, e.g. `DEFAULT`, `WEBSTAGING`, `retail`). `channelId` (`WEB`/`WAP`) and `industryTypeId` are usually inherited from the dashboard but can be overridden in the body. **Response:** `body.txnToken` - single-use, **15-min TTL**.
 
 ---
 
 ### Step 3 – Render Payment Page
 
-**Web – JS Checkout** (browser-only — never paste into a Next.js / Remix / RSC server component; wrap in `"use client"` or guard with `typeof window !== "undefined"`):
+**Web – JS Checkout** (browser-only - never paste into a Next.js / Remix / RSC server component; wrap in `"use client"` or guard with `typeof window !== "undefined"`):
 ```html
 <script src="{pgDomain}/merchantpgpui/checkoutjs/merchants/{MID}.js"
         type="application/javascript" crossorigin="anonymous"></script>
@@ -161,12 +161,12 @@ ORDERID, MID, TXNID, TXNAMOUNT, PAYMENTMODE, STATUS, RESPCODE, RESPMSG, CHECKSUM
 ```
 
 **Always verify `CHECKSUMHASH`** server-side before trusting the response.
-**Never rely solely on callback** — confirm via Transaction Status API (step 5).
+**Never rely solely on callback** - confirm via Transaction Status API (step 5).
 
 Key status values:
-- `TXN_SUCCESS` — payment successful
-- `TXN_FAILURE` — payment failed
-- `PENDING` — awaiting bank confirmation
+- `TXN_SUCCESS` - payment successful
+- `TXN_FAILURE` - payment failed
+- `PENDING` - awaiting bank confirmation
 
 ---
 
@@ -186,15 +186,15 @@ Content-Type: application/json
 
 Treat this response as the **final authoritative status**. Call it server-to-server, not from the browser.
 
-> **⚠️ `/v3/order/status` is for one-time-payment / JS-Checkout flows ONLY.** For Payment Link reconciliation use **`/link/fetchTransaction`** instead — see `references/payment-links.md`. The two endpoints have different head shapes; carrying over fields between them causes checksum-mismatch errors.
+> **⚠️ `/v3/order/status` is for one-time-payment / JS-Checkout flows ONLY.** For Payment Link reconciliation use **`/link/fetchTransaction`** instead - see `references/payment-links.md`. The two endpoints have different head shapes; carrying over fields between them causes checksum-mismatch errors.
 >
-> - **`/v3/order/status`** uses `head: { signature }` ONLY. Do NOT add `tokenType` (`"AES"`) or `timestamp` — Paytm rejects them or silently ignores them, leading to checksum mismatches that look unrelated.
+> - **`/v3/order/status`** uses `head: { signature }` ONLY. Do NOT add `tokenType` (`"AES"`) or `timestamp` - Paytm rejects them or silently ignores them, leading to checksum mismatches that look unrelated.
 > - **`/link/*`** (create / fetch / update / resendNotification / expire / **fetchTransaction**) all use `head: { tokenType: "AES", signature, timestamp? }`.
 >
-> If your flow mixes both (rare — typically you'd pick one path), build each request's `head` from scratch. Don't copy the link-API head into a Transaction Status call. Bad request observed in the wild:
+> If your flow mixes both (rare - typically you'd pick one path), build each request's `head` from scratch. Don't copy the link-API head into a Transaction Status call. Bad request observed in the wild:
 >
 > ```json
-> // ❌ WRONG — extra tokenType + timestamp leak from the link API
+> // ❌ WRONG - extra tokenType + timestamp leak from the link API
 > { "head": { "tokenType": "AES", "timestamp": "1777662548", "signature": "..." },
 >   "body": { "mid": "...", "orderId": "..." } }
 > ```
@@ -224,13 +224,13 @@ SDK docs: `https://www.paytmpayments.com/docs/server-sdk/`
 
 ## UPI Autopay / Subscriptions
 
-For recurring payments use Paytm's Subscription (UPI Autopay) product. **Different endpoint, different requestType, different field placement from one-time Payment** — see `references/subscriptions.md` for the correct payload.
+For recurring payments use Paytm's Subscription (UPI Autopay) product. **Different endpoint, different requestType, different field placement from one-time Payment** - see `references/subscriptions.md` for the correct payload.
 
 - Endpoint: `POST /subscription/create` (staging) / `POST /theia/api/v1/subscription/create` (production), with required query params `mid`, `orderId`, `traceId`.
 - Body: `requestType: "NATIVE_SUBSCRIPTION"` (or `"NATIVE_MF_SIP"` for SIPs); subscription fields **flat inside `body`** (no `subscriptionDetails` wrapper); `subscriptionPaymentMode` + `subscriptionAmountType` + both `subscriptionFrequency` & `subscriptionFrequencyUnit` are required.
 - Head: `clientId` + `channelId` + `signature` are all required.
 - The returned `txnToken` is consumed by JS Checkout exactly like a one-time payment, where the user approves the mandate.
-- Recurring debit / status / edit / cancel operations are **out of scope for this skill** — refer to live Paytm docs and validate paths before implementing.
+- Recurring debit / status / edit / cancel operations are **out of scope for this skill** - refer to live Paytm docs and validate paths before implementing.
 - Full field reference, error codes, and worked example: `references/subscriptions.md`.
 
 ---
@@ -250,14 +250,14 @@ For recurring payments use Paytm's Subscription (UPI Autopay) product. **Differe
 
 ## Getting Your MID and Merchant Key
 
-Both are issued from the Paytm dashboard — staging works immediately, production needs KYC + activation.
+Both are issued from the Paytm dashboard - staging works immediately, production needs KYC + activation.
 
 - *Staging (test mode):* https://dashboard.paytmpayments.com → Developer Settings -> API Keys -> Generate now (under Test API Details)
 - *Production (Live Mode):* https://dashboard.paytmpayments.com → Developer Settings → API Keys -> Get Merchant ID, Merchant Key from Production API details.
 
   (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
 
-When generating setup instructions for users, **always include the two links above verbatim** — discovering the dashboard path is the #1 friction point.
+When generating setup instructions for users, **always include the two links above verbatim** - discovering the dashboard path is the #1 friction point.
 
 ## Test Credentials (Staging)
 
@@ -276,7 +276,7 @@ Use these in any staging integration so users can complete a full payment flow w
 - Mobile: `7777777777`
 - OTP: `489871`
 
-> **UPI testing — production environment only.** Paytm's staging environment does not support end-to-end UPI flows. For UPI you must test against your production MID (with a small real amount, e.g. ₹1) on a real UPI app. Cards and Net Banking can be fully exercised in staging using the values above.
+> **UPI testing - production environment only.** Paytm's staging environment does not support end-to-end UPI flows. For UPI you must test against your production MID (with a small real amount, e.g. ₹1) on a real UPI app. Cards and Net Banking can be fully exercised in staging using the values above.
 
 If your MID rejects the values above, the MID's Test API Details tab has merchant-specific overrides at <https://dashboard.paytmpayments.com> → Developer Settings → API Keys.
 
@@ -305,11 +305,11 @@ All endpoints prefixed with the environment base URL.
 4. **`txnToken`** is single-use, 15-minute TTL. Don't cache or pre-fetch.
 5. **Don't mix PG hosts.** Staging MID + prod host (or vice versa) returns confusing 401/checksum errors.
 6. **Browser callback ≠ webhook.** Callback can be lost (popup blockers, network drop). Always reconfirm via Transaction Status API or the S2S webhook before fulfilling.
-7. **Callback verification** uses sorted form params *minus* `CHECKSUMHASH` — different shape from API checksum, and field names are UPPERCASE.
+7. **Callback verification** uses sorted form params *minus* `CHECKSUMHASH` - different shape from API checksum, and field names are UPPERCASE.
 8. **JSON bytes used to sign must equal bytes sent.** Don't re-serialize between hashing and POSTing.
 9. **INR only** for domestic Paytm PG.
 10. Popup blockers kill the modal flow on mobile; offer `merchant.redirect: true` as a fallback.
-11. **Callback URL must be reachable from the user's browser AND match what your backend listens on.** The reference backends default to `http://localhost:{3001|5001|8080/paytm-backend}` — when scaffolding a multi-service project (e.g. Next.js frontend on `:3000` + separate backend), set `PAYTM_CALLBACK_BASE` (or `PAYTM_CALLBACK_URL`) to the *backend's* public URL, not the frontend's. Never hard-code `localhost` for production.
+11. **Callback URL must be reachable from the user's browser AND match what your backend listens on.** The reference backends default to `http://localhost:{3001|5001|8080/paytm-backend}` - when scaffolding a multi-service project (e.g. Next.js frontend on `:3000` + separate backend), set `PAYTM_CALLBACK_BASE` (or `PAYTM_CALLBACK_URL`) to the *backend's* public URL, not the frontend's. Never hard-code `localhost` for production.
 12. **Frontend `fetch` calls are browser-only.** The reference HTML uses `new URL("paytm/create-order", document.baseURI)` which deliberately fails fast in SSR (no `document`). When using Next.js / RSC, isolate Paytm calls in client components or behind `typeof window` guards.
 
 Symptom-driven debugging: `references/troubleshooting.md`.
@@ -318,7 +318,7 @@ Symptom-driven debugging: `references/troubleshooting.md`.
 
 ## Common Integration Bugs (and how to avoid them)
 
-These are real bugs Claude has produced when scaffolding Paytm integrations from prompts. Internalize the fixes — don't regenerate the broken patterns.
+These are real bugs Claude has produced when scaffolding Paytm integrations from prompts. Internalize the fixes - don't regenerate the broken patterns.
 
 ### 1. Hard-coded absolute paths to external certs / files
 
@@ -328,8 +328,8 @@ These are real bugs Claude has produced when scaffolding Paytm integrations from
 
 ### 2. `https://localhost` in callback / dev URLs
 
-**Symptom:** `PAYTM_CALLBACK_URL=https://localhost:3001/paytm/callback` — Paytm POSTs the callback, browser blocks the redirect because there's no SSL on localhost. Payment "succeeds" silently with no callback.
-**Fix:** Use `http://localhost:3001` for local dev. Reserve `https://` for deployed environments where TLS is real. The reference backends already default to `http://localhost:{port}` — don't override unless you've actually set up local SSL (mkcert, Caddy, etc.).
+**Symptom:** `PAYTM_CALLBACK_URL=https://localhost:3001/paytm/callback` - Paytm POSTs the callback, browser blocks the redirect because there's no SSL on localhost. Payment "succeeds" silently with no callback.
+**Fix:** Use `http://localhost:3001` for local dev. Reserve `https://` for deployed environments where TLS is real. The reference backends already default to `http://localhost:{port}` - don't override unless you've actually set up local SSL (mkcert, Caddy, etc.).
 
 ### 3. ❗ `CheckoutJS.onLoad()` wrapped inside a button click handler
 
@@ -346,7 +346,7 @@ button.addEventListener("click", function () {
     });
 });
 ```
-`CheckoutJS.onLoad(cb)` fires **exactly once**, when the merchant CheckoutJS script finishes loading — which happens shortly after page load, long before the user clicks "Pay". By click time, `onLoad` has already fired and your callback never runs. The payment modal silently fails to open.
+`CheckoutJS.onLoad(cb)` fires **exactly once**, when the merchant CheckoutJS script finishes loading - which happens shortly after page load, long before the user clicks "Pay". By click time, `onLoad` has already fired and your callback never runs. The payment modal silently fails to open.
 
 **Correct pattern:**
 ```javascript
@@ -383,7 +383,7 @@ handler: {
   transactionStatus: function (data) {
     // data.STATUS: TXN_SUCCESS / TXN_FAILURE / PENDING
     if (data.STATUS === "TXN_SUCCESS") setStatus("Payment successful.");
-    else if (data.STATUS === "PENDING") setStatus("Payment pending — we'll confirm shortly.");
+    else if (data.STATUS === "PENDING") setStatus("Payment pending - we'll confirm shortly.");
     else                                setStatus("Payment failed: " + data.RESPMSG);
     window.Paytm.CheckoutJS.close();
     // ALWAYS reconfirm server-side via /paytm/order-status before fulfilling.
@@ -397,42 +397,42 @@ handler: {
 
 **Symptom:** The page shows raw event payloads, `JSON.stringify(data)` blobs, `console.log` mirrored into a `<pre>` tag, or a "Status: …" debug strip on the production checkout page. Looks unprofessional, leaks internal field names, and confuses real users.
 
-**Rule:** When generating production-grade UI code, **never** add an on-screen logger / status panel / debug `<pre>` block. Use `console.log` / `console.warn` / `console.error` for developer visibility — that's what DevTools is for. The user-facing UI should show only **clean, customer-readable messages**:
+**Rule:** When generating production-grade UI code, **never** add an on-screen logger / status panel / debug `<pre>` block. Use `console.log` / `console.warn` / `console.error` for developer visibility - that's what DevTools is for. The user-facing UI should show only **clean, customer-readable messages**:
 
 - "Payment successful"
-- "Payment failed — please try again"
+- "Payment failed - please try again"
 - "Payment cancelled"
-- "Payment pending — we'll confirm shortly"
+- "Payment pending - we'll confirm shortly"
 
-The reference `scripts/frontend/checkout.html` includes a `#status` div for **demo/learning purposes only**. When scaffolding for a real product, drop that div and route diagnostics to `console.*` instead. No `alert()` either — use a proper toast / banner / modal in the host app's design system.
+The reference `scripts/frontend/checkout.html` includes a `#status` div for **demo/learning purposes only**. When scaffolding for a real product, drop that div and route diagnostics to `console.*` instead. No `alert()` either - use a proper toast / banner / modal in the host app's design system.
 
 ### 6. Merchant key in `.env` must be wrapped in double quotes
 
 **Symptom:** Checksum generation produces wrong signatures even though the key looks correct. Paytm responds with `resultCode: 227` (checksum mismatch). Hours lost debugging.
 
-**Cause:** Paytm Merchant Keys often contain `#`, `@`, `!`, `$`, or `%` characters. In `.env` files, an unquoted `#` is treated as a comment delimiter — everything after it is dropped. Other special chars can also be mis-parsed by some dotenv loaders.
+**Cause:** Paytm Merchant Keys often contain `#`, `@`, `!`, `$`, or `%` characters. In `.env` files, an unquoted `#` is treated as a comment delimiter - everything after it is dropped. Other special chars can also be mis-parsed by some dotenv loaders.
 
 **Rule:** **Always** wrap the Merchant Key in double quotes in `.env`:
 
 ```bash
-# ❌ Wrong — any '#' in the key truncates the value
+# ❌ Wrong - any '#' in the key truncates the value
 PAYTM_MERCHANT_KEY=ab#cd@1234XYZ
 
 # ✅ Correct
 PAYTM_MERCHANT_KEY="ab#cd@1234XYZ"
 ```
 
-Same rule applies to any other secret with non-alphanumeric chars (DB passwords, API keys, etc.). When generating `.env` / `.env.example` files, **always** quote secrets — don't try to inspect the key and decide.
+Same rule applies to any other secret with non-alphanumeric chars (DB passwords, API keys, etc.). When generating `.env` / `.env.example` files, **always** quote secrets - don't try to inspect the key and decide.
 
 ### 7. `.env` file conventions
 
 Rules (apply to every generated `.env` / `.env.example`):
 
-- **`PAYTM_ENVIRONMENT` is always the first variable** — everything else derives from it.
+- **`PAYTM_ENVIRONMENT` is always the first variable** - everything else derives from it.
 - **Pre-fill staging values** so the file works out of the box for development. Users replace with production values when going live.
 - **Wrap every value in double quotes**, not just secrets. Consistent and avoids edge cases (e.g. `#` in keys silently truncating).
-- **Generic placeholders** — `YOUR_MID`, not `YOUR_STAGING_MID_HERE`. The environment lives in `PAYTM_ENVIRONMENT`, never baked into placeholder text.
-- **All mandatory keys at the top, comments / optional overrides in a later section** — keep the active config block clean and scannable.
+- **Generic placeholders** - `YOUR_MID`, not `YOUR_STAGING_MID_HERE`. The environment lives in `PAYTM_ENVIRONMENT`, never baked into placeholder text.
+- **All mandatory keys at the top, comments / optional overrides in a later section** - keep the active config block clean and scannable.
 
 Canonical `.env.example`:
 
@@ -447,7 +447,7 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 # Defaults are pre-filled for staging. To go live:
 #   1. Set PAYTM_ENVIRONMENT="production"
 #   2. Replace MID / MERCHANT_KEY / WEBSITE_NAME with your live credentials
-# Everything below is optional — leave commented unless you need to override.
+# Everything below is optional - leave commented unless you need to override.
 # ---------------------------------------------------------------------------
 # PAYTM_PG_DOMAIN=""               # auto-derived from PAYTM_ENVIRONMENT
 # PAYTM_CALLBACK_URL=""            # auto-derived from PAYTM_CALLBACK_BASE
@@ -457,55 +457,55 @@ PAYTM_CALLBACK_BASE="http://localhost:3001"
 
 ### 8. ❗ Picked the wrong flow (Payment vs Subscription vs Link vs QR)
 
-**This is the single highest-impact bug in the whole skill.** Picking the wrong flow produces code that *runs* but solves the wrong problem — silent, expensive, often only caught in production.
+**This is the single highest-impact bug in the whole skill.** Picking the wrong flow produces code that *runs* but solves the wrong problem - silent, expensive, often only caught in production.
 
 **Failure modes seen in production testing:**
 - *"Gym subscription of ₹1/month"* → generated one-time Payment with `requestType: "Payment"`. Charges once, never recurs.
-- *"Monthly SaaS billing"* → generated `requestType: "SUBSCRIPTION"` against `/initiateTransaction`. Wrong endpoint AND wrong requestType — Paytm's subscription endpoint expects `"NATIVE_SUBSCRIPTION"`.
+- *"Monthly SaaS billing"* → generated `requestType: "SUBSCRIPTION"` against `/initiateTransaction`. Wrong endpoint AND wrong requestType - Paytm's subscription endpoint expects `"NATIVE_SUBSCRIPTION"`.
 - *"Send a payment link via WhatsApp for ₹500"* → generated full JS Checkout HTML page. User wanted a shareable URL.
 - *"QR code on the counter for customers to scan"* → generated JS Checkout modal. User wanted a printable QR image.
 - *"Generate a QR for ₹100"* → omitted `posId` → HTTP 400 from Paytm.
 - *"Fetch / expire a payment link"* → sent `linkId` as a string → "invalid link id" response. Paytm expects a JSON number.
 
-**Rule — pick the flow BEFORE writing any code, by mapping prompt keywords:**
+**Rule - pick the flow BEFORE writing any code, by mapping prompt keywords:**
 
 | Prompt cue | Flow | Code generates… |
 |---|---|---|
 | "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew", "membership" | **Subscription** | Backend: `POST /subscription/create` with `requestType: "NATIVE_SUBSCRIPTION"` and **flat** subscription fields inside `body`. Frontend: JS Checkout for the consent screen. → `references/subscriptions.md` |
-| "payment link", "shareable link", "send link via SMS/WhatsApp/email", "invoice link" | **Payment Link** | Backend: `POST /link/create`. **No frontend** — Paytm hosts the checkout page; you only share the returned `shortUrl`. → `references/payment-links.md` |
-| "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** | Backend: `POST /paymentservices/qr/create`. **No JS Checkout** — render the returned `image` (base64 PNG) or `qrData` (UPI deep-link) on a screen / print it. → `references/qr-codes.md` |
+| "payment link", "shareable link", "send link via SMS/WhatsApp/email", "invoice link" | **Payment Link** | Backend: `POST /link/create`. **No frontend** - Paytm hosts the checkout page; you only share the returned `shortUrl`. → `references/payment-links.md` |
+| "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** | Backend: `POST /paymentservices/qr/create`. **No JS Checkout** - render the returned `image` (base64 PNG) or `qrData` (UPI deep-link) on a screen / print it. → `references/qr-codes.md` |
 | "checkout page", "pay button on website", "in-app payment", "one-time payment" | **JS Checkout (Payment)** | Backend: `requestType: "Payment"` + Initiate Transaction. Frontend: `scripts/frontend/checkout.html` pattern. → `references/js-checkout.md` |
 
-**Crucially:** Payment Link and Dynamic QR flows **do NOT require JS Checkout** at all — no merchant `.js` script, no `window.Paytm.CheckoutJS`. The customer pays on Paytm-hosted infrastructure (web link or UPI app). The merchant's only frontend job is to display the URL / QR image.
+**Crucially:** Payment Link and Dynamic QR flows **do NOT require JS Checkout** at all - no merchant `.js` script, no `window.Paytm.CheckoutJS`. The customer pays on Paytm-hosted infrastructure (web link or UPI app). The merchant's only frontend job is to display the URL / QR image.
 
 **If the prompt is ambiguous** (e.g. *"accept ₹1 payments"*, *"integrate Paytm"*), ask one clarifying question before generating: *"Is this a one-time payment, a recurring subscription, a shareable payment link, or a QR for in-store?"*
 
 ### 9. Production guardrails baked into the reference backends
 
-Every backend (`scripts/backend-{node,python,spring}`) wires in two production-critical concerns by default — keep them when adapting code:
+Every backend (`scripts/backend-{node,python,spring}`) wires in two production-critical concerns by default - keep them when adapting code:
 
-- **Idempotency on every `/paytm/create-*` endpoint.** Send `Idempotency-Key: <uuid>` as a request header (or `idempotencyKey` in the body). Repeats with the same key replay the cached response with `Idempotent-Replayed: true` instead of generating a second Paytm order. Backed by a 24h in-memory cache by default — **swap for Redis / DB in production**. Definitive 4xx errors are cached too; transient 5xx are not, so retries can succeed.
+- **Idempotency on every `/paytm/create-*` endpoint.** Send `Idempotency-Key: <uuid>` as a request header (or `idempotencyKey` in the body). Repeats with the same key replay the cached response with `Idempotent-Replayed: true` instead of generating a second Paytm order. Backed by a 24h in-memory cache by default - **swap for Redis / DB in production**. Definitive 4xx errors are cached too; transient 5xx are not, so retries can succeed.
 - **S2S webhook receiver at `POST /paytm/webhook`.** Verifies `head.signature` against the raw body bytes Paytm sent (re-serializing breaks the signature), dedupes on `(orderId, status)` for at-least-once delivery, then calls a stub `fulfillOrder` hook. Returns 200 fast on success or duplicates, 401 on signature failure, 5xx on processing errors so Paytm retries. Replace the stub with your DB write / queue push.
 
-When generating new endpoints from these backends, copy the `withIdempotency` wrapper and the webhook handler verbatim — don't reinvent them.
+When generating new endpoints from these backends, copy the `withIdempotency` wrapper and the webhook handler verbatim - don't reinvent them.
 
 ---
 
 ## Reference Files
 
 **Core flow + supported products**
-- `references/js-checkout.md` — JS Checkout, non-SDK form POST, full callback field list, callback-vs-webhook
-- `references/troubleshooting.md` — symptom → cause → fix tree, expanded RESPCODE table, decision tree
-- `references/subscriptions.md` — UPI Autopay & card mandates, charge/edit/cancel, NPCI pre-notification rules
-- `references/payment-links.md` — FIXED / REUSABLE / OPEN links, fetch, expire, SMS dispatch
-- `references/qr-codes.md` — Dynamic QR (DQR) generation, status, reconciliation
+- `references/js-checkout.md` - JS Checkout, non-SDK form POST, full callback field list, callback-vs-webhook
+- `references/troubleshooting.md` - symptom → cause → fix tree, expanded RESPCODE table, decision tree
+- `references/subscriptions.md` - UPI Autopay & card mandates, charge/edit/cancel, NPCI pre-notification rules
+- `references/payment-links.md` - FIXED / REUSABLE / OPEN links, fetch, expire, SMS dispatch
+- `references/qr-codes.md` - Dynamic QR (DQR) generation, status, reconciliation
 
 **Reference backends + frontend**
-- `scripts/backend-node/` — Express + `paytmchecksum`
-- `scripts/backend-spring/` — Spring Boot 3 + Jakarta + executable JAR (recommended Java reference)
-- `scripts/backend-spring-legacy/` — Spring MVC 5 + `javax.servlet` + WAR (Tomcat 9 only — keep using if you're locked on the older stack)
-- `scripts/backend-python/` — Flask + `paytmchecksum`
-- `scripts/frontend/checkout.html` — minimal copy-paste browser page
+- `scripts/backend-node/` - Express + `paytmchecksum`
+- `scripts/backend-spring/` - Spring Boot 3 + Jakarta + executable JAR (recommended Java reference)
+- `scripts/backend-spring-legacy/` - Spring MVC 5 + `javax.servlet` + WAR (Tomcat 9 only - keep using if you're locked on the older stack)
+- `scripts/backend-python/` - Flask + `paytmchecksum`
+- `scripts/frontend/checkout.html` - minimal copy-paste browser page
 
 ---
 
@@ -543,14 +543,14 @@ Place it directly under the relevant section so the user never has to scroll or 
 ```
 ### 🔑 Get your Paytm credentials
 
-You need a **MID** (Merchant ID) and **Merchant Key** for each environment — staging and production keys are NOT interchangeable.
+You need a **MID** (Merchant ID) and **Merchant Key** for each environment - staging and production keys are NOT interchangeable.
 
 - *Staging (test mode):* https://dashboard.paytmpayments.com → Developer Settings -> API Keys -> Generate now (under Test API Details)
 - *Production (Live Mode):* https://dashboard.paytmpayments.com → Developer Settings → API Keys -> Get Merchant ID, Merchant Key from Production API details.
 
   (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
 
-Store both in environment variables (`PAYTM_MID`, `PAYTM_MERCHANT_KEY`) — never commit them or expose in client-side code.
+Store both in environment variables (`PAYTM_MID`, `PAYTM_MERCHANT_KEY`) - never commit them or expose in client-side code.
 ```
 
-If a response doesn't mention env vars, credentials, or setup at all (e.g. a pure debugging answer about checksum hashing), skip it — don't pad. The rule is: **wherever credentials are talked about, this block is right there**.
+If a response doesn't mention env vars, credentials, or setup at all (e.g. a pure debugging answer about checksum hashing), skip it - don't pad. The rule is: **wherever credentials are talked about, this block is right there**.

@@ -62,12 +62,12 @@
           body: JSON.stringify({ amount: amount, posId: "POS001" }),
         })
           .then(function (r) {
-            if (!r.ok) return r.text().then(function (t) { throw new Error("HTTP " + r.status + " — " + t); });
+            if (!r.ok) return r.text().then(function (t) { throw new Error("HTTP " + r.status + " - " + t); });
             return r.json();
           })
           .then(function (data) {
             console.log("[paytm] qr created", data);
-            // Backend already prefixes the base64 image with `data:image/png;base64,` —
+            // Backend already prefixes the base64 image with `data:image/png;base64,` -
             // just drop it straight into <img src>.
             qrImg.src = data.image;
             orderInfo.textContent = "orderId: " + data.orderId;
@@ -94,7 +94,7 @@
         })
           .then(function (r) { return r.json(); })
           .then(function (data) {
-            // /v3/order/status response — body.resultInfo.resultStatus
+            // /v3/order/status response - body.resultInfo.resultStatus
             var status = data && data.body && data.body.resultInfo && data.body.resultInfo.resultStatus;
             if (status === "TXN_SUCCESS") {
               showStatus("success", "Payment received. Thank you!");
@@ -104,7 +104,7 @@
               showStatus("failure", "Payment failed. Please scan again.");
               return;
             }
-            // Still pending — keep polling.
+            // Still pending - keep polling.
             pollHandle = setTimeout(function () { pollOnce(orderId); }, POLL_INTERVAL_MS);
           })
           .catch(function (e) {

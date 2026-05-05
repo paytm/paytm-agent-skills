@@ -8,7 +8,7 @@ export function getPaytmConfig() {
 
   const mid = process.env.PAYTM_MID?.trim() || "";
   const merchantKey = process.env.PAYTM_MERCHANT_KEY?.trim() || "";
-  // Default mirrors PAYTM_ENVIRONMENT — "WEBSTAGING" for staging, "DEFAULT" for prod.
+  // Default mirrors PAYTM_ENVIRONMENT - "WEBSTAGING" for staging, "DEFAULT" for prod.
   const websiteName = process.env.PAYTM_WEBSITE_NAME?.trim()
     || (env === "production" ? "DEFAULT" : "WEBSTAGING");
   const callbackBase = (process.env.PAYTM_CALLBACK_BASE?.trim() || "http://localhost:3001").replace(/\/+$/, "");
@@ -31,7 +31,7 @@ export function getPaytmConfig() {
     linkCreateUrl: `${pgDomain}/link/create`,
     linkFetchTransactionUrl: `${pgDomain}/link/fetchTransaction`,
     qrCreateUrl: `${pgDomain}/paymentservices/qr/create`,
-    // clientId is per-merchant — issued by Paytm during onboarding. "C11" works for
+    // clientId is per-merchant - issued by Paytm during onboarding. "C11" works for
     // most single-merchant-key setups; override via env if your KAM gave you a different value.
     clientId: process.env.PAYTM_CLIENT_ID?.trim() || "C11",
     checkoutJsLoaderUrl: mid

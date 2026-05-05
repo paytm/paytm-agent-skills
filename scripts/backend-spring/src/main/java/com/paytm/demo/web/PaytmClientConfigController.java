@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Public JSON for the browser (MID + loader URL only — never merchant key).
+ * Public JSON for the browser (MID + loader URL only - never merchant key).
  * Path: {@code /paytm-client-config.json} at WAR root.
  */
 @RestController

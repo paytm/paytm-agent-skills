@@ -4,10 +4,10 @@
 //   1. Read raw body bytes (we capture them in server.js via express.json verify).
 //   2. Extract head.signature; verify against the body bytes Paytm signed.
 //      Re-serializing here would change key order / whitespace and break the
-//      signature — use the bytes Paytm sent.
-//   3. Idempotency check: (orderId, status) — Paytm retries at-least-once.
+//      signature - use the bytes Paytm sent.
+//   3. Idempotency check: (orderId, status) - Paytm retries at-least-once.
 //   4. Persist event for audit (here, just an in-memory log).
-//   5. Apply state transition (here, a stub `fulfillOrder` hook — replace with
+//   5. Apply state transition (here, a stub `fulfillOrder` hook - replace with
 //      your real DB write).
 //   6. Return 200 fast. Heavy lifting (emails, accounting) goes to a queue.
 //
@@ -21,7 +21,7 @@
 import PaytmChecksum from "paytmchecksum";
 import { getPaytmConfig } from "./paytmConfig.js";
 
-const seen = new Set();                       // `${orderId}|${status}` — at-least-once dedup
+const seen = new Set();                       // `${orderId}|${status}` - at-least-once dedup
 const SEEN_MAX = 50_000;
 const eventLog = [];                          // ring buffer for /paytm/webhook/events
 const EVENT_LOG_MAX = 200;
@@ -37,7 +37,7 @@ export function recentEvents() {
 
 /**
  * Substring of the raw body that corresponds to "body": {...}.
- * Paytm signs those bytes verbatim — re-serializing the parsed object would
+ * Paytm signs those bytes verbatim - re-serializing the parsed object would
  * change key order / whitespace and break the signature.
  */
 function extractBodyBytes(rawBody) {
@@ -91,7 +91,7 @@ export async function handleWebhook({ rawBody, parsed }) {
   rememberEvent(parsed);
 
   // Idempotency: at-least-once delivery means duplicates are normal.
-  // Key on (orderId, status) — Paytm always sets both for terminal events.
+  // Key on (orderId, status) - Paytm always sets both for terminal events.
   const orderId = parsed?.body?.orderId;
   const status = parsed?.body?.status || parsed?.body?.STATUS;
   const dedupKey = `${orderId || "unknown"}|${status || "unknown"}`;
@@ -101,14 +101,14 @@ export async function handleWebhook({ rawBody, parsed }) {
   if (seen.size >= SEEN_MAX) seen.clear();   // crude wrap; Redis has TTLs in real life
   seen.add(dedupKey);
 
-  // Apply state transition. Stub here — replace with your real fulfillment.
+  // Apply state transition. Stub here - replace with your real fulfillment.
   await fulfillOrder({ orderId, status, parsed });
 
   return { ok: true, httpStatus: 200, detail: { orderId, status } };
 }
 
 /**
- * Replace this with your real DB write / queue push. Keep it FAST — webhook
+ * Replace this with your real DB write / queue push. Keep it FAST - webhook
  * timeout is 10s; queue heavy work (emails, accounting) if needed.
  */
 async function fulfillOrder({ orderId, status, parsed }) {

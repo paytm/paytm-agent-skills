@@ -57,7 +57,7 @@
         .then(function (r) {
           if (!r.ok) {
             return r.text().then(function (t) {
-              throw new Error("HTTP " + r.status + " — " + t);
+              throw new Error("HTTP " + r.status + " - " + t);
             });
           }
           return r.json();
@@ -87,7 +87,7 @@
             }
           };
 
-          /* Per https://www.paytmpayments.com/docs/jscheckout-invoke-payment — init after CheckoutJS.onLoad */
+          /* Per https://www.paytmpayments.com/docs/jscheckout-invoke-payment - init after CheckoutJS.onLoad */
           return new Promise(function (resolve, reject) {
             window.Paytm.CheckoutJS.onLoad(function () {
               window.Paytm.CheckoutJS.init(config)

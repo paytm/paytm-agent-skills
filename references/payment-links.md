@@ -1,23 +1,23 @@
 # Paytm Payment Links
 
-> _Companion to **`SKILL.md`** — load this file alongside `SKILL.md`, never instead of it._
+> _Companion to **`SKILL.md`** - load this file alongside `SKILL.md`, never instead of it._
 
 Server-generated short URLs that open Paytm-hosted checkout. No client SDK; works in SMS, WhatsApp, email. Use for invoices, manual collections, social-commerce, agent-assisted sales.
 
-> **⚠️ READ THIS FIRST — common mistakes that cause silent failures and 400 errors:**
+> **⚠️ READ THIS FIRST - common mistakes that cause silent failures and 400 errors:**
 >
 > 1. The link identifier **`linkId` must be sent as a JSON number (long integer)**, NOT a quoted string. `"linkId": "31309"` fails. `"linkId": 31309` works.
-> 2. **Read the response link id defensively** — current Paytm responses return `linkId` (camelCase); older docs / staging environments may still return `LinkID` (capitalized). Use `body.linkId ?? body.LinkID`. Always send it back to Paytm as `linkId` (camelCase) on subsequent calls.
+> 2. **Read the response link id defensively** - current Paytm responses return `linkId` (camelCase); older docs / staging environments may still return `LinkID` (capitalized). Use `body.linkId ?? body.LinkID`. Always send it back to Paytm as `linkId` (camelCase) on subsequent calls.
 > 3. The **resend** endpoint is `/link/resendNotification`, NOT `/link/resend`.
-> 4. **Every link API call requires `head.tokenType: "AES"`**, not just `signature`. Omitting it returns `"Invalid tokenType"`. Applies to create / fetch / update / resend / expire — all of them.
+> 4. **Every link API call requires `head.tokenType: "AES"`**, not just `signature`. Omitting it returns `"Invalid tokenType"`. Applies to create / fetch / update / resend / expire - all of them.
 > 5. **`linkDescription` must be ≥ 3 chars and contain NO special characters** (alphanumerics + spaces only). Anything else returns a validation error.
-> 6. **Fetch response wraps the link in `body.links[0]`**, not `body` directly. Reading `json.body.linkStatus` returns `undefined` — read `json.body.links[0].linkStatus`.
-> 7. **Customer phone / email / name go inside a `customerContact` object** — they are **NOT** top-level body fields. Putting `customerMobile` / `customerEmail` at the top of `body` is silently accepted but Paytm never sends the SMS/email.
-> 8. **`amount` in create-link is a JSON number** (e.g. `100.00`), not a string — different from `txnAmount.value` in Initiate Transaction. Quoting it as a string can fail validation.
+> 6. **Fetch response wraps the link in `body.links[0]`**, not `body` directly. Reading `json.body.linkStatus` returns `undefined` - read `json.body.links[0].linkStatus`.
+> 7. **Customer phone / email / name go inside a `customerContact` object** - they are **NOT** top-level body fields. Putting `customerMobile` / `customerEmail` at the top of `body` is silently accepted but Paytm never sends the SMS/email.
+> 8. **`amount` in create-link is a JSON number** (e.g. `100.00`), not a string - different from `txnAmount.value` in Initiate Transaction. Quoting it as a string can fail validation.
 > 9. **`head` should include a `timestamp`** (Unix epoch seconds as a string) alongside `tokenType` + `signature` per the official Create Link doc.
-> 10. **`expiryDate` format is MID-dependent.** Most MIDs accept `DD/MM/YYYY HH:MM:SS` (returns error code `5021: Date should be in format DD/MM/YYYY` when wrong). The Paytm doc shows `yyyy-MM-dd HH:mm:ss` for some. **Default to `DD/MM/YYYY HH:MM:SS`** — switch only if your MID rejects it.
-> 11. **Use `linkType: "FIXED"` for fixed-amount, single-payer links.** `"GENERIC"` is an open-amount link — it silently ignores `amount` on create (fetch shows `amount: null`) AND rejects amount updates with error `5082`. Don't use GENERIC unless you actually want payer-chosen amount.
-> 12. **Create response key is `linkId` (camelCase)** in current Paytm responses — older docs / earlier versions of this skill said `LinkID`. Read defensively: `const id = body.linkId ?? body.LinkID;`
+> 10. **`expiryDate` format is MID-dependent.** Most MIDs accept `DD/MM/YYYY HH:MM:SS` (returns error code `5021: Date should be in format DD/MM/YYYY` when wrong). The Paytm doc shows `yyyy-MM-dd HH:mm:ss` for some. **Default to `DD/MM/YYYY HH:MM:SS`** - switch only if your MID rejects it.
+> 11. **Use `linkType: "FIXED"` for fixed-amount, single-payer links.** `"GENERIC"` is an open-amount link - it silently ignores `amount` on create (fetch shows `amount: null`) AND rejects amount updates with error `5082`. Don't use GENERIC unless you actually want payer-chosen amount.
+> 12. **Create response key is `linkId` (camelCase)** in current Paytm responses - older docs / earlier versions of this skill said `LinkID`. Read defensively: `const id = body.linkId ?? body.LinkID;`
 > 13. **Reconcile a Payment Link via `/link/fetchTransaction`, NOT `/v3/order/status`.** The link product has a dedicated transactions endpoint that returns every payer's order(s) under `body.orders[]`. Use it for Payment Link reconciliation; `/v3/order/status` is for one-time-payment / JS-Checkout flows.
 
 Reference: <https://www.paytmpayments.com/docs/api/create-link-api?ref=paymentLinks>
@@ -64,24 +64,24 @@ Content-Type: application/json
 |---|---|---|
 | `mid` | ✅ | Merchant ID |
 | `linkName` | ✅ | Short label, alphanumerics + spaces only |
-| `linkDescription` | ✅ | **Min 3 chars, alphanumerics + spaces only — no special characters.** `!`, `@`, `#`, `$`, `&`, `-`, `_`, `.`, `/`, `:` etc. all fail validation. Keep it short and clean (`"Invoice 001"`, `"Gym membership"`) |
-| `linkType` | ✅ | `"FIXED"` for single-payer fixed-amount (most common), `"GENERIC"` for open-amount payer-chosen. **Don't use GENERIC for fixed amounts** — it ignores `amount` on create and rejects updates with error `5082` |
+| `linkDescription` | ✅ | **Min 3 chars, alphanumerics + spaces only - no special characters.** `!`, `@`, `#`, `$`, `&`, `-`, `_`, `.`, `/`, `:` etc. all fail validation. Keep it short and clean (`"Invoice 001"`, `"Gym membership"`) |
+| `linkType` | ✅ | `"FIXED"` for single-payer fixed-amount (most common), `"GENERIC"` for open-amount payer-chosen. **Don't use GENERIC for fixed amounts** - it ignores `amount` on create and rejects updates with error `5082` |
 | `amount` | conditional | **JSON number** (`499.00`), NOT a string. Required for `FIXED`; ignored for `GENERIC` |
 | `head.tokenType` | ✅ | Always `"AES"` |
 | `head.signature` | ✅ | CHECKSUMHASH over the body |
 | `head.timestamp` | ✅ | Unix epoch seconds as string (e.g. `"1714464000"`) |
-| `sendSms` / `sendEmail` | optional | Booleans — instruct Paytm to dispatch to `customerContact.customerMobile` / `customerContact.customerEmail` |
-| `customerContact` | optional | **Nested object** — see below. Required for SMS / email dispatch |
+| `sendSms` / `sendEmail` | optional | Booleans - instruct Paytm to dispatch to `customerContact.customerMobile` / `customerContact.customerEmail` |
+| `customerContact` | optional | **Nested object** - see below. Required for SMS / email dispatch |
 | `customerContact.customerName` | optional | Display name |
 | `customerContact.customerEmail` | optional | Required if `sendEmail: true` |
 | `customerContact.customerMobile` | optional | Required if `sendSms: true` |
 | `customerContact.customerId` | optional | Your customer ID for reconciliation |
 | `expiryDate` | optional | `DD/MM/YYYY HH:MM:SS` IST (most MIDs). Max ~1 year out. If MID rejects this format try `yyyy-MM-dd HH:mm:ss` |
-| `orderId` | optional | **Strongly recommended** — lets you reconcile via `/v3/order/status` |
+| `orderId` | optional | **Strongly recommended** - lets you reconcile via `/v3/order/status` |
 | `callbackUrl` | optional | Same semantics as JS Checkout callback (browser POST after payment) |
 | `merchantUniqueReference` | optional | Echoed back; useful for invoice ↔ link mapping |
 
-For payer-chosen amount: omit `amount` and provide `minAmount` / `maxAmount` as numbers (`10.00`, `10000.00`). Confirm support with your account manager — some Paytm MIDs don't allow open-amount links.
+For payer-chosen amount: omit `amount` and provide `minAmount` / `maxAmount` as numbers (`10.00`, `10000.00`). Confirm support with your account manager - some Paytm MIDs don't allow open-amount links.
 
 ### Response
 
@@ -104,7 +104,7 @@ For payer-chosen amount: omit `amount` and provide `minAmount` / `maxAmount` as 
 > const linkId = body.linkId ?? body.LinkID;   // works for both
 > ```
 >
-> **Persist the value as an integer**, not a string — JavaScript will silently widen large IDs into floats; use `BigInt` or a string-of-digits internally if your stack mishandles long integers, but always send it back to Paytm as a JSON number.
+> **Persist the value as an integer**, not a string - JavaScript will silently widen large IDs into floats; use `BigInt` or a string-of-digits internally if your stack mishandles long integers, but always send it back to Paytm as a JSON number.
 
 Send `shortUrl` to the customer via your own channels, or rely on Paytm's SMS/email dispatch.
 
@@ -128,7 +128,7 @@ POST {pgDomain}/link/fetch
 
 `linkId` is a **JSON number**. Quoting it (`"31309"`) returns "invalid link id".
 
-### Fetch response shape — read carefully
+### Fetch response shape - read carefully
 
 ```json
 {
@@ -202,7 +202,7 @@ POST {pgDomain}/link/resendNotification
 }
 ```
 
-Use this if the original SMS/email didn't reach the customer, or to nudge unpaid invoices. Same DLT-template caveat as `create` — SMS may be silently dropped if templates aren't approved.
+Use this if the original SMS/email didn't reach the customer, or to nudge unpaid invoices. Same DLT-template caveat as `create` - SMS may be silently dropped if templates aren't approved.
 
 ---
 
@@ -222,13 +222,13 @@ POST {pgDomain}/link/expire
 }
 ```
 
-Idempotent. Once expired, payers see "link no longer active". You cannot un-expire — create a new link.
+Idempotent. Once expired, payers see "link no longer active". You cannot un-expire - create a new link.
 
 ---
 
 ## Fetch transactions for a link (reconciliation)
 
-> **Use this for Payment Link reconciliation, not `/v3/order/status`.** `/v3/order/status` exists for one-time-payment / JS-Checkout flows where you already know the merchant `orderId`. For Payment Links — especially `REUSABLE` and `OPEN` types where many payers may pay against the same link — `/link/fetchTransaction` is the right endpoint. It returns every order made against the link in a single call, paginated.
+> **Use this for Payment Link reconciliation, not `/v3/order/status`.** `/v3/order/status` exists for one-time-payment / JS-Checkout flows where you already know the merchant `orderId`. For Payment Links - especially `REUSABLE` and `OPEN` types where many payers may pay against the same link - `/link/fetchTransaction` is the right endpoint. It returns every order made against the link in a single call, paginated.
 
 ```
 POST {pgDomain}/link/fetchTransaction
@@ -255,7 +255,7 @@ Doc: <https://www.paytmpayments.com/docs/api/fetch-transaction-link-api?ref=paym
 | Field | Required | Notes |
 |---|---|---|
 | `mid` | ✅ | Merchant ID |
-| `linkId` | ✅ | **JSON number** (long), NOT a string — same rule as fetch / update / expire |
+| `linkId` | ✅ | **JSON number** (long), NOT a string - same rule as fetch / update / expire |
 | `pageNo` | optional | 1-indexed; defaults to 1 |
 | `pageSize` | optional | Up to ~50; defaults vary by MID |
 | `fetchAllTxns` | optional | `true` returns all orders against the link; `false` (default) returns only successful ones |
@@ -263,7 +263,7 @@ Doc: <https://www.paytmpayments.com/docs/api/fetch-transaction-link-api?ref=paym
 | `head.signature` | ✅ | CHECKSUMHASH over `body` |
 | `head.timestamp` / `clientId` / `version` / `channelId` | optional | Standard Paytm head extras |
 
-### Response shape — orders are wrapped in `body.orders[]`
+### Response shape - orders are wrapped in `body.orders[]`
 
 ```json
 {
@@ -300,7 +300,7 @@ Doc: <https://www.paytmpayments.com/docs/api/fetch-transaction-link-api?ref=paym
 | `resultCode` | Meaning | Action |
 |---|---|---|
 | `200` | Success | Proceed |
-| `404` | Data Not Found — no transactions yet for this link | Treat as "not paid yet"; poll later or wait for webhook |
+| `404` | Data Not Found - no transactions yet for this link | Treat as "not paid yet"; poll later or wait for webhook |
 | `5028` | Checksum invalid | Re-sign the body; check that you're hashing the same bytes you POST |
 | `501` | Internal Server Error | Transient; retry |
 
@@ -312,7 +312,7 @@ The post-payment flow for Payment Links:
 
 1. Customer opens the link → Paytm-hosted checkout → pays.
 2. Paytm POSTs to your `callbackUrl` (browser redirect) with the same UPPERCASE field set as JS Checkout: `ORDERID`, `TXNID`, `STATUS`, `RESPCODE`, `CHECKSUMHASH`, etc.
-3. **Verify CHECKSUMHASH**, then call **`/link/fetchTransaction`** server-to-server to confirm — it returns the order(s) in `body.orders[]` with `orderStatus`, `txnAmount`, `txnId`, customer details. Use that as the source of truth before fulfilling. (Do NOT use `/v3/order/status` for Payment Link reconciliation — that endpoint is for one-time-payment / JS-Checkout flows.)
+3. **Verify CHECKSUMHASH**, then call **`/link/fetchTransaction`** server-to-server to confirm - it returns the order(s) in `body.orders[]` with `orderStatus`, `txnAmount`, `txnId`, customer details. Use that as the source of truth before fulfilling. (Do NOT use `/v3/order/status` for Payment Link reconciliation - that endpoint is for one-time-payment / JS-Checkout flows.)
 4. Webhook (if configured) gives you the same data reliably without polling.
 
 ---
@@ -339,13 +339,13 @@ The post-payment flow for Payment Links:
 5. **Fetch response wraps the link in `body.links[0]`**, not `body` directly. `json.body.linkStatus` is `undefined`; you must read `json.body.links[0].linkStatus`.
 6. **Customer details must be nested in `customerContact`.** Putting `customerMobile` / `customerEmail` / `customerName` at the top level of `body` is silently accepted but Paytm never dispatches the SMS / email. The link is created but the customer is never notified.
 7. **Create-link `amount` is a JSON number**, not a string. `499.00` works; `"499.00"` may fail validation. (Different from `txnAmount.value` in Initiate Transaction, which IS a string.)
-8. **`head.timestamp` is required on create-link** per the official doc — Unix epoch seconds as a string.
-9. **`orderId` reconciles to a single payment for one-shot links** — for reusable/multi-payer links iterate `transactions[]` from the fetch response.
+8. **`head.timestamp` is required on create-link** per the official doc - Unix epoch seconds as a string.
+9. **`orderId` reconciles to a single payment for one-shot links** - for reusable/multi-payer links iterate `transactions[]` from the fetch response.
 10. **Expired links can't be charged.** Build a renewal job for unpaid invoices instead of relying on long expiry windows.
-11. **Open-amount links** (no fixed `amount`, only `minAmount`/`maxAmount`) are fraud-prone — set tight bounds and verify the paid amount server-side.
+11. **Open-amount links** (no fixed `amount`, only `minAmount`/`maxAmount`) are fraud-prone - set tight bounds and verify the paid amount server-side.
 12. **SMS dispatch requires DLT-registered templates** on the Paytm side (Indian regulation). New merchants may see SMS silently dropped until templates are approved on the dashboard.
-13. **`shortUrl` redirects to a long URL on the PG host** — link previews (WhatsApp, iMessage) hit the long URL, which can affect link analytics if you depend on click-through tracking.
-14. **Update can't change `linkType` or `orderId`** — only mutable fields (amount, expiry, description, contact).
-15. **Reconcile via `/link/fetchTransaction`, not `/v3/order/status`.** The link product has its own transactions endpoint that returns every order (paginated) under `body.orders[]`. `/v3/order/status` is for one-time-payment / JS-Checkout flows where you already know the merchant `orderId`; for Payment Links — especially `REUSABLE` / `OPEN` links with multiple payers — `/link/fetchTransaction` gives you the full list in a single call.
+13. **`shortUrl` redirects to a long URL on the PG host** - link previews (WhatsApp, iMessage) hit the long URL, which can affect link analytics if you depend on click-through tracking.
+14. **Update can't change `linkType` or `orderId`** - only mutable fields (amount, expiry, description, contact).
+15. **Reconcile via `/link/fetchTransaction`, not `/v3/order/status`.** The link product has its own transactions endpoint that returns every order (paginated) under `body.orders[]`. `/v3/order/status` is for one-time-payment / JS-Checkout flows where you already know the merchant `orderId`; for Payment Links - especially `REUSABLE` / `OPEN` links with multiple payers - `/link/fetchTransaction` gives you the full list in a single call.
 16. **Fetch-transaction response wraps orders in `body.orders[]`**, always an array (even when one order). Iterate; don't index by ordinal.
-17. **`404` from fetch-transaction is "no transactions yet" — not an error.** Treat as "link not paid yet" and poll later or wait for the webhook.
+17. **`404` from fetch-transaction is "no transactions yet" - not an error.** Treat as "link not paid yet" and poll later or wait for the webhook.

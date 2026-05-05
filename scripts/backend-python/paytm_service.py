@@ -66,7 +66,7 @@ def initiate_transaction(
     callback_url = cfg["callback_url"] or f"{server_base_url.rstrip('/')}/paytm/callback"
 
     user_info = {"custId": (cust_id or "").strip() or "CUST_DEMO"}
-    # mobile + email are strongly recommended — pre-fill the consent screen and
+    # mobile + email are strongly recommended - pre-fill the consent screen and
     # drive OTP / notifications. Real merchants should always pass these through.
     if mobile and mobile.strip():
         user_info["mobile"] = mobile.strip()
@@ -116,7 +116,7 @@ def fetch_order_status(order_id: str) -> str:
     r = requests.post(cfg["order_status_url"], json=payload,
                       headers={"Content-Type": "application/json"}, timeout=15)
     if not r.ok:
-        raise PaytmError("STATUS_HTTP_ERROR", f"order status HTTP {r.status_code} — {r.text}",
+        raise PaytmError("STATUS_HTTP_ERROR", f"order status HTTP {r.status_code} - {r.text}",
                          http_status=502, order_id=order_id)
     return r.text
 
