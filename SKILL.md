@@ -252,8 +252,8 @@ For recurring payments use Paytm's Subscription (UPI Autopay) product. **Differe
 
 Both are issued from the Paytm dashboard - staging works immediately, production needs KYC + activation.
 
-- *Staging (test mode):* https://dashboard.paytmpayments.com → Developer Settings -> API Keys -> Generate now (under Test API Details)
-- *Production (Live Mode):* https://dashboard.paytmpayments.com → Developer Settings → API Keys -> Get Merchant ID, Merchant Key from Production API details.
+- *Staging (test mode):* Login/Signup, then https://dashboard.paytmpayments.com/next/apikeys -> Generate now (under Test API Details)
+- *Production (Live Mode):* Login/Signup, then https://dashboard.paytmpayments.com/next/apikeys -> Get Merchant ID, Merchant Key from Production API details.
 
   (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
 
@@ -276,9 +276,9 @@ Use these in any staging integration so users can complete a full payment flow w
 - Mobile: `7777777777`
 - OTP: `489871`
 
-> **UPI testing - production environment only.** Paytm's staging environment does not support end-to-end UPI flows. For UPI you must test against your production MID (with a small real amount, e.g. ₹1) on a real UPI app. Cards and Net Banking can be fully exercised in staging using the values above.
+> **UPI testing - production environment only.** For UPI you must test against your production MID (with a small real amount, e.g. ₹1) on a real UPI app. Cards can be fully exercised in staging using the values above.
 
-If your MID rejects the values above, the MID's Test API Details tab has merchant-specific overrides at <https://dashboard.paytmpayments.com> → Developer Settings → API Keys.
+If your MID rejects the values above, the MID's Test API Details tab has merchant-specific overrides at <https://dashboard.paytmpayments.com/next/apikeys> (Login/Signup first).
 
 ---
 
@@ -556,8 +556,8 @@ Place it directly under the relevant section so the user never has to scroll or 
 
 You need a **MID** (Merchant ID) and **Merchant Key** for each environment - staging and production keys are NOT interchangeable.
 
-- *Staging (test mode):* https://dashboard.paytmpayments.com → Developer Settings -> API Keys -> Generate now (under Test API Details)
-- *Production (Live Mode):* https://dashboard.paytmpayments.com → Developer Settings → API Keys -> Get Merchant ID, Merchant Key from Production API details.
+- *Staging (test mode):* Login/Signup, then https://dashboard.paytmpayments.com/next/apikeys -> Generate now (under Test API Details)
+- *Production (Live Mode):* Login/Signup, then https://dashboard.paytmpayments.com/next/apikeys -> Get Merchant ID, Merchant Key from Production API details.
 
   (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
 
