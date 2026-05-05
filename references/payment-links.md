@@ -96,7 +96,7 @@ For payer-chosen amount: omit `amount` and provide `minAmount` / `maxAmount` as 
     "linkId": 31309,
     "shortUrl": "https://paytm.me/XXXXXXX",
     "longUrl": "https://secure.paytmpayments.com/link/...",
-    "linkStatus": "ACTIVE"
+    "isActive": true
   }
 }
 ```
@@ -108,6 +108,15 @@ For payer-chosen amount: omit `amount` and provide `minAmount` / `maxAmount` as 
 > ```
 >
 > **Persist the value as an integer**, not a string - JavaScript will silently widen large IDs into floats; use `BigInt` or a string-of-digits internally if your stack mishandles long integers, but always send it back to Paytm as a JSON number.
+
+> **Status field varies by MID.** Some MIDs return `linkStatus: "ACTIVE"` (string); others return `isActive: true` (boolean). Normalize on read:
+>
+> ```js
+> const linkStatus = body.linkStatus
+>   ?? (body.isActive === true ? "ACTIVE" : body.isActive === false ? "INACTIVE" : "UNKNOWN");
+> ```
+>
+> Same dual-shape applies in the `/link/fetch` response below.
 
 Send `shortUrl` to the customer via your own channels, or rely on Paytm's SMS/email dispatch.
 
@@ -142,7 +151,7 @@ POST {pgDomain}/link/fetch
       {
         "linkId": 31309,
         "linkType": "FIXED",
-        "linkStatus": "ACTIVE",
+        "isActive": true,           // some MIDs use this; others return linkStatus: "ACTIVE"
         "amount": "499.00",
         "shortUrl": "https://paytm.me/XXXXXXX",
         "longUrl": "https://...",
@@ -155,7 +164,15 @@ POST {pgDomain}/link/fetch
 }
 ```
 
-> **⚠️ The link is wrapped in `body.links[0]`, not `body` directly.** Reading `json.body.linkStatus` returns `undefined`. Read `json.body.links[0].linkStatus` (and similarly for every other link field). The array is always length 1 for fetch (single-link lookup) but the wrapper is always there.
+> **⚠️ The link is wrapped in `body.links[0]`, not `body` directly.** Reading `json.body.linkStatus` returns `undefined`. Read `json.body.links[0]` first (and similarly for every other link field). The array is always length 1 for fetch (single-link lookup) but the wrapper is always there.
+>
+> **Status field is dual-shape — normalize on read:**
+>
+> ```js
+> const link = body.links?.[0];
+> const linkStatus = link?.linkStatus
+>   ?? (link?.isActive === true ? "ACTIVE" : link?.isActive === false ? "INACTIVE" : "UNKNOWN");
+> ```
 
 ---
 
@@ -282,7 +299,7 @@ Doc: <https://www.paytmpayments.com/docs/api/fetch-transaction-link-api?ref=paym
         "txnId": "20260504000000000001",
         "orderId": "ORD_INV_001",
         "mercUniqRef": "INV-001-v1",
-        "orderStatus": "TXN_SUCCESS",
+        "orderStatus": "SUCCESS",
         "txnAmount": 499.00,
         "orderCreatedTime": "2026-05-04 14:32:11",
         "customerName": "Buyer Name",
@@ -297,15 +314,28 @@ Doc: <https://www.paytmpayments.com/docs/api/fetch-transaction-link-api?ref=paym
 ```
 
 > **`body.orders[]` is always an array**, even when only one order exists. Iterate; don't index by ordinal in production code.
+>
+> **⚠️ `orderStatus` is dual-shape — match BOTH `"SUCCESS"` and `"TXN_SUCCESS"`.** The `/link/fetchTransaction` endpoint returns `orderStatus: "SUCCESS"` for paid links on most MIDs; some return `"TXN_SUCCESS"` (the value you'd see from `/v3/order/status` and the JS Checkout `transactionStatus` callback). The two surfaces are not normalised on Paytm's side. Match both in your reconciliation:
+>
+> ```js
+> const PAID = new Set(["SUCCESS", "TXN_SUCCESS"]);
+> const FAILED = new Set(["FAILURE", "TXN_FAILURE", "FAILED"]);
+> const paidOrders = orders.filter(o => PAID.has(o.orderStatus));
+> ```
+>
+> Hard-coding only `"TXN_SUCCESS"` (as some older snippets show) silently classifies every paid link as unpaid on these MIDs — money is received but your DB never marks it. **Verify with both values before fulfilling.**
 
-### Error codes (Fetch Transaction)
+### Error codes (Payment Link APIs)
 
-| `resultCode` | Meaning | Action |
-|---|---|---|
-| `200` | Success | Proceed |
-| `404` | Data Not Found - no transactions yet for this link | Treat as "not paid yet"; poll later or wait for webhook |
-| `5028` | Checksum invalid | Re-sign the body; check that you're hashing the same bytes you POST |
-| `501` | Internal Server Error | Transient; retry |
+| `resultCode` | Where | Meaning | Action |
+|---|---|---|---|
+| `200` | All | Success | Proceed |
+| `404` | Fetch Transaction | Data Not Found - no transactions yet for this link | Treat as "not paid yet"; poll later or wait for webhook |
+| `5007` | Create / Update | `link name contains special character` | `linkName` must be alphanumerics ONLY on this MID — strip spaces too. See warning #5 |
+| `5021` | Create / Update | `Date should be in format DD/MM/YYYY` | Switch `expiryDate` to `DD/MM/YYYY HH:MM:SS` |
+| `5028` | All | Checksum invalid | Re-sign the body; check that you're hashing the same bytes you POST |
+| `5082` | Update | Amount-update rejected | You're trying to update `amount` on a `GENERIC` (open-amount) link; switch to `FIXED` on create |
+| `501` | All | Internal Server Error | Transient; retry |
 
 ---
 
@@ -315,7 +345,7 @@ The post-payment flow for Payment Links:
 
 1. Customer opens the link → Paytm-hosted checkout → pays.
 2. Paytm POSTs to your `callbackUrl` (browser redirect) with the same UPPERCASE field set as JS Checkout: `ORDERID`, `TXNID`, `STATUS`, `RESPCODE`, `CHECKSUMHASH`, etc.
-3. **Verify CHECKSUMHASH**, then call **`/link/fetchTransaction`** server-to-server to confirm - it returns the order(s) in `body.orders[]` with `orderStatus`, `txnAmount`, `txnId`, customer details. Use that as the source of truth before fulfilling. (Do NOT use `/v3/order/status` for Payment Link reconciliation - that endpoint is for one-time-payment / JS-Checkout flows.)
+3. **Verify CHECKSUMHASH**, then call **`/link/fetchTransaction`** server-to-server to confirm - it returns the order(s) in `body.orders[]` with `orderStatus`, `txnAmount`, `txnId`, customer details. Use that as the source of truth before fulfilling. **Treat the order as paid if `orderStatus` matches EITHER `"SUCCESS"` OR `"TXN_SUCCESS"`** — the value depends on MID and is not normalized by Paytm. (Do NOT use `/v3/order/status` for Payment Link reconciliation - that endpoint is for one-time-payment / JS-Checkout flows.)
 4. Webhook (if configured) gives you the same data reliably without polling.
 
 ---
@@ -339,7 +369,7 @@ The post-payment flow for Payment Links:
 2. **Response key is `linkId` (camelCase)** in current Paytm responses; some legacy / staging variants return `LinkID`. Read defensively (`body.linkId ?? body.LinkID`); always send `linkId` on subsequent calls.
 3. **`head.tokenType: "AES"` is required on every call.** Omitting it returns `"Invalid tokenType"`. Easy to miss because the field isn't called out in older Paytm samples.
 4. **`linkName` and `linkDescription` have different charset rules in practice — sanitize separately.** `linkName` accepts alphanumerics ONLY (some MIDs reject space as a special character despite Paytm docs claiming it's allowed). `linkDescription` accepts alphanumerics + spaces. Both ≥ 3 chars. Never pass raw user input through.
-5. **Fetch response wraps the link in `body.links[0]`**, not `body` directly. `json.body.linkStatus` is `undefined`; you must read `json.body.links[0].linkStatus`.
+5. **Fetch response wraps the link in `body.links[0]`**, not `body` directly. `json.body.linkStatus` is `undefined`; you must read `json.body.links[0]` first. The status field within is **dual-shape**: `linkStatus: "ACTIVE"` on some MIDs, `isActive: true` on others. Normalize: `link.linkStatus ?? (link.isActive ? "ACTIVE" : "INACTIVE")`.
 6. **Customer details must be nested in `customerContact`.** Putting `customerMobile` / `customerEmail` / `customerName` at the top level of `body` is silently accepted but Paytm never dispatches the SMS / email. The link is created but the customer is never notified.
 7. **Create-link `amount` is a JSON number**, not a string. `499.00` works; `"499.00"` may fail validation. (Different from `txnAmount.value` in Initiate Transaction, which IS a string.)
 8. **`head.timestamp` is required on create-link** per the official doc - Unix epoch seconds as a string.
@@ -352,3 +382,6 @@ The post-payment flow for Payment Links:
 15. **Reconcile via `/link/fetchTransaction`, not `/v3/order/status`.** The link product has its own transactions endpoint that returns every order (paginated) under `body.orders[]`. `/v3/order/status` is for one-time-payment / JS-Checkout flows where you already know the merchant `orderId`; for Payment Links - especially `REUSABLE` / `OPEN` links with multiple payers - `/link/fetchTransaction` gives you the full list in a single call.
 16. **Fetch-transaction response wraps orders in `body.orders[]`**, always an array (even when one order). Iterate; don't index by ordinal.
 17. **`404` from fetch-transaction is "no transactions yet" - not an error.** Treat as "link not paid yet" and poll later or wait for the webhook.
+18. **`orderStatus` from `/link/fetchTransaction` is dual-shape — match BOTH `"SUCCESS"` AND `"TXN_SUCCESS"`.** Hard-coding only `"TXN_SUCCESS"` (the value JS Checkout / `/v3/order/status` use) silently classifies every paid link as unpaid on MIDs that return `"SUCCESS"` here. Money received, system says no — a silent business bug.
+19. **`isActive` (boolean) vs `linkStatus` (string)** — both create-link and fetch-link responses use one or the other depending on MID. Read defensively (`linkStatus ?? (isActive ? "ACTIVE" : "INACTIVE")`).
+20. **Error code `5007`: "link name contains special character"** — `linkName` rejected. On many MIDs, **space is treated as a special character** even though Paytm's docs say spaces are allowed. Strip spaces from `linkName` (use `[A-Za-z0-9]` only); keep them only in `linkDescription`.
