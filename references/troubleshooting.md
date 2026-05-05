@@ -194,6 +194,41 @@ node -e "fetch('https://secure.paytmpayments.com').then(r=>console.log(r.status)
 ```
 Should print a status code (e.g. `404`), not an error code.
 
+### The asymmetric-MITM trap (the one that actually bit us)
+
+Some corp proxies (Zscaler is the common one) intercept **staging hosts but pass production through unintercepted** - or vice versa. This produces a confusing failure mode:
+
+| Endpoint | Proxy behavior | Chain Node sees | Trusted? |
+|---|---|---|---|
+| `securestage.paytmpayments.com` | MITM (re-signed with corp intermediate) | Corp-issued | Only if corp CA is trusted |
+| `secure.paytmpayments.com` | Passthrough | Real DigiCert chain | Only if DigiCert root is trusted |
+
+If your shell exports `SSL_CERT_FILE=~/zscaler-root-ca.pem` (Zscaler's installer does this), Node uses **only** that file as its trust store - DigiCert is gone. Staging works, prod fails with `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`. Same outcome on Python (`requests` honors `SSL_CERT_FILE` too).
+
+### `SSL_CERT_FILE` vs `NODE_EXTRA_CA_CERTS` - critical distinction
+
+| Variable | Behavior | Effect |
+|---|---|---|
+| `SSL_CERT_FILE` | **Replaces** Node's bundled trust store | Only the CAs in that file are trusted - public CAs (DigiCert, Let's Encrypt, etc.) are silently dropped |
+| `NODE_EXTRA_CA_CERTS` | **Adds** to Node's bundled trust store | Public CAs still trusted, plus the extras |
+
+Always prefer `NODE_EXTRA_CA_CERTS`. If `SSL_CERT_FILE` is set in your environment (check `env | grep SSL_CERT_FILE`), unset it for the Node process:
+
+```bash
+# Correct - drops the variable entirely
+env -u SSL_CERT_FILE NODE_EXTRA_CA_CERTS=./certs/corp-proxy-ca.crt node server.js
+
+# WRONG - empty string still tells Node "use this (empty) file as the trust store"
+SSL_CERT_FILE= NODE_EXTRA_CA_CERTS=./certs/corp-proxy-ca.crt node server.js
+```
+
+In a `package.json` script:
+```json
+"start": "env -u SSL_CERT_FILE NODE_EXTRA_CA_CERTS=./certs/corp-proxy-ca.crt node server.js"
+```
+
+Python equivalent: `unset SSL_CERT_FILE REQUESTS_CA_BUNDLE` before running, then point `REQUESTS_CA_BUNDLE` at a bundle that contains **both** the corp CA and the public roots (concatenate `certifi.where()` output with your corp PEM).
+
 ### Fix 2: Ask IT to bypass TLS inspection for Paytm
 
 One-line ticket: "Please exempt `*.paytmpayments.com` from TLS inspection - payment gateway, PCI-scope traffic." Most proxies have a financial-services bypass category already.
