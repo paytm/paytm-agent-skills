@@ -58,12 +58,21 @@ Install the Paytm PG integration skill globally from https://github.com/paytm/pa
 - **Claude Code:** Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.  
 - **Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.    
 
-### ChatGPT (Codex)
+### Codex
 
-Download `SKILL.md`, then:
-- **Codex:** upload as a file in a Project or Custom GPT, or paste into system instructions.
+Install the skill into Codex using either of:
 
-Optionally attach files from `references/` for deeper coverage.
+1. Run the skill installer:
+   ```
+   $skill-installer install "https://github.com/paytm/paytm-integration-skills/"
+   ```
+
+2. Or simply prompt Codex:
+   ```
+   Install the skill from https://github.com/paytm/paytm-integration-skills/
+   ```
+
+Once installed, any Paytm-related prompt in Codex will auto-load the skill.
 
 ---
 
