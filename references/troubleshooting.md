@@ -140,6 +140,87 @@ For unfamiliar codes: query Transaction Status API with the orderId - `body.resu
 
 ---
 
+## Corp proxy TLS interception (`UNABLE_TO_GET_ISSUER_CERT_LOCALLY`)
+
+Symptom: Node `fetch` to `https://secure.paytmpayments.com` (prod) fails with `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`, `SELF_SIGNED_CERT_IN_CHAIN`, or `unable to verify the first certificate`. Staging (`securestage.paytmpayments.com`) often works because many corp proxies exempt non-prod hosts from TLS inspection.
+
+Cause: A corporate proxy (Zscaler / Netskope / Palo Alto / BlueCoat / etc.) is doing TLS interception - it terminates the TLS connection, re-signs the response with an internal CA, and forwards it to your machine. Your OS keychain trusts that internal CA, but Node / Python / Java each ship their own CA bundle and don't pick it up automatically.
+
+### Fix 1 (recommended): Trust the corp CA in your runtime
+
+Extract the corp root cert, then point your runtime at it. TLS verification stays ON.
+
+**macOS** - export from System keychain:
+```bash
+mkdir -p ./certs
+security find-certificate -a -p /Library/Keychains/System.keychain > ./certs/corp-proxy-ca.crt
+# Or just the corp root if you know its CN:
+security find-certificate -a -c "YourCorpName Root CA" -p \
+  /Library/Keychains/System.keychain > ./certs/corp-proxy-ca.crt
+```
+
+**Linux** - usually already in the system bundle:
+```bash
+cp /etc/ssl/certs/ca-certificates.crt ./certs/corp-proxy-ca.crt
+# Debian/Ubuntu: corp certs land in /usr/local/share/ca-certificates/ after `update-ca-certificates`
+```
+
+**Windows (PowerShell, admin)**:
+```powershell
+Get-ChildItem Cert:\LocalMachine\Root |
+  Where-Object Subject -match "YourCorpName" |
+  Export-Certificate -FilePath .\certs\corp-proxy-ca.crt -Type CERT
+```
+
+**Pull what the proxy is actually serving** (works on any OS with openssl):
+```bash
+openssl s_client -showcerts -connect secure.paytmpayments.com:443 </dev/null \
+  2>/dev/null | sed -n '/BEGIN CERT/,/END CERT/p' > ./certs/corp-proxy-ca.crt
+```
+
+Then per runtime:
+
+| Runtime | Config |
+|---|---|
+| Node | `NODE_EXTRA_CA_CERTS=./certs/corp-proxy-ca.crt` in `.env`, restart |
+| Python (requests) | `REQUESTS_CA_BUNDLE=./certs/corp-proxy-ca.crt` |
+| Python (httpx) | `SSL_CERT_FILE=./certs/corp-proxy-ca.crt` |
+| Java | `keytool -import -alias corpProxy -file ./certs/corp-proxy-ca.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit` |
+| curl | `curl --cacert ./certs/corp-proxy-ca.crt ...` |
+
+Verify:
+```bash
+node -e "fetch('https://secure.paytmpayments.com').then(r=>console.log(r.status)).catch(e=>console.error(e.code))"
+```
+Should print a status code (e.g. `404`), not an error code.
+
+### Fix 2: Ask IT to bypass TLS inspection for Paytm
+
+One-line ticket: "Please exempt `*.paytmpayments.com` from TLS inspection - payment gateway, PCI-scope traffic." Most proxies have a financial-services bypass category already.
+
+### Fix 3: Run from outside the corp network (fastest for a demo)
+
+- Phone hotspot - proxy isn't in the path, real Paytm chain validates, zero config.
+- Cloud VM (EC2 / Render / Fly / Railway) - point your demo at that origin.
+- Home network over personal VPN.
+
+### What NOT to do
+
+- **Do not** set `NODE_TLS_REJECT_UNAUTHORIZED=0` or `rejectUnauthorized: false` with real production merchant credentials. It disables verification for *every* outbound HTTPS call in the process - any host on-path can read your `MERCHANT_KEY`.
+- **Do not** set `verify=False` (Python `requests`) or trust-all `SSLContext` (Java) in prod for the same reason.
+- **Do not** commit the extracted CA bundle to a public repo - it's not secret, but it leaks your employer's name and proxy vendor.
+
+### Quick triage
+
+```
+prod TLS fails, staging works?      → corp proxy intercepting prod only → Fix 1 or 2
+both fail with same cert error?     → corp proxy intercepting all → Fix 1 or 2
+both fail, different errors?        → not a TLS issue → check DNS / firewall / MID env mismatch
+works on hotspot, fails on wifi?    → confirmed corp-proxy MITM → Fix 1, 2, or 3
+```
+
+---
+
 ## Environment / config gotchas
 
 - **PG domain.** Use `https://secure.paytmpayments.com` (prod) and `https://securestage.paytmpayments.com` (staging). The exact host provisioned for your MID is shown under Developer Settings → API Keys on the dashboard.
