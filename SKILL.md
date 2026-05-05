@@ -318,7 +318,7 @@ Symptom-driven debugging: `references/troubleshooting.md`.
 
 ---
 
-## Common Vibe-Coded Bugs (and how to avoid them)
+## Common Integration Bugs (and how to avoid them)
 
 These are real bugs Claude has produced when scaffolding Paytm integrations from prompts. Internalize the fixes — don't regenerate the broken patterns.
 
@@ -369,7 +369,7 @@ button.addEventListener("click", function () {
 });
 ```
 
-The reference frontends in `scripts/frontend/checkout.html` and `scripts/frontend/checkout.html` follow this pattern and include an explicit comment warning against the broken one.
+The reference frontend at `scripts/frontend/checkout.html` follows this pattern and includes an explicit comment warning against the broken one.
 
 ### 4. Missing `transactionStatus` / `notifyMerchant` handlers
 

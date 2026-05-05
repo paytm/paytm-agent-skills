@@ -73,7 +73,7 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
     "clientId": "C11",
     "channelId": "WEB",
     "version": "v1",
-    "requestTimestamp": "1714464000000",
+    "requestTimestamp": "1714464000000",   // Unix epoch ms — generate at request time
     "signature": "<CHECKSUMHASH over JSON.stringify(body)>"
   },
   "body": {
@@ -177,7 +177,7 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 ```json
 {
   "head": {
-    "responseTimestamp": "1714464000000",
+    "responseTimestamp": "1714464000000",   // Unix epoch ms — server-supplied
     "version": "v1",
     "clientId": "C11",
     "signature": "..."

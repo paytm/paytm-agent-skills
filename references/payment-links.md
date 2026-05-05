@@ -333,7 +333,7 @@ The post-payment flow for Payment Links:
 ## Pitfalls
 
 1. **`linkId` MUST be a JSON number** in fetch / update / resend / expire calls. Quoting it as a string is the #1 cause of "invalid link id" responses.
-2. **Response field is `LinkID`, request field is `linkId`** — different casing. Convert when persisting.
+2. **Response key is `linkId` (camelCase)** in current Paytm responses; some legacy / staging variants return `LinkID`. Read defensively (`body.linkId ?? body.LinkID`); always send `linkId` on subsequent calls.
 3. **`head.tokenType: "AES"` is required on every call.** Omitting it returns `"Invalid tokenType"`. Easy to miss because the field isn't called out in older Paytm samples.
 4. **`linkDescription` rules:** minimum 3 characters, alphanumerics + spaces only. No `-`, `_`, `.`, `#`, `@`, `&`, `/`, `:`, etc. Validation error if violated.
 5. **Fetch response wraps the link in `body.links[0]`**, not `body` directly. `json.body.linkStatus` is `undefined`; you must read `json.body.links[0].linkStatus`.
