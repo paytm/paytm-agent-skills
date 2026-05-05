@@ -52,6 +52,14 @@ public class PaytmPaymentLinkService {
   }
 
   public CreateResult create(CreateRequest req) throws Exception {
+    return create(req, null);
+  }
+
+  /**
+   * Overload that accepts a per-request {@code requestBaseUrl} for callback derivation —
+   * matches the {@code serverBaseUrl} parameter on Node/Python.
+   */
+  public CreateResult create(CreateRequest req, String requestBaseUrl) throws Exception {
     String orderId = (req.orderId != null && !req.orderId.trim().isEmpty())
         ? req.orderId.trim() : "LNK_" + randomHex();
 
@@ -73,7 +81,7 @@ public class PaytmPaymentLinkService {
     body.put("expiryDate", notEmpty(req.expiryDate) ? req.expiryDate.trim() : oneYearFromNowExpiry());
     body.put("orderId", orderId);
     body.put("callbackUrl", notEmpty(req.callbackUrl) ? req.callbackUrl.trim()
-        : PaytmMerchantConfig.callbackUrl());
+        : PaytmMerchantConfig.callbackUrl(requestBaseUrl));
     if (notEmpty(req.merchantUniqueReference)) {
       body.put("merchantUniqueReference", req.merchantUniqueReference.trim());
     }

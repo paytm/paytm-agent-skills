@@ -123,6 +123,15 @@ public final class PaytmMerchantConfig {
    * Override with system property {@code paytm.callback.url} or env {@code PAYTM_CALLBACK_URL}.
    */
   public static String callbackUrl() {
+    return callbackUrl(null);
+  }
+
+  /**
+   * Per-request override of the callback URL. If {@code requestBaseUrl} is non-null
+   * (e.g. derived from the inbound HTTP request), it wins over the static config —
+   * matches the Node/Python backends' {@code serverBaseUrl} parameter.
+   */
+  public static String callbackUrl(String requestBaseUrl) {
     String fromSys = System.getProperty("paytm.callback.url");
     if (fromSys != null && !fromSys.isEmpty()) {
       return fromSys.trim();
@@ -135,7 +144,9 @@ public final class PaytmMerchantConfig {
     if (fromProps != null) {
       return fromProps;
     }
-    return callbackBaseUrl() + "/paytm/callback";
+    String base = (requestBaseUrl != null && !requestBaseUrl.trim().isEmpty())
+        ? trimTrailingSlash(requestBaseUrl) : callbackBaseUrl();
+    return base + "/paytm/callback";
   }
 
   /**

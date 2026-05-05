@@ -6,8 +6,13 @@ import com.paytm.demo.config.PaytmMerchantConfig;
 import com.paytm.pg.merchant.PaytmChecksum;
 import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +43,34 @@ public class PaytmWebhookController {
 
   // (orderId|status) — at-least-once dedup. Replace with Redis in production.
   private final Set<String> seen = ConcurrentHashMap.newKeySet();
+
+  // Bounded ring buffer of recent webhook events for in-process audit / debugging.
+  // Matches the 200-event cap in the Node + Python backends.
+  private static final int EVENT_LOG_MAX = 200;
+  private final Deque<LoggedEvent> eventLog = new ArrayDeque<>(EVENT_LOG_MAX);
+
+  /** Snapshot the most-recent events (newest first). */
+  public synchronized List<LoggedEvent> recentEvents() {
+    List<LoggedEvent> out = new ArrayList<>(eventLog);
+    Collections.reverse(out);
+    return out;
+  }
+
+  private synchronized void rememberEvent(JsonNode parsed) {
+    if (eventLog.size() >= EVENT_LOG_MAX) eventLog.removeFirst();
+    eventLog.addLast(new LoggedEvent(Instant.now(), parsed));
+  }
+
+  /** Audit-log entry shape — timestamp + parsed payload. */
+  public static final class LoggedEvent {
+    public final Instant at;
+    public final JsonNode payload;
+
+    LoggedEvent(Instant at, JsonNode payload) {
+      this.at = at;
+      this.payload = payload;
+    }
+  }
 
   @PostMapping(value = "/paytm/webhook", consumes = MediaType.APPLICATION_JSON_VALUE,
                produces = MediaType.APPLICATION_JSON_VALUE)
@@ -71,6 +104,9 @@ public class PaytmWebhookController {
     if (!ok) {
       return error(401, "invalid signature");
     }
+
+    // Persist for audit BEFORE dedup so duplicates are visible in the log.
+    rememberEvent(parsed);
 
     String orderId = parsed.path("body").path("orderId").asText("unknown");
     String status = parsed.path("body").path("status").asText(

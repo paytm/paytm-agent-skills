@@ -34,6 +34,15 @@ public class PaytmInitiateTransactionService {
   }
 
   public InitiateResult initiate(String amount, String custId, String mobile, String email, String callerOrderId) throws Exception {
+    return initiate(amount, custId, mobile, email, callerOrderId, null);
+  }
+
+  /**
+   * Overload that accepts a per-request {@code requestBaseUrl} for callback derivation —
+   * matches the {@code serverBaseUrl} parameter on Node/Python.
+   */
+  public InitiateResult initiate(String amount, String custId, String mobile, String email,
+                                 String callerOrderId, String requestBaseUrl) throws Exception {
     // Accept a merchant-supplied orderId for reconciliation; fall back to a random one.
     String orderId;
     if (callerOrderId != null && !callerOrderId.trim().isEmpty()) {
@@ -54,7 +63,7 @@ public class PaytmInitiateTransactionService {
     body.put("mid", PaytmMerchantConfig.mid());
     body.put("websiteName", PaytmMerchantConfig.websiteName());
     body.put("orderId", orderId);
-    body.put("callbackUrl", PaytmMerchantConfig.callbackUrl());
+    body.put("callbackUrl", PaytmMerchantConfig.callbackUrl(requestBaseUrl));
 
     JSONObject txnAmount = new JSONObject();
     txnAmount.put("value", normalizedAmount);

@@ -87,18 +87,22 @@ public class PaytmController {
   @ResponseBody
   public ResponseEntity<Object> createSubscription(
       @RequestHeader(value = "Idempotency-Key", required = false) String idemKey,
-      @RequestBody(required = false) PaytmSubscriptionService.CreateRequest req) {
+      @RequestBody(required = false) PaytmSubscriptionService.CreateRequest req,
+      HttpServletRequest httpReq) {
     final PaytmSubscriptionService.CreateRequest body = (req != null) ? req : new PaytmSubscriptionService.CreateRequest();
-    return withIdempotency(idemKey, () -> subscriptionService.create(body));
+    final String base = requestBase(httpReq);
+    return withIdempotency(idemKey, () -> subscriptionService.create(body, base));
   }
 
   @PostMapping(value = "/create-link", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
   @ResponseBody
   public ResponseEntity<Object> createLink(
       @RequestHeader(value = "Idempotency-Key", required = false) String idemKey,
-      @RequestBody(required = false) PaytmPaymentLinkService.CreateRequest req) {
+      @RequestBody(required = false) PaytmPaymentLinkService.CreateRequest req,
+      HttpServletRequest httpReq) {
     final PaytmPaymentLinkService.CreateRequest body = (req != null) ? req : new PaytmPaymentLinkService.CreateRequest();
-    return withIdempotency(idemKey, () -> linkService.create(body));
+    final String base = requestBase(httpReq);
+    return withIdempotency(idemKey, () -> linkService.create(body, base));
   }
 
   @PostMapping(value = "/create-qr", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -117,13 +121,15 @@ public class PaytmController {
   @ResponseBody
   public ResponseEntity<Object> createOrder(
       @RequestHeader(value = "Idempotency-Key", required = false) String idemKey,
-      @RequestBody(required = false) Map<String, String> body) {
+      @RequestBody(required = false) Map<String, String> body,
+      HttpServletRequest httpReq) {
     final Map<String, String> safe = body != null ? body : Collections.emptyMap();
+    final String base = requestBase(httpReq);
     return withIdempotency(idemKey, () -> {
       InitiateResult r = initiateService.initiate(
           safe.get("amount"), safe.get("custId"),
           safe.get("mobile"), safe.get("email"),
-          safe.get("orderId"));
+          safe.get("orderId"), base);
       Map<String, Object> out = new LinkedHashMap<>();
       out.put("orderId", r.orderId);
       out.put("txnToken", r.txnToken);
@@ -132,6 +138,26 @@ public class PaytmController {
       out.put("tokenType", "TXN_TOKEN");
       return out;
     });
+  }
+
+  /**
+   * Reconstruct the inbound origin (e.g. {@code https://api.example.com}) from the
+   * incoming request, honouring proxies. Used as the default callback base so each
+   * environment self-derives its callback URL without env vars.
+   */
+  private static String requestBase(HttpServletRequest req) {
+    if (req == null) return null;
+    String proto = headerOr(req, "X-Forwarded-Proto", req.getScheme());
+    String host = headerOr(req, "X-Forwarded-Host", req.getHeader("Host"));
+    if (host == null || host.isEmpty()) host = req.getServerName();
+    proto = proto.split(",")[0].trim();
+    host = host.split(",")[0].trim();
+    return proto + "://" + host;
+  }
+
+  private static String headerOr(HttpServletRequest req, String name, String fallback) {
+    String v = req.getHeader(name);
+    return (v != null && !v.isEmpty()) ? v : fallback;
   }
 
   /**

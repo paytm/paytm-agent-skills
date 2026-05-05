@@ -51,6 +51,14 @@ public class PaytmSubscriptionService {
   }
 
   public CreateResult create(CreateRequest req) throws Exception {
+    return create(req, null);
+  }
+
+  /**
+   * Overload that accepts a per-request {@code requestBaseUrl} for callback derivation —
+   * matches the {@code serverBaseUrl} parameter on Node/Python.
+   */
+  public CreateResult create(CreateRequest req, String requestBaseUrl) throws Exception {
     String orderId = (req.orderId != null && !req.orderId.trim().isEmpty())
         ? req.orderId.trim() : "SUB_" + randomHex();
     String traceId = "TRC_" + randomHex();
@@ -87,7 +95,7 @@ public class PaytmSubscriptionService {
     body.put("subscriptionGraceDays", req.graceDays != null ? req.graceDays : "3");
     body.put("subscriptionEnableRetry", "0");
     body.put("userInfo", userInfo);
-    body.put("callbackUrl", PaytmMerchantConfig.callbackUrl());
+    body.put("callbackUrl", PaytmMerchantConfig.callbackUrl(requestBaseUrl));
 
     if ("VARIABLE".equals(amountType)) {
       if (req.maxAmount == null) {
