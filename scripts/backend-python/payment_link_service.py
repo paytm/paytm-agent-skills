@@ -13,6 +13,7 @@ import json
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Optional
 
 import requests
@@ -34,14 +35,28 @@ def _expiry_one_year_from_now() -> str:
     return d.strftime("%d/%m/%Y 23:59:59")
 
 
+_TWO_PLACES = Decimal("0.01")
+_FALLBACK = Decimal("1.00")
+
+
 def _normalize_amount(amount: Any) -> float:
+    """Two-decimal currency normalization using Decimal to avoid binary-float drift.
+
+    Paytm's Create Link API requires `amount` as a JSON number (not a string),
+    so we must emit a float at the end — but we do all the rounding in Decimal
+    space first, then convert at the very last step. For typical INR amounts
+    this gives bit-exact two-decimal precision; the float conversion only loses
+    significance well above the rupee-amount range any real merchant will use.
+    """
+    raw = "" if amount is None else str(amount).strip()
     try:
-        n = float(str(amount).strip())
-    except (TypeError, ValueError):
-        return 1.00
-    if n <= 0:
-        return 1.00
-    return round(n, 2)
+        d = Decimal(raw) if raw else _FALLBACK
+    except Exception:
+        d = _FALLBACK
+    if d <= 0:
+        d = _FALLBACK
+    d = d.quantize(_TWO_PLACES, rounding=ROUND_HALF_UP)
+    return float(d)
 
 
 def create_payment_link(
@@ -124,6 +139,82 @@ def create_payment_link(
         "linkStatus": body_resp.get("linkStatus") or "ACTIVE",
         "amount": body["amount"],
         "mid": cfg["mid"],
+    }
+
+
+def fetch_link_transactions(
+    *,
+    link_id: Any,
+    page_no: int = 1,
+    page_size: int = 10,
+    fetch_all_txns: bool = True,
+) -> dict:
+    """Fetch transactions for a Payment Link — POST /link/fetchTransaction.
+
+    Doc: https://www.paytmpayments.com/docs/api/fetch-transaction-link-api
+
+    USE THIS for Payment Link reconciliation, NOT /v3/order/status. Returns
+    {linkId, orders: [...], resultInfo}. A 404 from Paytm ("Data Not Found")
+    is normalised to an empty list so callers don't need to special-case
+    "not paid yet".
+    """
+    cfg = get_paytm_config()
+    if not cfg["mid"]:
+        raise PaytmError("MISSING_MID", "Missing PAYTM_MID")
+    if not cfg["merchant_key"]:
+        raise PaytmError("MISSING_MERCHANT_KEY", "Missing PAYTM_MERCHANT_KEY")
+    if link_id in (None, ""):
+        raise PaytmError("MISSING_LINK_ID", "linkId is required")
+
+    # linkId MUST be a JSON number — coerce defensively.
+    try:
+        numeric_link_id = int(link_id)
+    except (TypeError, ValueError):
+        raise PaytmError("INVALID_LINK_ID", f"linkId must be numeric, got: {link_id!r}")
+
+    body = {
+        "mid": cfg["mid"],
+        "linkId": numeric_link_id,
+        "pageNo": int(page_no) or 1,
+        "pageSize": int(page_size) or 10,
+        "fetchAllTxns": bool(fetch_all_txns),
+    }
+    signature = PaytmChecksum.generateSignature(json.dumps(body), cfg["merchant_key"])
+    head = {"tokenType": "AES", "signature": signature}
+
+    r = requests.post(
+        cfg["link_fetch_transaction_url"],
+        json={"head": head, "body": body},
+        headers={"Content-Type": "application/json"},
+        timeout=15,
+    )
+    text = r.text
+    if not r.ok:
+        raise _upstream(
+            "LINK_FETCH_TXN_HTTP_ERROR",
+            f"link/fetchTransaction HTTP {r.status_code}",
+            str(numeric_link_id),
+            text,
+        )
+
+    data = json.loads(text)
+    info = (data.get("body") or {}).get("resultInfo") or {}
+    msg = info.get("resultMessage") or info.get("resultMsg") or ""
+    # 404 = "Data Not Found" — link exists, no txns yet. Normalise to empty list.
+    if info.get("resultCode") == "404" or "not found" in msg.lower():
+        return {"linkId": numeric_link_id, "orders": [], "resultInfo": info}
+    status = info.get("resultStatus")
+    if status and status not in ("SUCCESS", "S"):
+        raise _upstream(
+            "LINK_FETCH_TXN_FAILED",
+            msg or "link/fetchTransaction failed",
+            str(numeric_link_id),
+            text,
+        )
+    return {
+        "linkId": numeric_link_id,
+        "orders": (data.get("body") or {}).get("orders") or [],
+        "resultInfo": info,
     }
 
 

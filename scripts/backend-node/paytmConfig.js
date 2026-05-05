@@ -29,6 +29,7 @@ export function getPaytmConfig() {
       ? `${pgDomain}/theia/api/v1/subscription/create`
       : `${pgDomain}/subscription/create`,
     linkCreateUrl: `${pgDomain}/link/create`,
+    linkFetchTransactionUrl: `${pgDomain}/link/fetchTransaction`,
     qrCreateUrl: `${pgDomain}/paymentservices/qr/create`,
     // clientId is per-merchant — issued by Paytm during onboarding. "C11" works for
     // most single-merchant-key setups; override via env if your KAM gave you a different value.

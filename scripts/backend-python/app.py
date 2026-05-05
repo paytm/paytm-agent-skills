@@ -20,7 +20,7 @@ from paytm_service import (
     verify_callback_checksum,
 )
 from subscription_service import create_subscription
-from payment_link_service import create_payment_link
+from payment_link_service import create_payment_link, fetch_link_transactions
 from qr_service import create_dynamic_qr
 from idempotency import get_cached, set_cached, read_key
 from webhook_handler import handle_webhook
@@ -150,6 +150,26 @@ app.add_url_rule("/paytm/create-order",        view_func=_with_idempotency(_do_c
 app.add_url_rule("/paytm/create-subscription", view_func=_with_idempotency(_do_create_subscription), methods=["POST"])
 app.add_url_rule("/paytm/create-link",         view_func=_with_idempotency(_do_create_link),        methods=["POST"])
 app.add_url_rule("/paytm/create-qr",           view_func=_with_idempotency(_do_create_qr),          methods=["POST"])
+
+
+@app.post("/paytm/link-transactions")
+def link_transactions():
+    """Reconcile a Payment Link via /link/fetchTransaction.
+
+    Use this for Payment Link flows instead of /v3/order/status — the response
+    wraps each payer's order under body.orders[].
+    """
+    payload = request.get_json(silent=True) or {}
+    try:
+        out = fetch_link_transactions(
+            link_id=payload.get("linkId"),
+            page_no=payload.get("pageNo", 1),
+            page_size=payload.get("pageSize", 10),
+            fetch_all_txns=payload.get("fetchAllTxns", True),
+        )
+        return jsonify(out)
+    except PaytmError as e:
+        return _err_payload(e)
 
 
 @app.post("/paytm/webhook")

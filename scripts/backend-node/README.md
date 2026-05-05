@@ -12,6 +12,7 @@ Mirrors `scripts/backend-python` and `scripts/backend-spring` — same routes, s
 | POST | `/paytm/create-order` | initiateTransaction → `{orderId, txnToken, amount, mid}` (one-time payment) |
 | POST | `/paytm/create-subscription` | `/subscription/create` → `{orderId, txnToken, subscriptionId, amount, mid}` (UPI Autopay mandate) |
 | POST | `/paytm/create-link` | `/link/create` → `{orderId, linkId, shortUrl, longUrl, ...}` (shareable URL) |
+| POST | `/paytm/link-transactions` | reconcile via `/link/fetchTransaction` → `{linkId, orders: [...]}` (use this for Payment Link flows, NOT `/v3/order/status`) |
 | POST | `/paytm/create-qr` | `/paymentservices/qr/create` → `{orderId, qrCodeId, qrData, image, mid}` (image is data-URI prefixed) |
 | POST | `/paytm/order-status` | server-side Transaction Status API |
 | GET\|POST | `/paytm/callback` | Paytm browser redirect; verifies CHECKSUMHASH |

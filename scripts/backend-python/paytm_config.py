@@ -42,6 +42,7 @@ def get_paytm_config() -> dict:
             else f"{pg_domain}/subscription/create"
         ),
         "link_create_url": f"{pg_domain}/link/create",
+        "link_fetch_transaction_url": f"{pg_domain}/link/fetchTransaction",
         "qr_create_url": f"{pg_domain}/paymentservices/qr/create",
         # clientId is per-merchant — issued by Paytm during onboarding. "C11" works for
         # most single-merchant-key setups; override via env if your KAM gave you a different value.

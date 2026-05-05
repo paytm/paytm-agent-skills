@@ -10,6 +10,7 @@ Defaults & gotchas baked in:
 """
 import json
 import secrets
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Optional
 
 import requests
@@ -19,14 +20,23 @@ from paytm_config import get_paytm_config
 from paytm_service import PaytmError
 
 
+_TWO_PLACES = Decimal("0.01")
+_FALLBACK = Decimal("1.00")
+
+
 def _normalize_amount(amount: Any) -> str:
+    """Two-decimal currency normalization using Decimal (avoids binary-float drift).
+
+    Paytm QR API takes `amount` as a STRING with two decimals.
+    """
+    raw = ("" if amount is None else str(amount)).strip()
     try:
-        n = float(str(amount).strip())
-    except (TypeError, ValueError):
-        return "1.00"
-    if n <= 0:
-        return "1.00"
-    return f"{n:.2f}"
+        d = Decimal(raw) if raw else _FALLBACK
+    except Exception:
+        d = _FALLBACK
+    if d <= 0:
+        d = _FALLBACK
+    return str(d.quantize(_TWO_PLACES, rounding=ROUND_HALF_UP))
 
 
 def create_dynamic_qr(

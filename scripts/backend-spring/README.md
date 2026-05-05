@@ -23,6 +23,7 @@ Reference Spring Boot 3 backend covering all four Paytm products: JS Checkout, S
 | POST | `/paytm/create-order` | initiateTransaction → `{orderId, txnToken, amount, mid}` (one-time payment) |
 | POST | `/paytm/create-subscription` | `/subscription/create` → `{orderId, txnToken, subscriptionId, ...}` |
 | POST | `/paytm/create-link` | `/link/create` → `{orderId, linkId, shortUrl, longUrl, ...}` |
+| POST | `/paytm/link-transactions` | reconcile via `/link/fetchTransaction` → `{linkId, orders: [...]}` (use this for Payment Link flows, NOT `/v3/order/status`) |
 | POST | `/paytm/create-qr` | `/paymentservices/qr/create` → `{orderId, qrCodeId, qrData, image, mid}` |
 | POST | `/paytm/order-status` | server-side Transaction Status API |
 | POST | `/paytm/webhook` | Paytm S2S webhook — verifies head.signature, dedupes by (orderId,status) |

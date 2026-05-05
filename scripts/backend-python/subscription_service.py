@@ -12,6 +12,7 @@ import json
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Optional
 
 import requests
@@ -36,14 +37,20 @@ def _plus_one_year(yyyymmdd: str) -> str:
     return d.replace(year=d.year + 1).strftime("%Y-%m-%d")
 
 
+_TWO_PLACES = Decimal("0.01")
+
+
 def _normalize_amount(amount: Any, min_rupees: float = 2.0) -> str:
+    """Two-decimal currency normalization using Decimal (avoids binary-float drift)."""
+    floor = Decimal(str(min_rupees)).quantize(_TWO_PLACES)
+    raw = ("" if amount is None else str(amount)).strip()
     try:
-        n = float(str(amount).strip())
-    except (TypeError, ValueError):
-        return f"{min_rupees:.2f}"
-    if n < min_rupees:
-        return f"{min_rupees:.2f}"
-    return f"{n:.2f}"
+        d = Decimal(raw) if raw else floor
+    except Exception:
+        d = floor
+    if d < floor:
+        d = floor
+    return str(d.quantize(_TWO_PLACES, rounding=ROUND_HALF_UP))
 
 
 def create_subscription(

@@ -111,6 +111,19 @@ public class PaytmController {
   }
 
   /**
+   * Reconcile a Payment Link via {@code /link/fetchTransaction}. Use this for
+   * Payment Link flows instead of {@code /v3/order/status}; the response wraps
+   * each payer's order under {@code body.orders[]}.
+   */
+  @PostMapping(value = "/link-transactions", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+  @ResponseBody
+  public ResponseEntity<PaytmPaymentLinkService.FetchTransactionsResult> linkTransactions(
+      @RequestBody(required = false) PaytmPaymentLinkService.FetchTransactionsRequest req) throws Exception {
+    if (req == null) req = new PaytmPaymentLinkService.FetchTransactionsRequest();
+    return ResponseEntity.ok(linkService.fetchTransactions(req));
+  }
+
+  /**
    * initiateTransaction → txnToken (JSON for the HTML demo).
    */
   @PostMapping(value = "/create-order", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)

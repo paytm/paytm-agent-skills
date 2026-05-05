@@ -193,6 +193,10 @@ public final class PaytmMerchantConfig {
     return pgDomain() + "/link/create";
   }
 
+  public static String linkFetchTransactionUrl() {
+    return pgDomain() + "/link/fetchTransaction";
+  }
+
   public static String qrCreateUrl() {
     return pgDomain() + "/paymentservices/qr/create";
   }

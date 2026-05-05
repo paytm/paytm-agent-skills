@@ -134,6 +134,99 @@ public class PaytmPaymentLinkService {
         PaytmMerchantConfig.mid());
   }
 
+  /**
+   * Fetch transactions for a Payment Link — POST /link/fetchTransaction.
+   * Doc: https://www.paytmpayments.com/docs/api/fetch-transaction-link-api
+   *
+   * <p>USE THIS for Payment Link reconciliation, NOT /v3/order/status. Returns
+   * a {@link FetchTransactionsResult} with {@code orders} as a list (may be
+   * empty when no payments yet — Paytm's 404 / "Data Not Found" is normalised
+   * to an empty list so callers can treat all valid responses uniformly).
+   */
+  public FetchTransactionsResult fetchTransactions(FetchTransactionsRequest req) throws Exception {
+    if (req == null || req.linkId == null) {
+      throw new IllegalArgumentException("linkId is required");
+    }
+
+    JSONObject body = new JSONObject();
+    body.put("mid", PaytmMerchantConfig.mid());
+    body.put("linkId", req.linkId.longValue());
+    body.put("pageNo", req.pageNo != null ? req.pageNo : 1);
+    body.put("pageSize", req.pageSize != null ? req.pageSize : 10);
+    body.put("fetchAllTxns", req.fetchAllTxns != null ? req.fetchAllTxns : Boolean.TRUE);
+
+    String checksum = PaytmChecksum.generateSignature(body.toString(), PaytmMerchantConfig.merchantKey());
+    JSONObject head = new JSONObject();
+    head.put("tokenType", "AES");
+    head.put("signature", checksum);
+
+    JSONObject paytmParams = new JSONObject();
+    paytmParams.put("body", body);
+    paytmParams.put("head", head);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    HttpEntity<String> entity = new HttpEntity<>(paytmParams.toString(), headers);
+
+    String responseBody;
+    try {
+      ResponseEntity<String> response = restTemplate.postForEntity(
+          PaytmMerchantConfig.linkFetchTransactionUrl(), entity, String.class);
+      responseBody = response.getBody();
+    } catch (RestClientResponseException e) {
+      throw upstream("LINK_FETCH_TXN_HTTP_ERROR",
+          "link/fetchTransaction failed (HTTP " + e.getRawStatusCode() + ")",
+          String.valueOf(req.linkId), e.getResponseBodyAsString());
+    }
+
+    JsonNode root = MAPPER.readTree(responseBody);
+    JsonNode info = root.path("body").path("resultInfo");
+    String code = info.path("resultCode").asText("");
+    String msg = info.path("resultMessage").asText(info.path("resultMsg").asText(""));
+    String status = info.path("resultStatus").asText("");
+
+    if ("404".equals(code) || msg.toLowerCase().contains("not found")) {
+      return new FetchTransactionsResult(req.linkId, new java.util.ArrayList<>(),
+          code, status.isEmpty() ? "FAILED" : status, msg);
+    }
+    if (!status.isEmpty() && !"SUCCESS".equals(status) && !"S".equals(status)) {
+      throw upstream("LINK_FETCH_TXN_FAILED",
+          msg.isEmpty() ? "link/fetchTransaction failed" : msg,
+          String.valueOf(req.linkId), responseBody);
+    }
+
+    java.util.List<JsonNode> orders = new java.util.ArrayList<>();
+    JsonNode arr = root.path("body").path("orders");
+    if (arr.isArray()) arr.forEach(orders::add);
+    return new FetchTransactionsResult(req.linkId, orders, code, status, msg);
+  }
+
+  // -- DTOs (fetch-transactions) ---------------------------------------------
+
+  public static final class FetchTransactionsRequest {
+    public Long linkId;
+    public Integer pageNo;
+    public Integer pageSize;
+    public Boolean fetchAllTxns;
+  }
+
+  public static final class FetchTransactionsResult {
+    public final Long linkId;
+    public final java.util.List<JsonNode> orders;
+    public final String resultCode;
+    public final String resultStatus;
+    public final String resultMessage;
+
+    public FetchTransactionsResult(Long linkId, java.util.List<JsonNode> orders,
+                                   String resultCode, String resultStatus, String resultMessage) {
+      this.linkId = linkId;
+      this.orders = orders;
+      this.resultCode = resultCode;
+      this.resultStatus = resultStatus;
+      this.resultMessage = resultMessage;
+    }
+  }
+
   // -- helpers ---------------------------------------------------------------
 
   private static String sanitizeDescription(String s, String fallback) {

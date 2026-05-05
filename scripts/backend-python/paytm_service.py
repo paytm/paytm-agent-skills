@@ -4,6 +4,7 @@ Mirrors backend-node/paytmService.js. Uses Paytm's official `paytmchecksum` pack
 """
 import json
 import secrets
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Optional
 
 import requests
@@ -22,17 +23,24 @@ class PaytmError(Exception):
         self.paytm = paytm
 
 
+_TWO_PLACES = Decimal("0.01")
+_FALLBACK_AMT = Decimal("1.00")
+
+
 def _normalize_amount(amount: Any) -> str:
+    """Two-decimal currency normalization using Decimal (avoids binary-float drift).
+
+    Paytm's `txnAmount.value` is a STRING with two decimals, so we serialize
+    via Decimal's plain string form. Float arithmetic is never used.
+    """
     raw = ("" if amount is None else str(amount)).strip()
-    if not raw:
-        return "1.00"
     try:
-        n = float(raw)
-    except ValueError:
-        return "1.00"
-    if n <= 0:
-        return "1.00"
-    return f"{n:.2f}"
+        d = Decimal(raw) if raw else _FALLBACK_AMT
+    except Exception:
+        d = _FALLBACK_AMT
+    if d <= 0:
+        d = _FALLBACK_AMT
+    return str(d.quantize(_TWO_PLACES, rounding=ROUND_HALF_UP))
 
 
 def _require_credentials() -> dict:

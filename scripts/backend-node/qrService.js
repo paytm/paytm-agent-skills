@@ -11,9 +11,12 @@ import PaytmChecksum from "paytmchecksum";
 import { getPaytmConfig } from "./paytmConfig.js";
 
 function normalizeAmount(amount) {
+  // Two-decimal currency normalization. Integer-paise rounding to avoid
+  // binary-float drift. Returns a string (Paytm QR `amount` contract).
   const n = Number(String(amount ?? "").trim());
   if (!Number.isFinite(n) || n <= 0) return "1.00";
-  return n.toFixed(2);
+  const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+  return rounded.toFixed(2);
 }
 
 export async function createDynamicQr({

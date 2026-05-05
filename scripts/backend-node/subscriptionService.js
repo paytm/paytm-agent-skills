@@ -26,9 +26,13 @@ function plusOneYear(yyyymmdd) {
 }
 
 function normalizeAmount(amount, minRupees = 2) {
+  // Two-decimal currency normalization, integer-paise rounding to avoid
+  // binary-float drift. Returns a string (Paytm subscription `txnAmount.value`
+  // contract).
   const n = Number(String(amount ?? "").trim());
   if (!Number.isFinite(n) || n < minRupees) return minRupees.toFixed(2);
-  return n.toFixed(2);
+  const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+  return rounded.toFixed(2);
 }
 
 export async function createSubscription({

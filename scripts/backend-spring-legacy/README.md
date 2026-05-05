@@ -61,6 +61,7 @@ Each setting can be supplied via `-Dpaytm.*` system property OR `PAYTM_*` env va
 | POST | `/paytm/create-order` | initiateTransaction → `{orderId, txnToken, amount, mid}` (one-time payment) |
 | POST | `/paytm/create-subscription` | `/subscription/create` → `{orderId, txnToken, subscriptionId, ...}` |
 | POST | `/paytm/create-link` | `/link/create` → `{orderId, linkId, shortUrl, longUrl, ...}` |
+| POST | `/paytm/link-transactions` | reconcile via `/link/fetchTransaction` → `{linkId, orders: [...]}` (use this for Payment Link flows, NOT `/v3/order/status`) |
 | POST | `/paytm/create-qr` | `/paymentservices/qr/create` → `{orderId, qrCodeId, qrData, image, mid}` |
 | POST | `/paytm/order-status` | server-side Transaction Status API |
 | GET\|POST | `/paytm/callback` | Paytm browser redirect; verifies CHECKSUMHASH |

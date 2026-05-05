@@ -3,11 +3,16 @@ import PaytmChecksum from "paytmchecksum";
 import { getPaytmConfig } from "./paytmConfig.js";
 
 function normalizeAmount(amount) {
+  // Two-decimal currency normalization. We round via integer paise (×100,
+  // round-half-up via Number.EPSILON, ÷100) to avoid binary-float drift, then
+  // emit as a string with exactly two decimals — Paytm's `txnAmount.value`
+  // contract.
   const raw = (amount ?? "").toString().trim();
   if (!raw) return "1.00";
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return "1.00";
-  return n.toFixed(2);
+  const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+  return rounded.toFixed(2);
 }
 
 export function requireCredentials() {

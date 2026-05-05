@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { fetchOrderStatus, initiateTransaction, verifyCallbackChecksum } from "./paytmService.js";
 import { createSubscription } from "./subscriptionService.js";
-import { createPaymentLink } from "./paymentLinkService.js";
+import { createPaymentLink, fetchLinkTransactions } from "./paymentLinkService.js";
 import { createDynamicQr } from "./qrService.js";
 import { getPaytmConfig } from "./paytmConfig.js";
 import { getCached, setCached, readKey } from "./idempotency.js";
@@ -82,6 +82,18 @@ app.post("/paytm/create-link", withIdempotency(async (req) => {
 app.post("/paytm/create-qr", withIdempotency(async (req) => {
   return createDynamicQr({ ...(req.body ?? {}) });
 }));
+
+// Reconcile a Payment Link — POST /link/fetchTransaction. Use this for Payment
+// Link flows instead of /v3/order/status; the response wraps each payer's
+// order under body.orders[].
+app.post("/paytm/link-transactions", async (req, res) => {
+  try {
+    const out = await fetchLinkTransactions({ ...(req.body ?? {}) });
+    res.json(out);
+  } catch (e) {
+    res.status(Number(e?.httpStatus) || 500).json(payloadFromError(e));
+  }
+});
 
 // S2S webhook from Paytm. Verifies head.signature, dedupes on (orderId, status),
 // and applies a stub fulfillment hook. See webhookHandler.js for the contract.

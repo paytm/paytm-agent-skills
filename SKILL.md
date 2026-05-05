@@ -83,7 +83,7 @@ New merchants are provisioned on `paytmpayments.com`; older MIDs may still resol
 > |---|---|---|---|---|
 > | "checkout page", "pay button on website", "one-time payment", "buy" | **Payment** | `POST /theia/api/v1/initiateTransaction` (`requestType: "Payment"`) | ✅ Yes | Steps below + `references/js-checkout.md` |
 > | "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew every…", "membership", "plan" | **Subscription** | `POST /subscription/create` (`requestType: "NATIVE_SUBSCRIPTION"`) | ✅ Yes (for consent screen) | `references/subscriptions.md` ← **MUST READ** |
-> | "shareable link", "invoice link", "payment link via SMS / WhatsApp / email" | **Payment Link** | `POST /link/create` | ❌ No — Paytm hosts the page | `references/payment-links.md` |
+> | "shareable link", "invoice link", "payment link via SMS / WhatsApp / email" | **Payment Link** | `POST /link/create` (then `POST /link/fetchTransaction` to reconcile — NOT `/v3/order/status`) | ❌ No — Paytm hosts the page | `references/payment-links.md` |
 > | "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | **Dynamic QR** | `POST /paymentservices/qr/create` | ❌ No — render image, customer scans with their UPI app | `references/qr-codes.md` |
 >
 > **The steps below describe Payment + JS Checkout only.** Do NOT extrapolate them to the other three flows — they have different endpoints, different request shapes, different validators. Load the matching reference file and follow its flow.
@@ -214,13 +214,12 @@ Content-Type: application/json
 
 Treat this response as the **final authoritative status**. Call it server-to-server, not from the browser.
 
-> **⚠️ `/v3/order/status` head shape is DIFFERENT from `/link/*` and refund APIs. Do not carry over.**
+> **⚠️ `/v3/order/status` is for one-time-payment / JS-Checkout flows ONLY.** For Payment Link reconciliation use **`/link/fetchTransaction`** instead — see `references/payment-links.md`. The two endpoints have different head shapes; carrying over fields between them causes checksum-mismatch errors.
 >
 > - **`/v3/order/status`** uses `head: { signature }` ONLY. Do NOT add `tokenType` (`"AES"`) or `timestamp` — Paytm rejects them or silently ignores them, leading to checksum mismatches that look unrelated.
-> - **`/link/create` / `/link/fetch` / `/link/update` / `/link/resendNotification` / `/link/expire`** use `head: { tokenType: "AES", signature, timestamp }`.
-> - **`/refund/apply` / `/refund/status`** also use `head: { tokenType: "AES", signature }`.
+> - **`/link/*`** (create / fetch / update / resendNotification / expire / **fetchTransaction**) all use `head: { tokenType: "AES", signature, timestamp? }`.
 >
-> When polling Transaction Status from inside a Payment Link or Refund flow, the model often hallucinates and copies the `tokenType: "AES"` head from the surrounding link/refund code. This is wrong. **Build the `/v3/order/status` head from scratch with `signature` only**. Bad request observed in the wild:
+> If your flow mixes both (rare — typically you'd pick one path), build each request's `head` from scratch. Don't copy the link-API head into a Transaction Status call. Bad request observed in the wild:
 >
 > ```json
 > // ❌ WRONG — extra tokenType + timestamp leak from the link API
@@ -232,39 +231,6 @@ Treat this response as the **final authoritative status**. Call it server-to-ser
 > { "head": { "signature": "..." },
 >   "body": { "mid": "...", "orderId": "..." } }
 > ```
-
----
-
-## Refunds
-
-### Initiate Refund
-```
-POST {BASE_URL}/v2/refund/apply
-```
-```json
-{
-  "head": { "signature": "<CHECKSUMHASH>" },
-  "body": {
-    "mid": "YOUR_MID",
-    "txnType": "REFUND",
-    "orderId": "ORDERID_98765",
-    "txnId": "PAYTM_TXN_ID",
-    "refId": "UNIQUE_REFUND_REF_ID",
-    "refundAmount": "1.00"
-  }
-}
-```
-
-### Refund Status
-```
-POST {BASE_URL}/v2/refund/status
-```
-```json
-{
-  "head": { "signature": "<CHECKSUMHASH>" },
-  "body": { "mid": "YOUR_MID", "orderId": "ORDERID_98765", "refId": "UNIQUE_REFUND_REF_ID" }
-}
-```
 
 ---
 
@@ -352,8 +318,6 @@ If your MID rejects the values above, the MID's Test API Details tab has merchan
 | Fetch Payment Options | `POST /theia/api/v2/fetchPaymentOptions` |
 | Process Transaction | `POST /theia/api/v1/processTransaction` |
 | Transaction Status | `POST /v3/order/status` |
-| Initiate Refund | `POST /v2/refund/apply` |
-| Refund Status | `POST /v2/refund/status` |
 | Create Subscription | `POST /subscription/create` |
 
 All endpoints prefixed with the environment base URL.

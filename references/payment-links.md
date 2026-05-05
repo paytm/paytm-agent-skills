@@ -18,6 +18,7 @@ Server-generated short URLs that open Paytm-hosted checkout. No client SDK; work
 > 10. **`expiryDate` format is MID-dependent.** Most MIDs accept `DD/MM/YYYY HH:MM:SS` (returns error code `5021: Date should be in format DD/MM/YYYY` when wrong). The Paytm doc shows `yyyy-MM-dd HH:mm:ss` for some. **Default to `DD/MM/YYYY HH:MM:SS`** — switch only if your MID rejects it.
 > 11. **Use `linkType: "FIXED"` for fixed-amount, single-payer links.** `"GENERIC"` is an open-amount link — it silently ignores `amount` on create (fetch shows `amount: null`) AND rejects amount updates with error `5082`. Don't use GENERIC unless you actually want payer-chosen amount.
 > 12. **Create response key is `linkId` (camelCase)** in current Paytm responses — older docs / earlier versions of this skill said `LinkID`. Read defensively: `const id = body.linkId ?? body.LinkID;`
+> 13. **Reconcile a Payment Link via `/link/fetchTransaction`, NOT `/v3/order/status`.** The link product has a dedicated transactions endpoint that returns every payer's order(s) under `body.orders[]`. Use it for Payment Link reconciliation; `/v3/order/status` is for one-time-payment / JS-Checkout flows.
 
 Reference: <https://www.paytmpayments.com/docs/api/create-link-api?ref=paymentLinks>
 
@@ -225,34 +226,94 @@ Idempotent. Once expired, payers see "link no longer active". You cannot un-expi
 
 ---
 
+## Fetch transactions for a link (reconciliation)
+
+> **Use this for Payment Link reconciliation, not `/v3/order/status`.** `/v3/order/status` exists for one-time-payment / JS-Checkout flows where you already know the merchant `orderId`. For Payment Links — especially `REUSABLE` and `OPEN` types where many payers may pay against the same link — `/link/fetchTransaction` is the right endpoint. It returns every order made against the link in a single call, paginated.
+
+```
+POST {pgDomain}/link/fetchTransaction
+```
+
+Doc: <https://www.paytmpayments.com/docs/api/fetch-transaction-link-api?ref=paymentLinks>
+
+```json
+{
+  "head": {
+    "tokenType": "AES",
+    "signature": "<sig>"
+  },
+  "body": {
+    "mid": "YOUR_MID",
+    "linkId": 31309,
+    "pageNo": 1,
+    "pageSize": 10,
+    "fetchAllTxns": true
+  }
+}
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `mid` | ✅ | Merchant ID |
+| `linkId` | ✅ | **JSON number** (long), NOT a string — same rule as fetch / update / expire |
+| `pageNo` | optional | 1-indexed; defaults to 1 |
+| `pageSize` | optional | Up to ~50; defaults vary by MID |
+| `fetchAllTxns` | optional | `true` returns all orders against the link; `false` (default) returns only successful ones |
+| `head.tokenType` | ✅ | Always `"AES"` |
+| `head.signature` | ✅ | CHECKSUMHASH over `body` |
+| `head.timestamp` / `clientId` / `version` / `channelId` | optional | Standard Paytm head extras |
+
+### Response shape — orders are wrapped in `body.orders[]`
+
+```json
+{
+  "head": { "tokenType": "AES", "signature": "..." },
+  "body": {
+    "resultInfo": {
+      "resultCode": "200",
+      "resultStatus": "SUCCESS",
+      "resultMessage": "Success"
+    },
+    "orders": [
+      {
+        "txnId": "20260504000000000001",
+        "orderId": "ORD_INV_001",
+        "mercUniqRef": "INV-001-v1",
+        "orderStatus": "TXN_SUCCESS",
+        "txnAmount": 499.00,
+        "orderCreatedTime": "2026-05-04 14:32:11",
+        "customerName": "Buyer Name",
+        "customerEmail": "buyer@example.com",
+        "customerPhoneNumber": "9999999999",
+        "customerId": "CUST_001",
+        "payableAmount": 499.00
+      }
+    ]
+  }
+}
+```
+
+> **`body.orders[]` is always an array**, even when only one order exists. Iterate; don't index by ordinal in production code.
+
+### Error codes (Fetch Transaction)
+
+| `resultCode` | Meaning | Action |
+|---|---|---|
+| `200` | Success | Proceed |
+| `404` | Data Not Found — no transactions yet for this link | Treat as "not paid yet"; poll later or wait for webhook |
+| `5028` | Checksum invalid | Re-sign the body; check that you're hashing the same bytes you POST |
+| `501` | Internal Server Error | Transient; retry |
+
+---
+
 ## After payment
 
-The flow merges back into the standard one:
+The post-payment flow for Payment Links:
 
 1. Customer opens the link → Paytm-hosted checkout → pays.
 2. Paytm POSTs to your `callbackUrl` (browser redirect) with the same UPPERCASE field set as JS Checkout: `ORDERID`, `TXNID`, `STATUS`, `RESPCODE`, `CHECKSUMHASH`, etc.
-3. **Verify CHECKSUMHASH**, then call `/v3/order/status` server-to-server to confirm.
-4. Webhook (if configured) gives you the same data reliably.
-
-> **⚠️ When calling `/v3/order/status` from a Payment Link flow, the head shape is DIFFERENT from `/link/*`.** Build it from scratch — do NOT carry over `tokenType: "AES"` or `timestamp` from the link API.
->
-> ```json
-> // ✅ CORRECT — Transaction Status request
-> {
->   "head": { "signature": "<sig>" },
->   "body": { "mid": "YOUR_MID", "orderId": "ORD_INV_001" }
-> }
-> ```
->
-> ```json
-> // ❌ WRONG — extra tokenType + timestamp leaked from /link/* head
-> {
->   "head": { "tokenType": "AES", "timestamp": "1777662548", "signature": "<sig>" },
->   "body": { "mid": "YOUR_MID", "orderId": "ORD_INV_001" }
-> }
-> ```
->
-> The wrong head triggers checksum-mismatch errors (`227`) that look like a key problem but are actually about the extra fields being included in the signed body.
+3. **Verify CHECKSUMHASH**, then call **`/link/fetchTransaction`** server-to-server to confirm — it returns the order(s) in `body.orders[]` with `orderStatus`, `txnAmount`, `txnId`, customer details. Use that as the source of truth before fulfilling. (Do NOT use `/v3/order/status` for Payment Link reconciliation — that endpoint is for one-time-payment / JS-Checkout flows.)
+4. Webhook (if configured) gives you the same data reliably without polling.
 
 ---
 
@@ -261,10 +322,11 @@ The flow merges back into the standard one:
 | Action | Path | Identifier |
 |---|---|---|
 | Create | `POST /link/create` | n/a |
-| Fetch | `POST /link/fetch` | `linkId` (number) |
+| Fetch link details | `POST /link/fetch` | `linkId` (number) |
 | Update | `POST /link/update` | `linkId` (number) |
-| Resend | `POST /link/resendNotification` | `linkId` (number) |
+| Resend notification | `POST /link/resendNotification` | `linkId` (number) |
 | Expire | `POST /link/expire` | `linkId` (number) |
+| **Fetch transactions (reconcile)** | `POST /link/fetchTransaction` | `linkId` (number) |
 
 ---
 
@@ -284,4 +346,6 @@ The flow merges back into the standard one:
 12. **SMS dispatch requires DLT-registered templates** on the Paytm side (Indian regulation). New merchants may see SMS silently dropped until templates are approved on the dashboard.
 13. **`shortUrl` redirects to a long URL on the PG host** — link previews (WhatsApp, iMessage) hit the long URL, which can affect link analytics if you depend on click-through tracking.
 14. **Update can't change `linkType` or `orderId`** — only mutable fields (amount, expiry, description, contact).
-15. **`/v3/order/status` head shape differs from `/link/*`.** Transaction Status uses `head: { signature }` only — NO `tokenType`, NO `timestamp`. When polling order status from inside a payment-link flow, build the head from scratch instead of copying the link-API head.
+15. **Reconcile via `/link/fetchTransaction`, not `/v3/order/status`.** The link product has its own transactions endpoint that returns every order (paginated) under `body.orders[]`. `/v3/order/status` is for one-time-payment / JS-Checkout flows where you already know the merchant `orderId`; for Payment Links — especially `REUSABLE` / `OPEN` links with multiple payers — `/link/fetchTransaction` gives you the full list in a single call.
+16. **Fetch-transaction response wraps orders in `body.orders[]`**, always an array (even when one order). Iterate; don't index by ordinal.
+17. **`404` from fetch-transaction is "no transactions yet" — not an error.** Treat as "link not paid yet" and poll later or wait for the webhook.
