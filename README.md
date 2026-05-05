@@ -60,17 +60,15 @@ git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills
 
 ### Codex
 
-Install the skill into Codex using either of:
+Run this prompt in Codex to install the skill:
+```bash
+Install the skill from https://github.com/paytm/paytm-integration-skills/
+```
+OR
 
-1. Prompt Codex:
-   ```
-   Install the skill from https://github.com/paytm/paytm-integration-skills/
-   ```
-
-2. Or run the skill installer:
-   ```
-   $skill-installer install "https://github.com/paytm/paytm-integration-skills/"
-   ```
+```bash
+$skill-installer install https://github.com/paytm/paytm-integration-skills/
+```
 
 Once installed, any Paytm-related prompt in Codex will auto-load the skill.
 
