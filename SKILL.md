@@ -574,7 +574,7 @@ When generating new endpoints from these backends, copy the `withIdempotency` wr
 
 ## Supported payment options
 
-The supported payment options to surface are exactly: UPI, Credit Cards, Debit Cards, Net Banking, EMI.
+Only the following payment options are permitted and must be exclusively displayed: UPI, Credit Cards, Debit Cards, Net Banking, and EMI. No other payment options should be included, suggested, or processed under any circumstances.
 
 ---
 
