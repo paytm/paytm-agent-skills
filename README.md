@@ -44,15 +44,15 @@ The skill file (`SKILL.md`) acts as the instruction layer that teaches the AI ho
 
 ### Claude (Claude Code, Claude.ai)
 
-```bash
-mkdir -p ~/.claude/skills
-git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills/paytm-integration
-``` 
-OR
-
 Run this prompt in Claude Code to install the skill globally:
 ```bash
 Install the Paytm PG integration skill globally from https://github.com/paytm/paytm-integration-skills
+``` 
+OR
+
+```bash
+mkdir -p ~/.claude/skills
+git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills/paytm-integration
 ``` 
 
 - **Claude Code:** Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.  
@@ -62,14 +62,14 @@ Install the Paytm PG integration skill globally from https://github.com/paytm/pa
 
 Install the skill into Codex using either of:
 
-1. Run the skill installer:
-   ```
-   $skill-installer install "https://github.com/paytm/paytm-integration-skills/"
-   ```
-
-2. Or simply prompt Codex:
+1. Prompt Codex:
    ```
    Install the skill from https://github.com/paytm/paytm-integration-skills/
+   ```
+
+2. Or run the skill installer:
+   ```
+   $skill-installer install "https://github.com/paytm/paytm-integration-skills/"
    ```
 
 Once installed, any Paytm-related prompt in Codex will auto-load the skill.
@@ -111,10 +111,6 @@ To go live with Paytm, you will need a **MID** (your unique Merchant ID) and a *
   (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
 
 Store keys in environment variables. Never commit them or expose them in client-side code.
-
-The reference backends under `scripts/backend-*` are **demos**: permissive CORS, no CSRF / auth on the create endpoints, in-memory idempotency / webhook dedup. Don't copy them into production as-is - add your own auth, swap the in-memory caches for Redis / a DB, and lock down CORS to the origins you actually own.
-
-Only the following payment options are permitted and must be exclusively displayed: UPI, Credit Cards, Debit Cards, Net Banking, and EMI. No other payment options should be included, suggested, or processed under any circumstances.
 
 ---
 
