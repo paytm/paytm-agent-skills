@@ -121,12 +121,21 @@ var config = {
   }
 };
 
-window.Paytm.CheckoutJS.onLoad(function () {
-  window.Paytm.CheckoutJS.init(config)
-    .then(function () { window.Paytm.CheckoutJS.invoke(); })
-    .catch(function (err) { console.error("init error", err); });
-});
+// Call init/invoke directly inside the click handler — NOT inside
+// Paytm.CheckoutJS.onLoad(). onLoad fires once at script-load time, long
+// before the user clicks; wrapping init/invoke inside it means the modal
+// never opens. See SKILL.md "Common Integration Bugs" → #3.
+window.Paytm.CheckoutJS.init(config)
+  .then(function () { window.Paytm.CheckoutJS.invoke(); })
+  .catch(function (err) { console.error("init error", err); });
 ```
+
+> **Loader timing.** The merchant `.js` script (the one that defines `window.Paytm`) must finish loading before the click handler runs. Two ways to enforce this:
+>
+> 1. **Dynamic loader (recommended; matches `scripts/frontend/checkout.html`):** fetch `/paytm-client-config.json`, inject a `<script>` element, set `script.onload = () => { payBtn.disabled = false; }`. Native `onload`, no `Paytm.CheckoutJS.onLoad`.
+> 2. **Static loader (`<script src="...">` in HTML):** `window.Paytm` exists by the time inline JS runs. You can use `Paytm.CheckoutJS.onLoad(() => { payBtn.disabled = false; })` to gate the button. Don't mix the two.
+>
+> Either way, **the click handler calls `init`/`invoke` directly** — never wrap them inside `Paytm.CheckoutJS.onLoad()`.
 
 > **Note on shape:** Paytm docs show two slightly different config shapes. Modern merchants use the `data: { orderId, token, tokenType, amount }` form shown above (matches the working snippets in `scripts/`). Older docs show `merchant: { mid, name }` + `order: { id, token, amount }` - both work, but don't mix.
 

@@ -346,28 +346,39 @@ button.addEventListener("click", function () {
     });
 });
 ```
-`CheckoutJS.onLoad(cb)` fires **exactly once**, when the merchant CheckoutJS script finishes loading - which happens shortly after page load, long before the user clicks "Pay". By click time, `onLoad` has already fired and your callback never runs. The payment modal silently fails to open.
+`CheckoutJS.onLoad(cb)` fires **exactly once**, when the merchant CheckoutJS script finishes loading. By click time it has already fired and your callback never runs. The payment modal silently fails to open.
 
-**Correct pattern:**
+There's a second trap here: you can't call `window.Paytm.CheckoutJS.onLoad(...)` *anywhere* until the merchant `.js` script has actually loaded, because that script is what creates `window.Paytm` in the first place. If you load the script dynamically (after a `/paytm-client-config.json` fetch — the reference pattern), `window.Paytm` is `undefined` at page-eval time and `Paytm.CheckoutJS.onLoad` throws.
+
+**Correct pattern — dynamic loader (matches `scripts/frontend/checkout.html`):**
 ```javascript
-// Page-load level: enable the Pay button only once CheckoutJS is ready.
-window.Paytm.CheckoutJS.onLoad(function () {
-  payBtn.disabled = false;                                // or whatever signals readiness
-});
+// Fetch backend config, inject the merchant .js, use the <script> tag's native
+// onload to enable the Pay button. Do NOT call Paytm.CheckoutJS.onLoad here —
+// window.Paytm doesn't exist yet.
+fetch("/paytm-client-config.json")
+  .then(r => r.json())
+  .then(cfg => {
+    const s = document.createElement("script");
+    s.src = cfg.loader_url;
+    s.crossOrigin = "anonymous";
+    s.onload = () => { payBtn.disabled = false; };       // ✅ native script onload
+    document.head.appendChild(s);
+  });
 
-// Click handler: CheckoutJS is already loaded, call init/invoke directly.
+// Click handler: CheckoutJS is already loaded (button only enables after s.onload),
+// so call init/invoke directly. No CheckoutJS.onLoad wrapper needed.
 button.addEventListener("click", function () {
   fetch("/paytm/create-order", ...)
-    .then(function (data) {
-      var config = { /* ... */ };
-      return window.Paytm.CheckoutJS.init(config).then(function () {
-        window.Paytm.CheckoutJS.invoke();
-      });
+    .then(data => {
+      const config = { /* ... */ };
+      return window.Paytm.CheckoutJS.init(config).then(() => window.Paytm.CheckoutJS.invoke());
     });
 });
 ```
 
-The reference frontend at `scripts/frontend/checkout.html` follows this pattern and includes an explicit comment warning against the broken one.
+**Alternative — static loader tag in HTML:** If you embed the merchant `.js` as a normal `<script src="...">` in HTML (not dynamically injected), then `window.Paytm` exists by the time inline JS runs, and you *can* use `Paytm.CheckoutJS.onLoad(() => { payBtn.disabled = false; })` for the same purpose. Don't mix the two — pick one.
+
+The reference frontend at `scripts/frontend/checkout.html` uses the dynamic-loader pattern with `s.onload`. Follow it exactly.
 
 ### 4. Missing `transactionStatus` / `notifyMerchant` handlers
 
