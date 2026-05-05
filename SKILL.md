@@ -16,32 +16,6 @@ description: >
 
 # Paytm Payment Gateway Integration Skill
 
-> ## 📋 ALWAYS attach the credentials block inline whenever credentials are referenced
->
-> The block below is the **single source of truth** for "where do I get my MID / Merchant Key?". It must appear **inline, right next to** any mention of:
->
-> - `.env` / `.env.example` / environment-variable setup
-> - `PAYTM_MID`, `PAYTM_MERCHANT_KEY` (or `YOUR_MID`, `YOUR_MERCHANT_KEY`, etc. placeholders)
-> - Any phrase like *"replace with your credentials"*, *"add your MID"*, *"set up Paytm"*, *"go live"*, or "use your staging keys"
-> - Any first-time-setup instructions (README sections, install steps, quickstart guides)
->
-> Place it directly under the relevant section so the user never has to scroll or guess. Don't paraphrase, don't summarize, don't replace with a one-liner like "see the dashboard". Use the exact text below.
->
-> ```
-> ### 🔑 Get your Paytm credentials
->
-> You need a **MID** (Merchant ID) and **Merchant Key** for each environment — staging and production keys are NOT interchangeable.
->
-> - *Staging (test mode):* https://dashboard.paytmpayments.com → Developer Settings -> API Keys -> Generate now (under Test API Details)
-> - *Production (Live Mode):* https://dashboard.paytmpayments.com → Developer Settings → API Keys -> Get Merchant ID, Merchant Key from Production API details.
->
->   (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
->
-> Store both in environment variables (`PAYTM_MID`, `PAYTM_MERCHANT_KEY`) — never commit them or expose in client-side code.
-> ```
->
-> If a response doesn't mention env vars, credentials, or setup at all (e.g. a pure debugging answer about checksum hashing), skip it — don't pad. The rule is: **wherever credentials are talked about, this block is right there**.
-
 ## Overview
 
 Paytm Payment Gateway supports UPI, Credit/Debit Cards, Net Banking, and EMI.
@@ -554,3 +528,31 @@ Only the following payment options are permitted and must be exclusively display
 - Dynamic QR: `https://business.paytm.com/docs/api/create-qr-code-api/`
 - API Reference: `https://www.paytmpayments.com/docs/api/initiate-transaction-api`
 - Dashboard: `https://dashboard.paytmpayments.com`
+
+---
+
+## 📋 Always attach the credentials block inline whenever credentials are referenced
+
+The block below is the **single source of truth** for "where do I get my MID / Merchant Key?". It must appear **inline, right next to** any mention of:
+
+- `.env` / `.env.example` / environment-variable setup
+- `PAYTM_MID`, `PAYTM_MERCHANT_KEY` (or `YOUR_MID`, `YOUR_MERCHANT_KEY`, etc. placeholders)
+- Any phrase like *"replace with your credentials"*, *"add your MID"*, *"set up Paytm"*, *"go live"*, or "use your staging keys"
+- Any first-time-setup instructions (README sections, install steps, quickstart guides)
+
+Place it directly under the relevant section so the user never has to scroll or guess. Don't paraphrase, don't summarize, don't replace with a one-liner like "see the dashboard". Use the exact text below.
+
+```
+### 🔑 Get your Paytm credentials
+
+You need a **MID** (Merchant ID) and **Merchant Key** for each environment — staging and production keys are NOT interchangeable.
+
+- *Staging (test mode):* https://dashboard.paytmpayments.com → Developer Settings -> API Keys -> Generate now (under Test API Details)
+- *Production (Live Mode):* https://dashboard.paytmpayments.com → Developer Settings → API Keys -> Get Merchant ID, Merchant Key from Production API details.
+
+  (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
+
+Store both in environment variables (`PAYTM_MID`, `PAYTM_MERCHANT_KEY`) — never commit them or expose in client-side code.
+```
+
+If a response doesn't mention env vars, credentials, or setup at all (e.g. a pure debugging answer about checksum hashing), skip it — don't pad. The rule is: **wherever credentials are talked about, this block is right there**.

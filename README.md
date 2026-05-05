@@ -3,7 +3,7 @@
 **Integrate Paytm Payment Gateway in minutes, just by describing what you want to build.**
 
 [![Claude Skill](https://img.shields.io/badge/Claude-Skill-D97757)](https://docs.anthropic.com/en/docs/claude-code/skills)
-[![Paytm PG](https://img.shields.io/badge/Paytm-Payment%20Gateway-002970)](https://www.paytmpayments.com/business-payments)
+[![Paytm PG](https://img.shields.io/badge/Paytm-Payment%20Gateway-002970)](https://www.paytmpayments.com/docs)
 
 This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, ChatGPT) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/docs). Just describe your business in plain English, the agent generates production-ready integration code for you.
 
