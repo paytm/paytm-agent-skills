@@ -10,7 +10,10 @@ Server-generated short URLs that open Paytm-hosted checkout. No client SDK; work
 > 2. **Read the response link id defensively** - current Paytm responses return `linkId` (camelCase); older docs / staging environments may still return `LinkID` (capitalized). Use `body.linkId ?? body.LinkID`. Always send it back to Paytm as `linkId` (camelCase) on subsequent calls.
 > 3. The **resend** endpoint is `/link/resendNotification`, NOT `/link/resend`.
 > 4. **Every link API call requires `head.tokenType: "AES"`**, not just `signature`. Omitting it returns `"Invalid tokenType"`. Applies to create / fetch / update / resend / expire - all of them.
-> 5. **BOTH `linkName` AND `linkDescription` must be ≥ 3 chars and contain NO special characters** (alphanumerics + spaces only). `-`, `_`, `.`, `#`, `@`, `&`, `/`, `:`, `'`, `"`, etc. all fail validation. The error message names whichever field violated; both fields enforce the same rule, so sanitize them with the same regex.
+> 5. **`linkName` and `linkDescription` have *different* charset rules in practice — sanitize them separately:**
+>    - **`linkName`: alphanumerics ONLY (no spaces).** Paytm docs say spaces are allowed, but several MIDs reject space as a special character with `"link name contains special character"`. Stripping spaces is the safe cross-MID default.
+>    - **`linkDescription`: alphanumerics + spaces.**
+>    Both must be ≥ 3 chars. `-`, `_`, `.`, `#`, `@`, `&`, `/`, `:`, `'`, `"`, etc. fail in both fields. Sanitize on the server before sending; never pass raw user input through.
 > 6. **Fetch response wraps the link in `body.links[0]`**, not `body` directly. Reading `json.body.linkStatus` returns `undefined` - read `json.body.links[0].linkStatus`.
 > 7. **Customer phone / email / name go inside a `customerContact` object** - they are **NOT** top-level body fields. Putting `customerMobile` / `customerEmail` at the top of `body` is silently accepted but Paytm never sends the SMS/email.
 > 8. **`amount` in create-link is a JSON number** (e.g. `100.00`), not a string - different from `txnAmount.value` in Initiate Transaction. Quoting it as a string can fail validation.
@@ -41,7 +44,7 @@ Content-Type: application/json
   "body": {
     "mid": "YOUR_MID",
     "linkType": "FIXED",
-    "linkName": "Invoice 001",
+    "linkName": "Invoice001",
     "linkDescription": "Payment for Invoice 001",
     "amount": 499.00,
     "sendSms": true,
@@ -63,8 +66,8 @@ Content-Type: application/json
 | Field | Required | Notes |
 |---|---|---|
 | `mid` | ✅ | Merchant ID |
-| `linkName` | ✅ | **Min 3 chars, alphanumerics + spaces only - no special characters.** Same rule as `linkDescription`. `!`, `@`, `#`, `$`, `&`, `-`, `_`, `.`, `/`, `:`, `'`, `"` etc. all fail validation. Sanitize on the server before sending (e.g. `s.replace(/[^A-Za-z0-9 ]/g, " ")`) |
-| `linkDescription` | ✅ | **Min 3 chars, alphanumerics + spaces only - no special characters.** Same rule as `linkName`. Sanitize with the same regex. Keep it short and clean (`"Invoice 001"`, `"Gym membership"`) |
+| `linkName` | ✅ | **Min 3 chars, alphanumerics ONLY — no spaces, no special chars.** Paytm docs say spaces are allowed; several MIDs reject them as `"link name contains special character"`. Strip with `s.replace(/[^A-Za-z0-9]/g, "")`. Examples: `Invoice001`, `OrderABC123` |
+| `linkDescription` | ✅ | **Min 3 chars, alphanumerics + spaces.** Spaces ARE allowed here (unlike `linkName`). No `!`, `@`, `#`, `$`, `&`, `-`, `_`, `.`, `/`, `:`, `'`, `"`. Strip with `s.replace(/[^A-Za-z0-9 ]/g, " ")`. Examples: `"Invoice 001"`, `"Gym membership"` |
 | `linkType` | ✅ | `"FIXED"` for single-payer fixed-amount (most common), `"GENERIC"` for open-amount payer-chosen. **Don't use GENERIC for fixed amounts** - it ignores `amount` on create and rejects updates with error `5082` |
 | `amount` | conditional | **JSON number** (`499.00`), NOT a string. Required for `FIXED`; ignored for `GENERIC` |
 | `head.tokenType` | ✅ | Always `"AES"` |
@@ -335,7 +338,7 @@ The post-payment flow for Payment Links:
 1. **`linkId` MUST be a JSON number** in fetch / update / resend / expire calls. Quoting it as a string is the #1 cause of "invalid link id" responses.
 2. **Response key is `linkId` (camelCase)** in current Paytm responses; some legacy / staging variants return `LinkID`. Read defensively (`body.linkId ?? body.LinkID`); always send `linkId` on subsequent calls.
 3. **`head.tokenType: "AES"` is required on every call.** Omitting it returns `"Invalid tokenType"`. Easy to miss because the field isn't called out in older Paytm samples.
-4. **BOTH `linkName` AND `linkDescription`** are subject to the same charset rule: minimum 3 characters, alphanumerics + spaces only. No `-`, `_`, `.`, `#`, `@`, `&`, `/`, `:`, `'`, `"`, etc. Validation error if violated. Apply the same sanitizer to both fields server-side; never pass raw user input through.
+4. **`linkName` and `linkDescription` have different charset rules in practice — sanitize separately.** `linkName` accepts alphanumerics ONLY (some MIDs reject space as a special character despite Paytm docs claiming it's allowed). `linkDescription` accepts alphanumerics + spaces. Both ≥ 3 chars. Never pass raw user input through.
 5. **Fetch response wraps the link in `body.links[0]`**, not `body` directly. `json.body.linkStatus` is `undefined`; you must read `json.body.links[0].linkStatus`.
 6. **Customer details must be nested in `customerContact`.** Putting `customerMobile` / `customerEmail` / `customerName` at the top level of `body` is silently accepted but Paytm never dispatches the SMS / email. The link is created but the customer is never notified.
 7. **Create-link `amount` is a JSON number**, not a string. `499.00` works; `"499.00"` may fail validation. (Different from `txnAmount.value` in Initiate Transaction, which IS a string.)

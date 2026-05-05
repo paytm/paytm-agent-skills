@@ -4,17 +4,28 @@
 //   - head requires tokenType: "AES" + timestamp (Unix epoch SECONDS as string)
 //   - linkType: "FIXED" by default (GENERIC ignores amount)
 //   - amount is a JSON number, NOT a string
-//   - linkName AND linkDescription must each be ≥ 3 chars, alphanumerics + spaces
-//     only (same rule for both fields). Sanitize via sanitizeDescription() below.
+//   - linkName: alphanumerics ONLY (no spaces) - some MIDs reject space here.
+//     Sanitize via sanitizeLinkName() below.
+//   - linkDescription: alphanumerics + spaces. Sanitize via sanitizeDescription().
+//     Both fields must be ≥ 3 chars.
 //   - customer details nested under customerContact (not top-level)
 //   - expiryDate format DD/MM/YYYY HH:MM:SS (most MIDs)
 import crypto from "node:crypto";
 import PaytmChecksum from "paytmchecksum";
 import { getPaytmConfig } from "./paytmConfig.js";
 
+// linkDescription: alphanumerics + spaces (per Paytm docs). Sanitize untrusted
+// input; fall back when empty / too short.
 function sanitizeDescription(s, fallback = "Invoice payment") {
-  // Alphanumerics + spaces only; collapse to fallback if empty / too short.
   const cleaned = String(s ?? "").replace(/[^A-Za-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  return cleaned.length >= 3 ? cleaned : fallback;
+}
+
+// linkName: alphanumerics ONLY. Paytm's docs say spaces are allowed but several
+// MIDs reject space as a special character with "link name contains special
+// character". Stripping spaces is the safe cross-MID default.
+function sanitizeLinkName(s, fallback = "Invoice") {
+  const cleaned = String(s ?? "").replace(/[^A-Za-z0-9]/g, "");
   return cleaned.length >= 3 ? cleaned : fallback;
 }
 
@@ -73,7 +84,7 @@ export async function createPaymentLink({
   const body = {
     mid: cfg.mid,
     linkType: "FIXED",
-    linkName: sanitizeDescription(linkName, "Invoice"),
+    linkName: sanitizeLinkName(linkName, "Invoice"),
     linkDescription: sanitizeDescription(linkDescription, "Invoice payment"),
     amount: normalizeAmount(amount),
     sendSms: !!sendSms,

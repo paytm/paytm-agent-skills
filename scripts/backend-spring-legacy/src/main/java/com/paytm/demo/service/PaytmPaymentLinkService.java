@@ -32,7 +32,10 @@ import org.springframework.web.client.RestTemplate;
  *  - head requires tokenType "AES" + timestamp (Unix epoch SECONDS as string)
  *  - linkType: "FIXED" by default (GENERIC ignores amount)
  *  - amount is a JSON number, NOT a string
- *  - linkDescription must be >= 3 chars, alphanumerics + spaces only
+ *  - linkName: alphanumerics ONLY (no spaces) - some MIDs reject space here.
+ *    Sanitize via sanitizeLinkName() below.
+ *  - linkDescription: alphanumerics + spaces. Sanitize via sanitizeDescription().
+ *    Both fields must be >= 3 chars.
  *  - customer details nested under customerContact (not top-level)
  *  - expiryDate format DD/MM/YYYY HH:MM:SS (most MIDs)
  */
@@ -72,7 +75,7 @@ public class PaytmPaymentLinkService {
     JSONObject body = new JSONObject();
     body.put("mid", PaytmMerchantConfig.mid());
     body.put("linkType", "FIXED");
-    body.put("linkName", sanitizeDescription(req.linkName, "Invoice"));
+    body.put("linkName", sanitizeLinkName(req.linkName, "Invoice"));
     body.put("linkDescription", sanitizeDescription(req.linkDescription, "Invoice payment"));
     body.put("amount", normalizeAmountAsNumber(req.amount));
     body.put("sendSms", req.sendSms != null ? req.sendSms : Boolean.TRUE);
@@ -229,9 +232,21 @@ public class PaytmPaymentLinkService {
 
   // -- helpers ---------------------------------------------------------------
 
+  /** linkDescription: alphanumerics + spaces (per Paytm docs). */
   private static String sanitizeDescription(String s, String fallback) {
     if (s == null) return fallback;
     String cleaned = s.replaceAll("[^A-Za-z0-9 ]", " ").replaceAll("\\s+", " ").trim();
+    return cleaned.length() >= 3 ? cleaned : fallback;
+  }
+
+  /**
+   * linkName: alphanumerics ONLY. Paytm's docs say spaces are allowed but
+   * several MIDs reject space as a special character with "link name contains
+   * special character". Stripping spaces is the safe cross-MID default.
+   */
+  private static String sanitizeLinkName(String s, String fallback) {
+    if (s == null) return fallback;
+    String cleaned = s.replaceAll("[^A-Za-z0-9]", "");
     return cleaned.length() >= 3 ? cleaned : fallback;
   }
 

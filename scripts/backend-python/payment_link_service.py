@@ -5,8 +5,10 @@ Defaults & gotchas baked in:
 - head requires tokenType: "AES" + timestamp (Unix epoch SECONDS as string)
 - linkType: "FIXED" by default (GENERIC ignores amount)
 - amount is a JSON number, NOT a string
-- linkName AND linkDescription must each be >= 3 chars, alphanumerics + spaces
-  only (same rule for both fields). Sanitize via _sanitize_description() below.
+- linkName: alphanumerics ONLY (no spaces) - some MIDs reject space here.
+  Sanitize via _sanitize_link_name() below.
+- linkDescription: alphanumerics + spaces. Sanitize via _sanitize_description().
+  Both fields must be >= 3 chars.
 - customer details nested under customerContact (not top-level)
 - expiryDate format DD/MM/YYYY HH:MM:SS (most MIDs)
 """
@@ -27,7 +29,16 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 
 def _sanitize_description(s: Optional[str], fallback: str = "Invoice payment") -> str:
+    """linkDescription: alphanumerics + spaces (per Paytm docs)."""
     cleaned = re.sub(r"\s+", " ", re.sub(r"[^A-Za-z0-9 ]", " ", s or "")).strip()
+    return cleaned if len(cleaned) >= 3 else fallback
+
+
+def _sanitize_link_name(s: Optional[str], fallback: str = "Invoice") -> str:
+    """linkName: alphanumerics ONLY. Paytm's docs say spaces are allowed but
+    several MIDs reject space as a special character with "link name contains
+    special character". Stripping spaces is the safe cross-MID default."""
+    cleaned = re.sub(r"[^A-Za-z0-9]", "", s or "")
     return cleaned if len(cleaned) >= 3 else fallback
 
 
@@ -96,7 +107,7 @@ def create_payment_link(
     body: dict = {
         "mid": cfg["mid"],
         "linkType": "FIXED",
-        "linkName": _sanitize_description(link_name, "Invoice"),
+        "linkName": _sanitize_link_name(link_name, "Invoice"),
         "linkDescription": _sanitize_description(link_description, "Invoice payment"),
         "amount": _normalize_amount(amount),
         "sendSms": bool(send_sms),
