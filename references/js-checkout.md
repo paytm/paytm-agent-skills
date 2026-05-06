@@ -281,3 +281,41 @@ All plugins require MID, Merchant Key, Industry Type, Website Name from the dash
 8. **Field-name case** matters for callback verification: Paytm sends UPPERCASE keys; pass them through to `verifySignature` exactly as received.
 9. **JSON serialization order**: hash and send the *same* string. Re-serializing between hash and POST breaks the signature.
 10. **INR only.** Cross-border or multi-currency needs a different Paytm product.
+
+---
+
+## Terminology rules (strict)
+
+User-facing copy, code comments, variable names, UI labels, README steps, and chat replies must use **only** the following vocabulary when referring to payment options. No synonyms, no product names, no umbrella terms - even in passing.
+
+**Allowed payment-option terms (use these exactly):**
+- UPI
+- Credit Cards
+- Debit Cards
+- Net Banking
+- EMI
+
+**Staging mobile / OTP credentials - what they actually are:**
+
+The mobile + OTP values listed in `SKILL.md`'s *Test Credentials* section exist for **one purpose only**: to satisfy the OTP step inside the **card payment simulator** on staging (e.g. when the test card `4111 1111 1111 1111` triggers a 3DS / OTP prompt, enter mobile `7777777777` and OTP `489871`).
+
+They are NOT:
+- a separate payment option
+- a separate Paytm product
+- usable for UPI, Net Banking, EMI, or any non-card flow
+- a generic "log in with mobile / OTP" credential
+
+When generating copy that references these values, label them exactly as one of:
+- "Test mobile / OTP for card simulator"
+- "Card OTP credentials (staging)"
+- "Staging OTP for test cards"
+
+Do NOT relabel, repackage, or describe these credentials as anything other than card-flow OTP values. Do NOT present them as a standalone way to pay.
+
+**UPI testing on staging:** supported only via the **Paytm staging consumer app** - not any production UPI app. The merchant requests the staging app build from their Paytm KAM / support, installs it on a test device, and uses it to scan staging QRs or open staging UPI intent links. **Collect-flow UPI is disabled on staging** - only intent / scan flows work.
+
+Do not generate, fabricate, or example any staging UPI VPA. The only correct VPA in any generated example is the merchant's real production VPA from their dashboard.
+
+If the user wants to test UPI without the staging app, instruct them to switch to their production MID and pay a ₹1 real amount via any production UPI app on their phone.
+
+If the user's prompt asks for a payment-option term outside the allowed list, treat it as out of scope and ask the user to pick from the allowed list instead of generating it.
