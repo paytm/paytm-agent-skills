@@ -272,7 +272,7 @@ Use these in any staging integration so users can complete a full payment flow w
 
 **Test Net Banking:** pick any bank in the staging selector → simulator page → click *Success* / *Failure* to force the outcome.
 
-> **UPI testing on staging:** supported only via the **Paytm staging consumer app** - not any production UPI app. The merchant requests the staging app build from their Paytm KAM / support, installs it on a test device, and uses it to scan staging QRs or open staging UPI intent links.
+**Test UPI:** supported only via the Paytm staging consumer app - not any production UPI app. The merchant requests the staging app build from their Paytm KAM / support, installs it on a test device, and uses it to scan staging QRs or open staging UPI intent links.
 
 If your MID rejects the values above, the MID's Test API Details tab has merchant-specific overrides at <https://dashboard.paytmpayments.com/next/apikeys>.
 
