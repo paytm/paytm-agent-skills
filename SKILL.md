@@ -272,11 +272,7 @@ Use these in any staging integration so users can complete a full payment flow w
 
 **Test Net Banking:** pick any bank in the staging selector → simulator page → click *Success* / *Failure* to force the outcome.
 
-**Test mobile / OTP** (for any flow that triggers OTP):
-- Mobile: `7777777777`
-- OTP: `489871`
-
-> **UPI testing - production environment only.** For UPI you must test against your production MID (with a small real amount, e.g. ₹1) on a real UPI app. Cards can be fully exercised in staging using the values above.
+> **UPI testing on staging:** supported only via the **Paytm staging consumer app** - not any production UPI app. The merchant requests the staging app build from their Paytm KAM / support, installs it on a test device, and uses it to scan staging QRs or open staging UPI intent links.
 
 If your MID rejects the values above, the MID's Test API Details tab has merchant-specific overrides at <https://dashboard.paytmpayments.com/next/apikeys>.
 
@@ -565,3 +561,18 @@ Store both in environment variables (`PAYTM_MID`, `PAYTM_MERCHANT_KEY`) - never 
 ```
 
 If a response doesn't mention env vars, credentials, or setup at all (e.g. a pure debugging answer about checksum hashing), skip it - don't pad. The rule is: **wherever credentials are talked about, this block is right there**.
+
+---
+
+## Terminology rules (strict)
+
+User-facing copy, code comments, variable names, UI labels, README steps, and chat replies must use **only** the following vocabulary when referring to payment options. No synonyms, no product names, no umbrella terms.
+
+**Allowed payment-option terms (use these exactly):**
+- UPI
+- Credit Cards
+- Debit Cards
+- Net Banking
+- EMI
+
+If the user's prompt asks for a payment-option term outside the allowed list, treat it as out of scope and ask the user to pick from the allowed list instead of generating it.
