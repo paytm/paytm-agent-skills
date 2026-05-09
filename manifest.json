@@ -1,0 +1,184 @@
+{
+  "$schema": "./manifest.schema.json",
+  "manifest_version": "1.0",
+
+  "name": "paytm-integration",
+  "version": "1.0.0",
+  "description": "Expert skill for integrating Paytm Payment Gateway APIs and SDKs - one-time payments, subscriptions, payment links, dynamic QR, callbacks, and troubleshooting.",
+  "license": "MIT",
+
+  "homepage": "https://github.com/paytm/paytm-integration-skills",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paytm/paytm-integration-skills.git"
+  },
+  "bugs": "https://github.com/paytm/paytm-integration-skills/issues",
+  "changelog": "CHANGELOG.md",
+
+  "entry": "SKILL.md",
+
+  "references": [
+    {
+      "path": "references/js-checkout.md",
+      "load": "lazy",
+      "summary": "JS Checkout integration: script loading, init/invoke patterns, event handling, common bugs."
+    },
+    {
+      "path": "references/payment-links.md",
+      "load": "lazy",
+      "summary": "Payment Link create/fetch/update/expire/resend, MID-specific quirks, error code reference."
+    },
+    {
+      "path": "references/subscriptions.md",
+      "load": "lazy",
+      "summary": "UPI Autopay / NATIVE_SUBSCRIPTION flow, mandate setup, retry/grace rules, error codes."
+    },
+    {
+      "path": "references/qr-codes.md",
+      "load": "lazy",
+      "summary": "Dynamic QR generation, posId, base64 image handling, post-payment polling."
+    },
+    {
+      "path": "references/troubleshooting.md",
+      "load": "lazy",
+      "summary": "Symptom -> cause -> fix for checksum, callback, JS Checkout, refunds, corp-proxy TLS."
+    }
+  ],
+
+  "assets": [
+    ".env.example",
+    "scripts/frontend/checkout.html",
+    "scripts/frontend/subscription.html",
+    "scripts/frontend/payment-link.html",
+    "scripts/frontend/qr.html"
+  ],
+
+  "backends": [
+    { "id": "node", "path": "scripts/backend-node", "language": "javascript", "runtime": "node>=18", "default": true },
+    { "id": "python", "path": "scripts/backend-python", "language": "python", "runtime": "python>=3.10" },
+    { "id": "spring-boot", "path": "scripts/backend-spring", "language": "java", "runtime": "jdk>=17" },
+    { "id": "spring-legacy", "path": "scripts/backend-spring-legacy", "language": "java", "runtime": "jdk>=8" }
+  ],
+
+  "triggers": [
+    "paytm",
+    "paytmchecksum",
+    "txnToken",
+    "CHECKSUMHASH",
+    "paytmpayments.com",
+    "/theia/api/",
+    "subscription/create",
+    "/link/create",
+    "paymentservices/qr",
+    "WEBSTAGING",
+    "NATIVE_SUBSCRIPTION"
+  ],
+
+  "anti_triggers": [
+    "MID",
+    "merchant key",
+    "checksum",
+    "PG integration"
+  ],
+
+  "capabilities": [
+    "one-time-payment",
+    "subscription",
+    "payment-link",
+    "dynamic-qr",
+    "callback-verification",
+    "transaction-status",
+    "refunds",
+    "webhook-receiver",
+    "idempotency"
+  ],
+
+  "targets": [
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "status": "supported",
+      "install_dir": "~/.claude/skills/paytm-integration",
+      "format": "skill-md",
+      "verify_command": "/skills"
+    },
+    {
+      "id": "claude-ai",
+      "name": "Claude.ai (Projects)",
+      "status": "supported",
+      "install_dir": null,
+      "format": "project-files",
+      "notes": "Upload SKILL.md and references/ as project files."
+    },
+    {
+      "id": "codex",
+      "name": "Codex",
+      "status": "supported",
+      "install_dir": "~/.codex/skills/paytm-integration",
+      "format": "skill-md"
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor",
+      "status": "planned",
+      "install_dir": ".cursor/rules",
+      "format": "cursor-rules"
+    },
+    {
+      "id": "continue",
+      "name": "Continue",
+      "status": "planned",
+      "install_dir": ".continue/rules",
+      "format": "continue-rules"
+    },
+    {
+      "id": "windsurf",
+      "name": "Windsurf",
+      "status": "planned",
+      "install_dir": ".windsurf/rules",
+      "format": "windsurf-rules"
+    },
+    {
+      "id": "gemini-cli",
+      "name": "Gemini CLI",
+      "status": "planned",
+      "install_dir": "~/.gemini/skills/paytm-integration",
+      "format": "agents-md"
+    },
+    {
+      "id": "antigravity",
+      "name": "Antigravity",
+      "status": "planned",
+      "install_dir": null,
+      "format": "agents-md"
+    },
+    {
+      "id": "aider",
+      "name": "Aider",
+      "status": "planned",
+      "install_dir": ".aider/conventions",
+      "format": "agents-md"
+    }
+  ],
+
+  "migrations": [],
+
+  "telemetry": {
+    "default": "opt-in",
+    "endpoint": null,
+    "payload_version": 1,
+    "opt_out_env": "PAYTM_SKILLS_TELEMETRY",
+    "fields": ["skill_version", "manifest_version", "target", "os", "node_version", "install_outcome"]
+  },
+
+  "min_runtime": {
+    "node": "18.0.0"
+  },
+
+  "categories": ["payments", "fintech", "india", "psp"],
+  "keywords": ["paytm", "payment-gateway", "upi", "subscription", "payment-link", "qr-code", "checkout", "psp"],
+
+  "maintainers": [
+    { "name": "Paytm", "url": "https://github.com/paytm" }
+  ]
+}

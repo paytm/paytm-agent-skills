@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/paytm/paytm-integration-skills/manifest.schema.json",
+  "title": "Paytm Skill Manifest",
+  "description": "Distribution manifest for the paytm-integration skill. Describes payload, triggers, supported AI tool targets, and tooling config.",
+  "type": "object",
+  "required": ["manifest_version", "name", "version", "description", "entry", "references", "targets"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "manifest_version": {
+      "type": "string",
+      "description": "Version of the manifest schema itself. Bump when adding/removing required fields.",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Skill identifier. Lowercase, hyphens only."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.-]+)?$",
+      "description": "Semver of the skill content."
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "license": { "type": "string" },
+    "homepage": { "type": "string", "format": "uri" },
+    "repository": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "url": { "type": "string", "format": "uri" }
+      },
+      "required": ["type", "url"]
+    },
+    "bugs": { "type": "string", "format": "uri" },
+    "changelog": { "type": "string" },
+
+    "entry": {
+      "type": "string",
+      "description": "Always-loaded entrypoint markdown file (relative to repo root).",
+      "pattern": "\\.md$"
+    },
+
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "load"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "pattern": "\\.md$" },
+          "load": { "type": "string", "enum": ["eager", "lazy"] },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+
+    "assets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Non-markdown files that ship with the skill (env templates, frontend HTML, etc.)."
+    },
+
+    "backends": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path", "language"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "path": { "type": "string" },
+          "language": { "type": "string" },
+          "runtime": { "type": "string" },
+          "default": { "type": "boolean" }
+        }
+      }
+    },
+
+    "triggers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Keyword tokens that should auto-load this skill."
+    },
+    "anti_triggers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Generic terms that overlap with other PSPs - listed so generators can warn against using them as sole triggers."
+    },
+
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "status", "format"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["supported", "planned", "experimental", "deprecated"] },
+          "install_dir": { "type": ["string", "null"] },
+          "format": { "type": "string", "enum": ["skill-md", "project-files", "cursor-rules", "continue-rules", "windsurf-rules", "agents-md"] },
+          "verify_command": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "migrations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "path": { "type": "string" },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default": { "type": "string", "enum": ["opt-in", "opt-out", "disabled"] },
+        "endpoint": { "type": ["string", "null"], "format": "uri" },
+        "payload_version": { "type": "integer", "minimum": 1 },
+        "opt_out_env": { "type": "string" },
+        "fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "min_runtime": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+
+    "categories": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "maintainers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "url": { "type": "string", "format": "uri" }
+        }
+      }
+    }
+  }
+}
