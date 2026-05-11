@@ -107,7 +107,7 @@
           "name": { "type": "string" },
           "status": { "type": "string", "enum": ["supported", "planned", "experimental", "deprecated"] },
           "install_dir": { "type": ["string", "null"] },
-          "format": { "type": "string", "enum": ["skill-md", "project-files", "cursor-rules", "continue-rules", "windsurf-rules", "agents-md"] },
+          "format": { "type": "string", "enum": ["skill-md", "bundled-md", "project-files"] },
           "verify_command": { "type": "string" },
           "notes": { "type": "string" }
         }
