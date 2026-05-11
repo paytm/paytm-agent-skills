@@ -92,17 +92,19 @@ npx paytm-skills help
 
 ### Supported AI tools
 
-| Tool | Installs to | Routing file |
+Most tools install automatically. Two (Claude.ai Projects and Antigravity) don't expose a filesystem skills folder, so you upload the skill files manually through the tool's own UI — the installer skips them with a clear message.
+
+| Tool | How it's installed | Where the files land |
 |---|---|---|
-| Claude Code | `~/.claude/skills/paytm/` | `CLAUDE.md` |
-| Claude.ai (Projects) | manual upload | n/a |
-| Codex (CLI or ChatGPT desktop) | `~/.codex/skills/paytm/` | `AGENTS.md` |
-| Cursor | `~/.cursor/skills-cursor/paytm/` | `.cursor/rules/paytm.mdc` |
-| Continue | `~/.continue/rules/paytm/` | `ROUTING.md` |
-| Windsurf | `~/.codeium/windsurf/memories/paytm.md` (single bundled file) | inlined |
-| Gemini CLI | `~/.gemini/skills/paytm/` | `GEMINI.md` |
-| Antigravity | manual upload | n/a |
-| Aider | `~/.config/aider/conventions/paytm.md` (single bundled file) | inlined |
+| Claude Code | `npx paytm-skills install` | `~/.claude/skills/paytm/` |
+| Codex (CLI or ChatGPT desktop) | `npx paytm-skills install` | `~/.codex/skills/paytm/` |
+| Cursor | `npx paytm-skills install` | `~/.cursor/skills-cursor/paytm/` |
+| Continue | `npx paytm-skills install` | `~/.continue/rules/paytm/` |
+| Windsurf | `npx paytm-skills install` | `~/.codeium/windsurf/memories/paytm.md` (single file) |
+| Gemini CLI | `npx paytm-skills install` | `~/.gemini/skills/paytm/` |
+| Aider | `npx paytm-skills install` | `~/.config/aider/conventions/paytm.md` (single file) |
+| Claude.ai (Projects) | Upload manually | Add `skills/` files as project files in the Claude.ai UI |
+| Antigravity | Upload manually | Add skill files via the Antigravity UI (no filesystem convention yet) |
 
 After install:
 - **Claude Code:** restart, run `/skills` to verify.
