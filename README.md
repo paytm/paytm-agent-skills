@@ -19,6 +19,8 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 | **Subscriptions** | Recurring payment collections through UPI Autopay, cards or eNACH |
 | **Payment Links** | Generate and share payment links for payment collections |
 | **QR Codes** | Display dynamic QR codes on your website for UPI payments |
+| **All-in-One SDK** | Native Android / iOS SDK with Paytm-branded checkout UI built in |
+| **Custom SDK** | Native Android / iOS SDK for fully custom payment UI |
 | **Webhooks** | S2S notification receiver with signature verification |
 | **Refunds** | Full and partial refund APIs |
 
