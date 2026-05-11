@@ -56,46 +56,21 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 
 ## 3. Setup
 
-One command installs the right files into the AI tool(s) you actually have on your machine.
-
-### Quick install (recommended)
-
 ```bash
 npx paytm-skills
 ```
 
-Launches an interactive Paytm Payments installer that auto-detects which AI tools are present (Claude Code, Codex, Cursor, Windsurf, etc.), asks you what to install, and writes the files into the right place. Re-run any time to upgrade.
+Launches the interactive Paytm Payments installer — auto-detects which AI tools are on your machine (Claude Code, Codex, Cursor, Windsurf, etc.), asks what to install, and writes the files into the right place for each tool. Re-run any time to upgrade.
 
-For scripted / CI installs, the flag-based form is equivalent:
-
-```bash
-npx paytm-skills install
-```
-
-### Pick a specific tool
+### Other commands
 
 ```bash
-npx paytm-skills install --target claude-code
-npx paytm-skills install --target codex
-npx paytm-skills install --target cursor
-```
-
-### Install everywhere
-
-```bash
-npx paytm-skills install --all-targets
-```
-
-### Uninstall
-
-```bash
-npx paytm-skills uninstall
-```
-
-For all other commands and flags (list targets, list skills, dry-run, install a single skill, etc.) run:
-
-```bash
-npx paytm-skills help
+npx paytm-skills add skills               # same as above (interactive)
+npx paytm-skills install                  # scripted install, no prompts
+npx paytm-skills install --target cursor  # install for one tool
+npx paytm-skills install --all-targets    # install for every supported tool
+npx paytm-skills uninstall                # remove from detected tools
+npx paytm-skills help                     # full command + flag reference
 ```
 
 ### Supported AI tools
