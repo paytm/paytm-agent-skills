@@ -5,7 +5,7 @@
 [![Claude Skill](https://img.shields.io/badge/Claude-Skill-D97757)](https://docs.anthropic.com/en/docs/claude-code/skills)
 [![Paytm PG](https://img.shields.io/badge/Paytm-Payment%20Gateway-002970)](https://www.paytmpayments.com/docs)
 
-This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, Codex, Cursor, Continue, Windsurf, Gemini CLI, Aider, and more) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/docs). Just describe your business in plain English, the agent generates production-ready integration code for you.
+This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, Codex, Cursor, Continue, Windsurf, Gemini CLI, OpenCode, Aider, GitHub Copilot, and more) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/docs). Just describe your business in plain English, the agent generates production-ready integration code for you.
 
 The skills teach your AI agent the full Paytm spec, integration patterns, and common pitfalls, so the code it generates works on the first try.
 
@@ -75,19 +75,22 @@ npx paytm-skills help                     # full command + flag reference
 
 ### Supported AI tools
 
-Most tools install automatically. Two (Claude.ai Projects and Antigravity) don't expose a filesystem skills folder, so you upload the skill files manually through the tool's own UI — the installer skips them with a clear message.
+Most tools install automatically. Four (Claude.ai Projects, Antigravity, VS Code Copilot, GitHub Copilot CLI) don't expose a filesystem skills folder, so you copy the skill files through the tool's own UI / config — the installer skips them with a clear message.
 
 | Tool | How it's installed | Where the files land |
 |---|---|---|
 | Claude Code | `npx paytm-skills install` | `~/.claude/skills/paytm/` |
 | Codex (CLI or ChatGPT desktop) | `npx paytm-skills install` | `~/.codex/skills/paytm/` |
-| Cursor | `npx paytm-skills install` | `~/.cursor/skills-cursor/paytm/` |
+| Cursor | `npx paytm-skills install` | `~/.cursor/skills-cursor/paytm/` + `~/.cursor/rules/paytm.mdc` |
 | Continue | `npx paytm-skills install` | `~/.continue/rules/paytm/` |
 | Windsurf | `npx paytm-skills install` | `~/.codeium/windsurf/memories/paytm.md` (single file) |
 | Gemini CLI | `npx paytm-skills install` | `~/.gemini/skills/paytm/` |
 | Aider | `npx paytm-skills install` | `~/.config/aider/conventions/paytm.md` (single file) |
+| OpenCode | `npx paytm-skills install` | `~/.opencode/skills/paytm/` |
 | Claude.ai (Projects) | Upload manually | Add `skills/` files as project files in the Claude.ai UI |
 | Antigravity | Upload manually | Add skill files via the Antigravity UI (no filesystem convention yet) |
+| VS Code Copilot | Copy manually | Paste `routing/PREAMBLE.md` content into each project's `.github/copilot-instructions.md` |
+| GitHub Copilot CLI | Reference only | No skills convention - paste relevant skill content into `gh copilot` prompts as needed |
 
 After install:
 - **Claude Code:** restart, run `/skills` to verify.
