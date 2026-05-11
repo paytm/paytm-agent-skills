@@ -3,50 +3,39 @@
 All notable changes to the `paytm` skills bundle are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
-## [2.0.0] - Unreleased
+## [0.0.1] - Unreleased
 
-### BREAKING
+Initial pre-release of the Paytm Agent Skills bundle and `paytm-skills` CLI installer.
 
-- Repository restructured from a **single monolithic skill** to a **bundle of 8 modular skills**. Old install path `~/.claude/skills/paytm-integration/` is replaced by `~/.claude/skills/paytm/` (and the equivalent per-tool dirs). Re-run `npx paytm-skills install --force` to upgrade; remove the old `paytm-integration` dir manually.
-- `manifest.json` schema bumped to `manifest_version: "2.0"`. The previous flat `entry` + `references[]` shape is replaced by `skills[]` (each skill carries its own entry + references + triggers + description).
-- Adapter format names tightened: `cursor-rules` / `continue-rules` / `windsurf-rules` / `agents-md` collapsed into `skill-md` (multi-file) and `bundled-md` (single concatenated file).
+### Bundle
 
-### Added
+- **10 modular skills** under `skills/`:
+  `getting-started`, `js-checkout`, `subscriptions`, `payment-links`, `qr-codes`, `webhooks`, `refunds`, `all-in-one-sdk`, `custom-sdk`, `troubleshooting`.
+- Each skill ships an `SKILL.md` (always-loaded entry) and optionally a `references/REFERENCE.md` deep dive.
+- `routing/PREAMBLE.md` is the single source of truth for global rules (decision tree, terminology, credentials block, test creds).
+- Per-framework routing manifest (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursor/rules/paytm.mdc`, `ROUTING.md`) auto-generated at install time from `routing/PREAMBLE.md` + an auto-generated skill index table. Never edited by hand.
 
-- **8 modular skills** under `skills/`:
-  `getting-started`, `js-checkout`, `subscriptions`, `payment-links`, `qr-codes`, `webhooks`, `refunds` (stub), `troubleshooting`.
-- **Routing manifest generation** — `routing/PREAMBLE.md` is the single source of truth for global rules + decision tree. The `lib/adapters/routing.mjs` renderer writes a per-tool routing file at install time (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursor/rules/paytm.mdc`, `ROUTING.md`). Bundled-md targets (Windsurf, Aider) inline the same preamble at the top of their single file.
-- Auto-generated **skill index table** appended to every routing manifest — lists each skill with its trigger keywords.
-- Per-tool `target.routing_file` field in the manifest.
-- New top-level skill `webhooks` covering S2S receiver, signature verification, and dedup.
-- New top-level skill `refunds` (currently a stub — full content lands in the next product-depth release).
+### CLI (`paytm-skills`)
 
-### Changed
+- `npx paytm-skills` launches a branded interactive installer (Paytm Payments theme, auto-detects AI tools, prompts for target / skill selection / backends / force).
+- `npx paytm-skills add skills` alias for the interactive flow.
+- Scripted commands: `install`, `uninstall`, `list-targets`, `list-skills`, `path`, `help`, `--version`.
+- Flags: `--target <id>`, `--all-targets`, `--skill <name>` (repeatable), `--with-backends`, `--force`, `--dry-run`.
+- 9 AI tool targets supported: Claude Code, Claude.ai (Projects), Codex (CLI + ChatGPT desktop), Cursor, Continue, Windsurf, Gemini CLI, Antigravity, Aider.
+- Two adapter formats: `skill-md` (multi-file folder copy) and `bundled-md` (single concatenated file for memory-bound targets like Windsurf and Aider).
+- Auto-detection uses both directory presence and PATH-binary checks.
+- Zero runtime dependencies (Node built-ins only).
 
-- `manifest.json` skill-list moved into nested `skills[]`. `manifest.references[]` removed at top level (now per-skill).
-- `manifest.schema.json` updated for the new shape with `routing_preamble`, `skills[].triggers`, `skills[].references`, `target.routing_file`.
-- `scripts/manifest/validate.mjs` rewritten for v2 — now validates each skill's path / entry / references and cross-checks each `SKILL.md` frontmatter against `manifest.skills[].triggers`.
-- `lib/adapters/skill-md.mjs` rewritten for multi-skill — copies all 8 skill folders into one bundle dir, plus a `shared/` folder with assets, plus the per-tool routing manifest.
-- `lib/adapters/bundled-md.mjs` rewritten — concatenates routing preamble + every skill's entry + every skill's references + assets into one file (Windsurf, Aider).
-- README rewritten — `npx paytm-skills install` is the primary install path; legacy git-clone instructions removed.
+### Reference implementations
 
-### Removed
+- `scripts/backend-{node,python,spring,spring-legacy}/` — full backends in Node.js, Python, Spring Boot 3 (Jakarta), and Spring legacy (javax.servlet). Each includes idempotency wrapper + S2S webhook receiver.
+- `scripts/frontend/{checkout,subscription,payment-link,qr}.html` — copy-paste browser pages.
 
-- `SKILL.md` at repo root (content carved into per-skill files).
-- `references/` at repo root (each reference moved to its owning skill's `references/REFERENCE.md`).
-- Old format names (`cursor-rules` / `continue-rules` / `windsurf-rules` / `agents-md`) from manifest schema enum.
+### Tooling
 
-## [1.0.0] - Earlier
-
-### Added
-
-- `manifest.json` distribution manifest declaring entry, references, assets, backends, triggers, capabilities, and supported AI tool targets.
-- `manifest.schema.json` JSON Schema for the manifest.
-- `scripts/manifest/validate.mjs` zero-dep validator (runs in CI).
-- `bin/cli.mjs` NPX CLI with `install`, `uninstall`, `list-targets`, `path` subcommands.
-- `lib/manifest.mjs`, `lib/paths.mjs`, `lib/install.mjs`, `lib/detect.mjs`.
-- `lib/adapters/skill-md.mjs` (multi-file copy) and `lib/adapters/bundled-md.mjs` (single concatenated file) adapters.
-- GitHub Actions workflows: `manifest` (validator on every PR) and `cli` (cross-OS smoke tests on Ubuntu / macOS / Windows × Node 18 / 20 / 22).
-- 9 AI tool targets supported: Claude Code, Claude.ai, Codex (CLI + ChatGPT desktop), Cursor, Continue, Windsurf, Gemini CLI, Antigravity, Aider.
-- Asset bundling for `bundled-md` targets — `.env.example` and frontend HTML files inlined as fenced code blocks.
-- Auto-detect logic with both directory-presence and PATH-binary checks.
+- `manifest.json` — canonical distribution manifest (10 skills, 9 targets, telemetry stub, migrations array, capabilities).
+- `manifest.schema.json` — JSON Schema for the manifest, autocompletion + editor validation.
+- `scripts/manifest/validate.mjs` — zero-dep validator (checks required fields, semver, file existence, target uniqueness, cross-checks SKILL.md frontmatter triggers against manifest.skills[].triggers).
+- `.github/workflows/manifest.yml` — CI runs validator on every PR.
+- `.github/workflows/cli.yml` — cross-OS CI smoke tests (Ubuntu / macOS / Windows × Node 18 / 20 / 22, install + uninstall round-trip).
+- `assets/.env.example` — canonical `.env` template shipped alongside the skill bundle.

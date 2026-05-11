@@ -25,6 +25,7 @@ import { loadManifest } from "../lib/manifest.mjs";
 import { installTarget, uninstallTarget } from "../lib/install.mjs";
 import { defaultTargets, detectInstalledTools } from "../lib/detect.mjs";
 import { resolveInstallDir } from "../lib/paths.mjs";
+import { printBanner, runInteractiveInstall, isInteractive } from "../lib/ui.mjs";
 
 // Flags that can be repeated (collected into arrays).
 const MULTI_FLAGS = new Set(["skill"]);
@@ -68,7 +69,9 @@ function printHelp() {
   console.log(`paytm-skills - install the Paytm PG integration skill bundle into your AI tools.
 
 Usage:
-  npx paytm-skills <command> [options]
+  npx paytm-skills                       (interactive UI - recommended)
+  npx paytm-skills add skills            (same as above)
+  npx paytm-skills <command> [options]   (scripted / CI use)
 
 Commands:
   install                  Install into detected AI tools.
@@ -231,6 +234,82 @@ function cmdListTargets(manifest) {
   console.log(c.dim("Install one with: npx paytm-skills install --target <id>"));
 }
 
+// `npx paytm-skills add skills` -> interactive (mirrors Cashfree's UX)
+function cmdAdd(manifest, args) {
+  const sub = args._[1];
+  if (sub === "skills" || sub === undefined) {
+    if (!isInteractive()) {
+      console.error(c.red("✗ Interactive mode requires a TTY. In non-interactive contexts use 'install --target <id>'."));
+      process.exit(1);
+    }
+    return runInteractive(manifest);
+  }
+  console.error(c.red(`✗ Unknown subcommand: add ${sub}`));
+  process.exit(1);
+}
+
+async function runInteractive(preLoadedManifest) {
+  let manifest = preLoadedManifest;
+  if (!manifest) {
+    try { manifest = loadManifest(); }
+    catch (e) { console.error(c.red("✗ " + e.message)); process.exit(2); }
+  }
+
+  printBanner(manifest.version);
+
+  const detected = new Set(detectInstalledTools());
+  const result = await runInteractiveInstall({ manifest, detected });
+  if (result.cancelled) return;
+
+  // Build a synthetic flags object and dispatch through the normal install path.
+  const flags = {
+    target: result.targets.length === 1 ? result.targets[0] : undefined,
+    force: result.force,
+    "with-backends": result.withBackends,
+  };
+  if (result.targets.length > 1) flags["all-targets"] = true;
+  if (result.skills.length > 0) flags.skill = result.skills;
+
+  console.log("");
+
+  // Filter targets explicitly to the picked subset (since --all-targets includes
+  // every supported target, but the user may have picked a subset).
+  const pickedSet = new Set(result.targets);
+  const targets = (manifest.targets || []).filter((t) => pickedSet.has(t.id));
+
+  const requestedSkills = Array.isArray(flags.skill) ? flags.skill : [];
+  const effective = requestedSkills.length
+    ? { ...manifest, skills: manifest.skills.filter((s) => requestedSkills.includes(s.name)) }
+    : manifest;
+
+  let okCount = 0, skipCount = 0;
+  for (const t of targets) {
+    process.stdout.write(`  ${t.name} (${t.id})  ... `);
+    try {
+      const res = installTarget(effective, t, {
+        force: result.force,
+        dryRun: false,
+        withBackends: result.withBackends,
+      });
+      if (res.installed) {
+        console.log(c.green("ok") + c.dim(`  -> ${res.dir} (${res.files} files)`));
+        okCount++;
+      } else {
+        console.log(c.yellow("skipped") + c.dim(`  ${res.skipped}`));
+        skipCount++;
+      }
+    } catch (e) {
+      console.log(c.red("failed") + `  ${e.message}`);
+      process.exitCode = 2;
+    }
+  }
+
+  console.log("");
+  console.log(c.bold(`Done.`) + ` ${c.green(okCount + " installed")}, ${c.yellow(skipCount + " skipped")}`);
+  console.log("");
+  console.log(c.dim("Try it: open your AI tool and type \"Set up Paytm payments\"."));
+}
+
 function cmdListSkills(manifest) {
   console.log(c.bold(`Skills in bundle ${manifest.name}@${manifest.version}:`));
   console.log("");
@@ -276,7 +355,14 @@ function main() {
     return;
   }
 
-  const cmd = args._[0] || "help";
+  const cmd = args._[0];
+
+  // Bare invocation with TTY -> launch interactive UI. Without TTY -> show help.
+  if (!cmd) {
+    if (isInteractive()) return runInteractive();
+    printHelp();
+    return;
+  }
 
   if (cmd === "help" || cmd === "--help" || cmd === "-h") {
     printHelp();
@@ -297,6 +383,7 @@ function main() {
     case "list-targets": return cmdListTargets(manifest);
     case "list-skills":  return cmdListSkills(manifest);
     case "path":         return cmdPath(manifest, args.flags);
+    case "add":          return cmdAdd(manifest, args);
     default:
       console.error(c.red(`✗ Unknown command: ${cmd}`));
       console.error(`  Run 'npx paytm-skills help' for usage.`);

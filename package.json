@@ -1,6 +1,6 @@
 {
   "name": "paytm-skills",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "One-command installer for the Paytm Payment Gateway integration skill across Claude Code, Codex, Cursor, Continue, Windsurf, Gemini CLI, and more.",
   "bin": {
     "paytm-skills": "bin/cli.mjs"
