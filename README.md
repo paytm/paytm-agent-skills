@@ -57,18 +57,18 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 ## 3. Setup
 
 ```bash
-npx paytm-skills
+npx paytm-skills install
 ```
 
-Launches the interactive Paytm Payments installer — auto-detects which AI tools are on your machine (Claude Code, Codex, Cursor, Windsurf, etc.), asks what to install, and writes the files into the right place for each tool. Re-run any time to upgrade.
+Auto-detects every AI tool on your machine (Claude Code, Codex, Cursor, Windsurf, etc.) and installs the skill bundle into each one in a single command. Re-run any time to upgrade.
 
 ### Other commands
 
 ```bash
-npx paytm-skills add skills
-npx paytm-skills install                  # scripted install, no prompts
+npx paytm-skills                          # interactive UI (prompts for tools / skills)
+npx paytm-skills add skills               # alias for the interactive UI
 npx paytm-skills install --target cursor  # install for one tool
-npx paytm-skills install --all-targets    # install for every supported tool
+npx paytm-skills install --all-targets    # install for every supported tool (incl. ones not detected)
 npx paytm-skills uninstall                # remove from detected tools
 npx paytm-skills help                     # full command + flag reference
 ```
