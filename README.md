@@ -103,9 +103,6 @@ Skills are **modular** — eight focused skills load only the context relevant t
 
 ```
 .
-├── manifest.json                # Distribution manifest (single source of truth)
-├── manifest.schema.json         # JSON Schema for the manifest
-├── routing/PREAMBLE.md          # Global rules + decision tree (embedded into every per-tool routing file)
 ├── skills/                      # One folder per skill - load only what's needed
 │   ├── getting-started/         # MID/key, environments, .env conventions, decision tree
 │   ├── js-checkout/             # One-time payments + JS Checkout
@@ -120,8 +117,6 @@ Skills are **modular** — eight focused skills load only the context relevant t
 │   ├── refunds/                 # Full + partial refunds (stub - expanded soon)
 │   └── troubleshooting/         # Symptom -> cause -> fix tree
 │       └── references/REFERENCE.md
-├── bin/cli.mjs                  # NPX entrypoint
-├── lib/                         # Adapters, manifest loader, install logic
 └── scripts/                     # Reference backends + frontend examples
     ├── backend-node/            # Node.js (Express + paytmchecksum)
     ├── backend-python/          # Python (Flask + paytmchecksum)
@@ -138,8 +133,6 @@ Skills are **modular** — eight focused skills load only the context relevant t
 
 When a user asks *"how do I send a payment link via SMS?"*, only the `payment-links` skill content is loaded — not the full 144 KB of every flow. Smaller context per request = better LLM accuracy and faster responses.
 
-The routing file (`CLAUDE.md` / `GEMINI.md` / etc.) contains the decision tree the model uses to pick the right skill, plus global rules (terminology, credentials block, supported payment options) that apply across all skills.
-
 ---
 
 ## 5. Important notes
@@ -152,32 +145,6 @@ To go live with Paytm, you will need a **MID** (your unique Merchant ID) and a *
   (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
 
 Store keys in environment variables. Never commit them or expose them in client-side code.
-
----
-
-## 6. Contributing a new skill
-
-Adding a new skill (e.g. `disputes`) is two steps:
-
-1. Create the folder:
-   ```
-   skills/disputes/
-   ├── SKILL.md                  # YAML frontmatter + content
-   └── references/REFERENCE.md   # optional deep dive
-   ```
-
-2. Add one entry to `manifest.json → skills[]`:
-   ```json
-   {
-     "name": "disputes",
-     "path": "skills/disputes",
-     "entry": "SKILL.md",
-     "description": "...",
-     "triggers": ["/dispute/raise", "chargeback", "..."]
-   }
-   ```
-
-CI runs `node scripts/manifest/validate.mjs` automatically on every PR — invalid manifests can't merge. The next install run picks up the new skill across all 9 supported tools without touching CLI code.
 
 ---
 
