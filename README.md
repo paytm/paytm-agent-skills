@@ -65,7 +65,7 @@ Launches the interactive Paytm Payments installer — auto-detects which AI tool
 ### Other commands
 
 ```bash
-npx paytm-skills add skills               # same as above (interactive)
+npx paytm-skills add skills
 npx paytm-skills install                  # scripted install, no prompts
 npx paytm-skills install --target cursor  # install for one tool
 npx paytm-skills install --all-targets    # install for every supported tool
