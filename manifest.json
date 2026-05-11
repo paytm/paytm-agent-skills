@@ -66,16 +66,41 @@
       "name": "webhooks",
       "path": "skills/webhooks",
       "entry": "SKILL.md",
-      "description": "S2S webhook receiver - source of truth that outlives lost browser callbacks. Raw body, signature verify, dedup.",
-      "triggers": ["/paytm/webhook", "S2S notification", "head.signature", "raw body", "verifySignature"]
+      "description": "S2S webhook receiver - source of truth that outlives lost browser callbacks. Event types, raw body, signature verify, dedup, retry behavior.",
+      "triggers": ["/paytm/webhook", "S2S notification", "head.signature", "raw body", "verifySignature"],
+      "references": [
+        { "path": "skills/webhooks/references/REFERENCE.md", "load": "lazy", "summary": "Webhook event types, retry/backoff schedule, raw-body extraction per language, dedup patterns, security checklist." }
+      ]
     },
     {
       "name": "refunds",
       "path": "skills/refunds",
       "entry": "SKILL.md",
-      "description": "Full and partial refunds via /refund/apply and /refund/status.",
-      "triggers": ["/refund/apply", "/refund/status", "refId", "refundAmount"],
-      "status": "stub"
+      "description": "Full and partial refunds via /refund/apply and /refund/status, refund webhooks, partial-refund cumulative limit, PENDING state and dispute relationship.",
+      "triggers": ["/refund/apply", "/refund/status", "refId", "refundAmount", "REFUND_STATUS"],
+      "references": [
+        { "path": "skills/refunds/references/REFERENCE.md", "load": "lazy", "summary": "Full refund API surface, state lifecycle, error codes table, settlement impact, dispute relationship, idempotency patterns." }
+      ]
+    },
+    {
+      "name": "all-in-one-sdk",
+      "path": "skills/all-in-one-sdk",
+      "entry": "SKILL.md",
+      "description": "Paytm All-in-One SDK for native Android/iOS - turn-key mobile checkout with Paytm-branded UI. Same backend flow as JS Checkout (Initiate Transaction -> txnToken), SDK renders payment screens.",
+      "triggers": ["All-in-One SDK", "AIOSDK", "PaytmSDK.startTransaction", "AppInvokeSDK", "com.paytm.pgsdk", "PaytmAllInOneSDK"],
+      "references": [
+        { "path": "skills/all-in-one-sdk/references/REFERENCE.md", "load": "lazy", "summary": "Callback fields, event lifecycle (Android/iOS), deep-link & scheme registration, SDK error codes, subscription consent on mobile." }
+      ]
+    },
+    {
+      "name": "custom-sdk",
+      "path": "skills/custom-sdk",
+      "entry": "SKILL.md",
+      "description": "Paytm Custom SDK for native Android/iOS - headless SDK where merchant builds their own payment UI. fetchPaymentOptions + processTransaction. PCI scope for cards.",
+      "triggers": ["Custom SDK", "fetchPaymentOptions", "processTransaction", "Paytm Custom", "headless payment SDK"],
+      "references": [
+        { "path": "skills/custom-sdk/references/REFERENCE.md", "load": "lazy", "summary": "Per-instrument request shapes (Card / UPI / Net Banking / EMI), PCI scope reality, 3DS WebView gotchas per bank, UPI polling pattern, fetchPaymentOptions response shape." }
+      ]
     },
     {
       "name": "troubleshooting",

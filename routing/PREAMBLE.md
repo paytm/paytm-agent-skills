@@ -20,7 +20,9 @@ Do NOT load on generic PSP terms (`MID`, `merchant key`, `checksum`, `PG integra
 | User says... | Load this skill |
 |---|---|
 | Starting fresh, "set up Paytm", "where do I get my MID", `.env` setup | `getting-started` |
-| "checkout page", "pay button", "one-time payment", "buy" | `js-checkout` |
+| "checkout page", "pay button", "one-time payment", "buy" (web) | `js-checkout` |
+| Native **Android / iOS app**, standard Paytm-branded checkout, fastest mobile path | `all-in-one-sdk` |
+| Native **Android / iOS app** with **custom** payment UI / own branding | `custom-sdk` |
 | "subscription", "monthly", "weekly", "yearly", "recurring", "auto-debit", "autopay", "mandate", "renew", "membership" | `subscriptions` |
 | "shareable link", "invoice link", "payment link via SMS / WhatsApp / email" | `payment-links` |
 | "QR code", "scan to pay", "in-store", "counter", "table-side", "print QR" | `qr-codes` |
