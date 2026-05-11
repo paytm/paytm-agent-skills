@@ -1,45 +1,94 @@
 {
   "$schema": "./manifest.schema.json",
-  "manifest_version": "1.0",
-  "name": "paytm-integration",
-  "version": "1.0.0",
-  "description": "Expert skill for integrating Paytm Payment Gateway APIs and SDKs - one-time payments, subscriptions, payment links, dynamic QR, callbacks, and troubleshooting.",
+  "manifest_version": "2.0",
+
+  "name": "paytm",
+  "version": "2.0.0",
+  "description": "Paytm Payment Gateway integration skills bundle - one-time payments, subscriptions, payment links, dynamic QR, webhooks, refunds, and troubleshooting. Loaded modularly per intent.",
   "license": "MIT",
+
   "homepage": "https://github.com/paytm/paytm-integration-skills",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/paytm/paytm-integration-skills.git"
-  },
+  "repository": { "type": "git", "url": "https://github.com/paytm/paytm-integration-skills.git" },
   "bugs": "https://github.com/paytm/paytm-integration-skills/issues",
   "changelog": "CHANGELOG.md",
-  "entry": "SKILL.md",
-  "references": [
+
+  "routing_preamble": "routing/PREAMBLE.md",
+
+  "skills": [
     {
-      "path": "references/js-checkout.md",
-      "load": "lazy",
-      "summary": "JS Checkout integration: script loading, init/invoke patterns, event handling, common bugs."
+      "name": "getting-started",
+      "path": "skills/getting-started",
+      "entry": "SKILL.md",
+      "description": "First-step setup: MID/Merchant Key, environments, .env conventions, decision tree for picking the right Paytm flow.",
+      "triggers": ["PAYTM_MID", "PAYTM_MERCHANT_KEY", "WEBSTAGING", "paytmpayments.com/docs", "dashboard.paytmpayments.com"]
     },
     {
-      "path": "references/payment-links.md",
-      "load": "lazy",
-      "summary": "Payment Link create/fetch/update/expire/resend, MID-specific quirks, error code reference."
+      "name": "js-checkout",
+      "path": "skills/js-checkout",
+      "entry": "SKILL.md",
+      "description": "One-time payment via JS Checkout: Generate Checksum -> Initiate Transaction -> Render -> Callback -> Transaction Status.",
+      "triggers": ["txnToken", "CHECKSUMHASH", "/theia/api/v1/initiateTransaction", "/v3/order/status", "paytmchecksum", "CheckoutJS", "Paytm.CheckoutJS"],
+      "references": [
+        { "path": "skills/js-checkout/references/REFERENCE.md", "load": "lazy", "summary": "JS Checkout deep dive: full callback fields, non-SDK form POST, event lifecycle, corp-proxy TLS." }
+      ]
     },
     {
-      "path": "references/subscriptions.md",
-      "load": "lazy",
-      "summary": "UPI Autopay / NATIVE_SUBSCRIPTION flow, mandate setup, retry/grace rules, error codes."
+      "name": "subscriptions",
+      "path": "skills/subscriptions",
+      "entry": "SKILL.md",
+      "description": "UPI Autopay / Native Subscription for recurring charges (mandates, monthly / weekly / yearly, SIPs).",
+      "triggers": ["subscription/create", "NATIVE_SUBSCRIPTION", "NATIVE_MF_SIP", "subscriptionFrequency", "subscriptionPaymentMode", "UPI Autopay"],
+      "references": [
+        { "path": "skills/subscriptions/references/REFERENCE.md", "load": "lazy", "summary": "Subscription full field reference, error code table, charge/edit/cancel flows." }
+      ]
     },
     {
-      "path": "references/qr-codes.md",
-      "load": "lazy",
-      "summary": "Dynamic QR generation, posId, base64 image handling, post-payment polling."
+      "name": "payment-links",
+      "path": "skills/payment-links",
+      "entry": "SKILL.md",
+      "description": "Server-only payment link flow - returns a shortUrl shared via SMS / WhatsApp / email. No frontend needed.",
+      "triggers": ["/link/create", "/link/fetch", "/link/fetchTransaction", "/link/expire", "/link/resendNotification", "linkId", "shortUrl"],
+      "references": [
+        { "path": "skills/payment-links/references/REFERENCE.md", "load": "lazy", "summary": "Payment link 20+ pitfalls, MID quirks, error code table, fetch-transaction reconciliation." }
+      ]
     },
     {
-      "path": "references/troubleshooting.md",
-      "load": "lazy",
-      "summary": "Symptom -> cause -> fix for checksum, callback, JS Checkout, refunds, corp-proxy TLS."
+      "name": "qr-codes",
+      "path": "skills/qr-codes",
+      "entry": "SKILL.md",
+      "description": "Dynamic QR for in-store / counter / printed payments. Server creates QR, customer scans with any UPI app.",
+      "triggers": ["/paymentservices/qr/create", "posId", "Dynamic QR", "DQR"],
+      "references": [
+        { "path": "skills/qr-codes/references/REFERENCE.md", "load": "lazy", "summary": "QR reconciliation flow, posId rules, base64 prefix gotcha." }
+      ]
+    },
+    {
+      "name": "webhooks",
+      "path": "skills/webhooks",
+      "entry": "SKILL.md",
+      "description": "S2S webhook receiver - source of truth that outlives lost browser callbacks. Raw body, signature verify, dedup.",
+      "triggers": ["/paytm/webhook", "S2S notification", "head.signature", "raw body", "verifySignature"]
+    },
+    {
+      "name": "refunds",
+      "path": "skills/refunds",
+      "entry": "SKILL.md",
+      "description": "Full and partial refunds via /refund/apply and /refund/status.",
+      "triggers": ["/refund/apply", "/refund/status", "refId", "refundAmount"],
+      "status": "stub"
+    },
+    {
+      "name": "troubleshooting",
+      "path": "skills/troubleshooting",
+      "entry": "SKILL.md",
+      "description": "Symptom -> cause -> fix tree, expanded RESPCODE reference, corp-proxy TLS interception guidance.",
+      "triggers": ["resultCode: 227", "resultCode: 330", "resultCode: 334", "resultCode: 400", "RESPCODE", "checksum mismatch", "UNABLE_TO_GET_ISSUER_CERT_LOCALLY", "MISSING_TXN_TOKEN"],
+      "references": [
+        { "path": "skills/troubleshooting/references/REFERENCE.md", "load": "lazy", "summary": "Full troubleshooting reference: per-symptom fixes, corp-proxy TLS deep dive, expanded RESPCODE table." }
+      ]
     }
   ],
+
   "assets": [
     ".env.example",
     "scripts/frontend/checkout.html",
@@ -47,52 +96,16 @@
     "scripts/frontend/payment-link.html",
     "scripts/frontend/qr.html"
   ],
+
   "backends": [
-    {
-      "id": "node",
-      "path": "scripts/backend-node",
-      "language": "javascript",
-      "runtime": "node>=18",
-      "default": true
-    },
-    {
-      "id": "python",
-      "path": "scripts/backend-python",
-      "language": "python",
-      "runtime": "python>=3.10"
-    },
-    {
-      "id": "spring-boot",
-      "path": "scripts/backend-spring",
-      "language": "java",
-      "runtime": "jdk>=17"
-    },
-    {
-      "id": "spring-legacy",
-      "path": "scripts/backend-spring-legacy",
-      "language": "java",
-      "runtime": "jdk>=8"
-    }
+    { "id": "node",          "path": "scripts/backend-node",          "language": "javascript", "runtime": "node>=18", "default": true },
+    { "id": "python",        "path": "scripts/backend-python",        "language": "python",     "runtime": "python>=3.10" },
+    { "id": "spring-boot",   "path": "scripts/backend-spring",        "language": "java",       "runtime": "jdk>=17" },
+    { "id": "spring-legacy", "path": "scripts/backend-spring-legacy", "language": "java",       "runtime": "jdk>=8" }
   ],
-  "triggers": [
-    "paytm",
-    "paytmchecksum",
-    "txnToken",
-    "CHECKSUMHASH",
-    "paytmpayments.com",
-    "/theia/api/",
-    "subscription/create",
-    "/link/create",
-    "paymentservices/qr",
-    "WEBSTAGING",
-    "NATIVE_SUBSCRIPTION"
-  ],
-  "anti_triggers": [
-    "MID",
-    "merchant key",
-    "checksum",
-    "PG integration"
-  ],
+
+  "anti_triggers": ["MID", "merchant key", "checksum", "PG integration"],
+
   "capabilities": [
     "one-time-payment",
     "subscription",
@@ -104,113 +117,33 @@
     "webhook-receiver",
     "idempotency"
   ],
+
   "targets": [
-    {
-      "id": "claude-code",
-      "name": "Claude Code",
-      "status": "supported",
-      "install_dir": "~/.claude/skills/paytm-integration",
-      "format": "skill-md",
-      "verify_command": "/skills"
-    },
-    {
-      "id": "claude-ai",
-      "name": "Claude.ai (Projects)",
-      "status": "supported",
-      "install_dir": null,
-      "format": "project-files",
-      "notes": "Upload SKILL.md and references/ as project files."
-    },
-    {
-      "id": "codex",
-      "name": "Codex (CLI or ChatGPT desktop)",
-      "status": "supported",
-      "install_dir": "~/.codex/skills/paytm-integration",
-      "format": "skill-md",
-      "notes": "Both the standalone Codex CLI and the ChatGPT desktop app read skills from ~/.codex/skills/. One install covers both."
-    },
-    {
-      "id": "cursor",
-      "name": "Cursor",
-      "status": "supported",
-      "install_dir": "~/.cursor/skills-cursor/paytm-integration",
-      "format": "skill-md"
-    },
-    {
-      "id": "continue",
-      "name": "Continue",
-      "status": "supported",
-      "install_dir": "~/.continue/rules/paytm-integration",
-      "format": "skill-md"
-    },
-    {
-      "id": "windsurf",
-      "name": "Windsurf",
-      "status": "supported",
-      "install_dir": "~/.codeium/windsurf/memories",
-      "format": "bundled-md"
-    },
-    {
-      "id": "gemini-cli",
-      "name": "Gemini CLI",
-      "status": "supported",
-      "install_dir": "~/.gemini/skills/paytm-integration",
-      "format": "skill-md"
-    },
-    {
-      "id": "antigravity",
-      "name": "Antigravity",
-      "status": "supported",
-      "install_dir": null,
-      "format": "project-files",
-      "notes": "Antigravity does not yet expose a stable filesystem skills convention. Upload SKILL.md and references/ manually if/when the tool supports it."
-    },
-    {
-      "id": "aider",
-      "name": "Aider",
-      "status": "supported",
-      "install_dir": "~/.config/aider/conventions",
-      "format": "bundled-md"
-    }
+    { "id": "claude-code", "name": "Claude Code",                "status": "supported", "install_dir": "~/.claude/skills/paytm",                "format": "skill-md",   "routing_file": "CLAUDE.md",     "verify_command": "/skills" },
+    { "id": "claude-ai",   "name": "Claude.ai (Projects)",       "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "Upload skill files manually as project files." },
+    { "id": "codex",       "name": "Codex (CLI or ChatGPT desktop)", "status": "supported", "install_dir": "~/.codex/skills/paytm",            "format": "skill-md",   "routing_file": "AGENTS.md",     "notes": "Both Codex CLI and the ChatGPT desktop app read from ~/.codex/skills/." },
+    { "id": "cursor",      "name": "Cursor",                      "status": "supported", "install_dir": "~/.cursor/skills-cursor/paytm",        "format": "skill-md",   "routing_file": ".cursor/rules/paytm.mdc" },
+    { "id": "continue",    "name": "Continue",                    "status": "supported", "install_dir": "~/.continue/rules/paytm",              "format": "skill-md",   "routing_file": "ROUTING.md" },
+    { "id": "windsurf",    "name": "Windsurf",                    "status": "supported", "install_dir": "~/.codeium/windsurf/memories",         "format": "bundled-md", "routing_file": null },
+    { "id": "gemini-cli",  "name": "Gemini CLI",                  "status": "supported", "install_dir": "~/.gemini/skills/paytm",               "format": "skill-md",   "routing_file": "GEMINI.md" },
+    { "id": "antigravity", "name": "Antigravity",                 "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "No stable filesystem skills convention yet." },
+    { "id": "aider",       "name": "Aider",                       "status": "supported", "install_dir": "~/.config/aider/conventions",          "format": "bundled-md", "routing_file": null }
   ],
+
   "migrations": [],
+
   "telemetry": {
     "default": "opt-in",
     "endpoint": null,
     "payload_version": 1,
     "opt_out_env": "PAYTM_SKILLS_TELEMETRY",
-    "fields": [
-      "skill_version",
-      "manifest_version",
-      "target",
-      "os",
-      "node_version",
-      "install_outcome"
-    ]
+    "fields": ["skill_version", "manifest_version", "target", "os", "node_version", "install_outcome"]
   },
-  "min_runtime": {
-    "node": "18.0.0"
-  },
-  "categories": [
-    "payments",
-    "fintech",
-    "india",
-    "psp"
-  ],
-  "keywords": [
-    "paytm",
-    "payment-gateway",
-    "upi",
-    "subscription",
-    "payment-link",
-    "qr-code",
-    "checkout",
-    "psp"
-  ],
-  "maintainers": [
-    {
-      "name": "Paytm",
-      "url": "https://github.com/paytm"
-    }
-  ]
+
+  "min_runtime": { "node": "18.0.0" },
+
+  "categories": ["payments", "fintech", "india", "psp"],
+  "keywords": ["paytm", "payment-gateway", "upi", "subscription", "payment-link", "qr-code", "checkout", "psp"],
+
+  "maintainers": [{ "name": "Paytm", "url": "https://github.com/paytm" }]
 }
