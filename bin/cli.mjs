@@ -26,17 +26,27 @@ import { installTarget, uninstallTarget } from "../lib/install.mjs";
 import { defaultTargets, detectInstalledTools } from "../lib/detect.mjs";
 import { resolveInstallDir } from "../lib/paths.mjs";
 
+// Flags that can be repeated (collected into arrays).
+const MULTI_FLAGS = new Set(["skill"]);
+
 // --- tiny arg parser (no deps) ---
 function parseArgs(argv) {
   const args = { _: [], flags: {} };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a.startsWith("--")) {
-      const [k, v] = a.slice(2).split("=");
-      if (v !== undefined) args.flags[k] = v;
-      else if (argv[i + 1] && !argv[i + 1].startsWith("--")) {
-        args.flags[k] = argv[++i];
-      } else args.flags[k] = true;
+      const [k, vEq] = a.slice(2).split("=");
+      let v;
+      if (vEq !== undefined) v = vEq;
+      else if (argv[i + 1] && !argv[i + 1].startsWith("--")) v = argv[++i];
+      else v = true;
+
+      if (MULTI_FLAGS.has(k)) {
+        if (!Array.isArray(args.flags[k])) args.flags[k] = [];
+        args.flags[k].push(v);
+      } else {
+        args.flags[k] = v;
+      }
     } else {
       args._.push(a);
     }
@@ -55,7 +65,7 @@ const c = {
 };
 
 function printHelp() {
-  console.log(`paytm-skills - install the Paytm PG integration skill into your AI tools.
+  console.log(`paytm-skills - install the Paytm PG integration skill bundle into your AI tools.
 
 Usage:
   npx paytm-skills <command> [options]
@@ -63,13 +73,16 @@ Usage:
 Commands:
   install                  Install into detected AI tools.
   uninstall                Remove from detected AI tools.
-  list-targets             Show all targets the manifest knows about.
+  list-targets             Show all targets the manifest knows about + detection state.
+  list-skills              Show all skills in the bundle with descriptions + triggers.
   path --target <id>       Print install dir for a target.
   help                     Show this help.
 
 Options:
   --target <id>            Restrict to one target (e.g. claude-code, codex, cursor).
   --all-targets            Apply to every supported target.
+  --skill <name>           Install only the named skill (e.g. subscriptions). Repeat to pick several.
+                           Default: install every skill.
   --with-backends          Also copy reference backend implementations.
   --force                  Wipe target dir before install.
   --dry-run                Print actions without writing.
@@ -78,9 +91,11 @@ Options:
 Examples:
   npx paytm-skills install
   npx paytm-skills install --target claude-code
+  npx paytm-skills install --target cursor --skill subscriptions
   npx paytm-skills install --all-targets --with-backends
   npx paytm-skills uninstall --target codex
   npx paytm-skills list-targets
+  npx paytm-skills list-skills
 `);
 }
 
@@ -113,13 +128,33 @@ function pickTargets(manifest, flags, { command }) {
 
 // --- commands ---
 
+function filterManifestSkills(manifest, requestedNames) {
+  if (!requestedNames || requestedNames.length === 0) return manifest;
+  const known = new Map((manifest.skills || []).map((s) => [s.name, s]));
+  const missing = requestedNames.filter((n) => !known.has(n));
+  if (missing.length) {
+    console.error(c.red(`✗ Unknown skill(s): ${missing.join(", ")}`));
+    console.error(`  Run 'npx paytm-skills list-skills' to see available skills.`);
+    process.exit(1);
+  }
+  // Return a shallow clone of the manifest with only the requested skills.
+  return { ...manifest, skills: requestedNames.map((n) => known.get(n)) };
+}
+
 function cmdInstall(manifest, flags) {
   const targets = pickTargets(manifest, flags, { command: "install" });
   const dryRun = !!flags["dry-run"];
   const force = !!flags.force;
   const withBackends = !!flags["with-backends"];
 
-  console.log(c.bold(`paytm-skills v${manifest.version} - installing skill: ${manifest.name}`));
+  // Skill filter (--skill X --skill Y) returns a manifest view with only those skills.
+  const requestedSkills = Array.isArray(flags.skill) ? flags.skill : (flags.skill ? [flags.skill] : []);
+  const effectiveManifest = filterManifestSkills(manifest, requestedSkills);
+
+  console.log(c.bold(`paytm-skills v${manifest.version} - installing bundle: ${manifest.name}`));
+  if (requestedSkills.length) {
+    console.log(c.dim(`(skills filter: ${requestedSkills.join(", ")})`));
+  }
   if (dryRun) console.log(c.dim("(dry-run mode - nothing will be written)"));
   console.log("");
 
@@ -127,7 +162,7 @@ function cmdInstall(manifest, flags) {
   for (const t of targets) {
     process.stdout.write(`  ${t.name} (${t.id})  ... `);
     try {
-      const res = installTarget(manifest, t, { force, dryRun, withBackends });
+      const res = installTarget(effectiveManifest, t, { force, dryRun, withBackends });
       if (res.installed) {
         console.log(c.green(`ok`) + c.dim(`  -> ${res.dir} (${res.files} files)`));
         okCount++;
@@ -196,6 +231,22 @@ function cmdListTargets(manifest) {
   console.log(c.dim("Install one with: npx paytm-skills install --target <id>"));
 }
 
+function cmdListSkills(manifest) {
+  console.log(c.bold(`Skills in bundle ${manifest.name}@${manifest.version}:`));
+  console.log("");
+  console.log(`  ${"NAME".padEnd(18)} ${"STATUS".padEnd(10)} ${"REFS".padEnd(6)} DESCRIPTION`);
+  console.log(`  ${"-".repeat(18)} ${"-".repeat(10)} ${"-".repeat(6)} ${"-".repeat(60)}`);
+  for (const s of manifest.skills || []) {
+    const status = s.status === "stub" ? c.yellow("stub") : s.status === "deprecated" ? c.red("deprecated") : c.green("stable");
+    const refs = String((s.references || []).length);
+    const desc = (s.description || "").slice(0, 80);
+    console.log(`  ${padVisible(s.name, 18)} ${padVisible(status, 10)} ${refs.padEnd(6)} ${desc}`);
+  }
+  console.log("");
+  console.log(c.dim("Install one with: npx paytm-skills install --target <id> --skill <name>"));
+  console.log(c.dim("Install several:  npx paytm-skills install --target <id> --skill subscriptions --skill payment-links"));
+}
+
 function cmdPath(manifest, flags) {
   if (!flags.target) {
     console.error(c.red("✗ --target <id> is required"));
@@ -244,6 +295,7 @@ function main() {
     case "install":      return cmdInstall(manifest, args.flags);
     case "uninstall":    return cmdUninstall(manifest, args.flags);
     case "list-targets": return cmdListTargets(manifest);
+    case "list-skills":  return cmdListSkills(manifest);
     case "path":         return cmdPath(manifest, args.flags);
     default:
       console.error(c.red(`✗ Unknown command: ${cmd}`));
