@@ -129,8 +129,6 @@
     { "id": "spring-legacy", "path": "scripts/backend-spring-legacy", "language": "java",       "runtime": "jdk>=8" }
   ],
 
-  "anti_triggers": ["MID", "merchant key", "checksum", "PG integration"],
-
   "capabilities": [
     "one-time-payment",
     "subscription",

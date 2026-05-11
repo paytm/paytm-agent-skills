@@ -11,9 +11,7 @@
 
 ## When to use these skills
 
-Load when the user is integrating with Paytm Payment Gateway, debugging Paytm errors, or asking about Paytm-specific tokens (`paytmchecksum`, `txnToken`, `CHECKSUMHASH`, `paytmpayments.com`, `/theia/api/`, `WEBSTAGING`, `NATIVE_SUBSCRIPTION`).
-
-Do NOT load on generic PSP terms (`MID`, `merchant key`, `checksum`, `PG integration`) in isolation - those overlap with other gateways.
+Load when the user is integrating with Paytm Payment Gateway, debugging Paytm errors, asking about Paytm-specific tokens (`paytmchecksum`, `txnToken`, `CHECKSUMHASH`, `paytmpayments.com`, `/theia/api/`, `WEBSTAGING`, `NATIVE_SUBSCRIPTION`), OR considering migrating from another payment gateway to Paytm.
 
 ## Picking the right skill (decision tree)
 
