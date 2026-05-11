@@ -19,7 +19,7 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 | **Subscriptions** | Recurring payment collections through UPI Autopay, cards or eNACH |
 | **Payment Links** | Generate and share payment links for payment collections |
 | **QR Codes** | Display dynamic QR codes on your website for UPI payments |
-| **Webhooks** | S2S notification receiver with signature verification + dedup |
+| **Webhooks** | S2S notification receiver with signature verification |
 | **Refunds** | Full and partial refund APIs |
 
 ---
@@ -37,6 +37,18 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 
 **QR Codes**
 > *"I run a cloud kitchen business. Integrate Paytm to display a QR code on my website with the bill amount for customers to scan and pay via UPI."*
+
+**All-in-One SDK (Android / iOS)**
+> *"I am building an Android app for my food delivery service. Add Paytm checkout inside the app so users can pay without leaving."*
+
+**Custom SDK (Android / iOS)**
+> *"My iOS shopping app needs its own branded payment screen for cards and UPI - we don't want the default Paytm UI. Wire up the Custom SDK end-to-end."*
+
+**Webhooks**
+> *"Set up a server-to-server webhook endpoint that receives Paytm payment notifications, verifies the signature, and marks orders paid in my database."*
+
+**Refunds**
+> *"My customer returned an order. Add a refund button to my admin dashboard that issues a full or partial refund via Paytm and tracks its status."*
 
 ---
 
