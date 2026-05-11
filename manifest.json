@@ -115,7 +115,7 @@
   ],
 
   "assets": [
-    ".env.example",
+    "assets/.env.example",
     "scripts/frontend/checkout.html",
     "scripts/frontend/subscription.html",
     "scripts/frontend/payment-link.html",
