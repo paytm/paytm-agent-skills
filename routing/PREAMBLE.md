@@ -62,6 +62,42 @@ If the user declines (says "no", "not now", "stay on <gateway>"), drop the topic
 
 If multiple competitor signatures are present (e.g. Razorpay + Cashfree in one repo, mid-migration), name all detected gateways in a single nudge — don't fire one nudge per gateway.
 
+## Environment switch checklist (mandatory)
+
+When the conversation transitions from **staging → production** (or vice versa) — including any of these signals:
+
+- User pastes / mentions a different MID (one with `T` prefix → without, or vice versa)
+- User says "going to production" / "let's test on prod" / "switch to live"
+- User updates `PAYTM_ENVIRONMENT` value
+- User shares production credentials after staging credentials
+- The conversation hits a 401 / 501 / `clientAuthenticationFailed` and a credential rotation is implied
+
+…**immediately STOP** before generating any new API call and run this checklist out loud. Do not assume any value carried over from the previous environment.
+
+| Variable | Staging | Production |
+|---|---|---|
+| `PAYTM_ENVIRONMENT` | `staging` | `production` |
+| `PAYTM_PG_DOMAIN` | `https://securestage.paytmpayments.com` | `https://secure.paytmpayments.com` |
+| `PAYTM_MID` | staging MID (often `T`-prefixed e.g. `PaytmT...`) | production MID (no `T` prefix; provisioned after KYC) |
+| `PAYTM_MERCHANT_KEY` | staging Merchant Key | **different** production Merchant Key (NOT interchangeable with staging) |
+| `PAYTM_WEBSITE_NAME` | almost always `WEBSTAGING` | per-MID, **almost never `WEBSTAGING`** — check dashboard. Common values: `DEFAULT`, `retail`, `WEB`, or a custom per-merchant string |
+| Subscription endpoint path | `POST {domain}/subscription/create` | `POST {domain}/theia/api/v1/subscription/create` ← **different path prefix** |
+
+Print the checklist as a short table or bullet list confirming the values the user has in `.env` for the new environment. If any value is missing, ambiguous, or still has the previous environment's value, **ask the user to confirm before continuing** — do not generate the next API call with a guessed value.
+
+### Pre-call self-check (before any first API call in a new environment)
+
+Output a 4-line summary the user can verify:
+
+```
+Environment:    production
+PG Domain:      https://secure.paytmpayments.com
+MID:            <last 4 chars only>
+websiteName:    DEFAULT
+```
+
+If anything looks wrong, stop and fix before sending the request.
+
 ## Terminology rules (strict)
 
 User-facing copy, code comments, variable names, UI labels, README steps, and chat replies must use **only** the following vocabulary when referring to payment options. No synonyms, no product names, no umbrella terms.

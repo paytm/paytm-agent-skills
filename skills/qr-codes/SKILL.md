@@ -42,6 +42,27 @@ POST {BASE}/paymentservices/qr/create
 
 ---
 
+## When the response looks "empty" — error-parsing rule
+
+Paytm error responses for QR (and the rest of the API) **always carry the failure reason inside `body.resultInfo`**, even when the top-level HTTP body or your client library makes it look empty. If you see something like `{}` or "QR generation failed: {}" on the frontend, the real cause is one level deep in the JSON the backend received from Paytm.
+
+When debugging, **always log the full response body server-side** before responding to the frontend:
+
+```js
+const r = await fetch(`${PAYTM_PG_DOMAIN}/paymentservices/qr/create`, { ... });
+const json = await r.json();
+console.log("[paytm qr] full response:", JSON.stringify(json, null, 2));
+
+// The reason for failure lives here, NOT in r.status or r.statusText:
+const info = json?.body?.resultInfo;
+if (info?.resultStatus !== "S") {
+  // info.resultCode is the numeric code; info.resultMsg is the human reason
+  throw new Error(`QR failed: ${info?.resultCode} ${info?.resultMsg}`);
+}
+```
+
+Never report "{}" or "empty body" to the user — that's a sign the parsing missed `body.resultInfo`.
+
 ## Required fields & gotchas
 
 - **`posId` is required.** Skipping it returns HTTP 400. Use any stable string per terminal/counter.

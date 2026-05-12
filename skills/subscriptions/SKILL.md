@@ -27,12 +27,32 @@ Full field reference, error code table, worked example, charge / cancel / edit f
 
 ---
 
+## ❗ Endpoint path differs by environment — pick the right one
+
+| Environment | Full endpoint URL |
+|---|---|
+| **Staging** | `POST https://securestage.paytmpayments.com/subscription/create?mid=...&orderId=...&traceId=...` |
+| **Production** | `POST https://secure.paytmpayments.com/theia/api/v1/subscription/create?mid=...&orderId=...&traceId=...` |
+
+Notice the **path prefix changes**: production has `/theia/api/v1/` before `/subscription/create`; staging does not. Using the staging path on production returns HTTP 404 / 501; using the production path on staging returns the same. This is unlike `/theia/api/v1/initiateTransaction` which uses the same path on both environments.
+
+In code, derive the URL from `PAYTM_ENVIRONMENT`:
+
+```js
+const SUBSCRIPTION_URL =
+  process.env.PAYTM_ENVIRONMENT === "production"
+    ? `${PAYTM_PG_DOMAIN}/theia/api/v1/subscription/create`
+    : `${PAYTM_PG_DOMAIN}/subscription/create`;
+```
+
+---
+
 ## Quick spec
 
 | | Value |
 |---|---|
-| Endpoint (staging) | `POST {BASE}/subscription/create` |
-| Endpoint (production) | `POST {BASE}/theia/api/v1/subscription/create` |
+| Endpoint (staging) | `POST {PAYTM_PG_DOMAIN}/subscription/create` |
+| Endpoint (production) | `POST {PAYTM_PG_DOMAIN}/theia/api/v1/subscription/create` |
 | Query params | `mid`, `orderId`, `traceId` (all required) |
 | `requestType` | `"NATIVE_SUBSCRIPTION"` (or `"NATIVE_MF_SIP"` for SIPs) |
 | `head` | `{ clientId, channelId, signature }` — all required |

@@ -35,6 +35,23 @@ Both API endpoints use the **JS Checkout head shape**: `head: { signature }` onl
 
 ---
 
+## Pre-flight checklist (run before every `/refund/apply` call)
+
+"Invalid refund request" is the most common refund error and it almost always traces to one of these. Verify each before generating the API call:
+
+| Check | Why it fails if wrong |
+|---|---|
+| `txnId` is **Paytm's TXNID** from the original payment response, NOT your `orderId` and NOT the bank's reference number | Wrong-id triggers `INVALID_TXN_STATE` or generic "invalid refund request" |
+| Original payment status is `TXN_SUCCESS` (confirmed via `/v3/order/status` server-side) | Refunding a `PENDING` or `TXN_FAILURE` payment returns "invalid request" |
+| `refundAmount` is a **string with two decimals** (`"50.00"`, not `50` / `50.0` / `50.000`) | Wrong type / missing decimals rejected at validation |
+| `refundAmount` + sum of any previous successful refunds for this `orderId` ≤ original `txnAmount` | Exceeding the cumulative cap returns "invalid refund amount" |
+| `refId` is fresh (UUID without hyphens is safe). Same `refId` only on retry of the **exact same** refund attempt | Duplicate `refId` returns `DUPLICATE_REF_ID` |
+| `head` shape is `{ signature }` ONLY — no `tokenType`, no `timestamp` | Mixing in fields from `/link/*` head causes checksum mismatch that looks like "invalid request" |
+| `txnType: "REFUND"` is set in the body | Missing → request rejected as malformed |
+| MID and Merchant Key match the **environment** the original payment was made in | Refunding a staging-MID payment with prod credentials → "invalid request" |
+
+When the user reports "invalid refund request", walk through this table item by item before guessing.
+
 ## Critical rules
 
 1. **`refId` is unique per refund attempt.** Generate fresh per call. Duplicate `refId` returns `Duplicate refId` — a retry of the same refund needs a new `refId`.

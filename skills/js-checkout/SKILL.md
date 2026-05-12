@@ -47,16 +47,22 @@ const PAYTM_PG_DOMAIN =
     : "https://securestage.paytmpayments.com");
 ```
 
-### `websiteName` per environment
+### `websiteName` per environment — the second-most-common 501 cause
 
-`websiteName` is per-MID, set on the Paytm dashboard. Defaults you'll see in the wild:
+`websiteName` is per-MID, set on the Paytm dashboard. **It is NOT the same across environments.** Reusing the staging value on production is one of the top two causes of `resultCode: 501 System Error` in this skill.
 
 | Environment | Common default | Other possibilities |
 |---|---|---|
 | Staging | `WEBSTAGING` | (almost always this — don't change unless dashboard says otherwise) |
 | Production | `DEFAULT` | `retail`, `WEB`, or a custom value provisioned per merchant |
 
-Wrong `websiteName` makes `initiateTransaction` succeed but the returned `txnToken` then fails when the JS Checkout tries to render. Check Developer Settings → API Keys → Test/Live API Details for the exact value.
+**Rule when switching staging → production:** `WEBSTAGING` is almost never valid in production. If you don't know the production value, **stop and ask the user to read it from Developer Settings → API Keys → Production API Details on https://dashboard.paytmpayments.com/next/apikeys**. Do not guess.
+
+Wrong `websiteName` produces one of two failure modes:
+- HTTP 200 with `resultStatus: "F"` + `resultCode: "501"` and `resultMsg: "System Error"` — the *most common* case.
+- HTTP 200 with a `txnToken` that then fails silently at the JS Checkout render step (modal opens, immediately closes, no callback).
+
+Both look unrelated to `websiteName` from the symptom alone — that's the trap.
 
 ### Reference backends (copy these — don't reinvent)
 
