@@ -62,15 +62,22 @@ for (const s of manifest.skills || []) {
     if (!["eager", "lazy"].includes(ref.load)) fail(`reference ${ref.path} invalid load: ${ref.load}`);
   }
 
-  // 4b. Cross-check skill SKILL.md frontmatter triggers against manifest.skills[].triggers
+  // 4b. Cross-check SKILL.md frontmatter triggers against manifest.skills[].triggers.
+  //
+  // Only checks "technical" triggers (no whitespace) - these are the tokens Claude
+  // and routing manifests pattern-match against. Natural-language phrases like
+  // "share payment link" or "modal not opening" are manifest-side metadata for
+  // installers / registries / fuzzy-discovery and don't need to appear in the
+  // skill loader's frontmatter.
+  const isTechnical = (t) => !/\s/.test(t);
   try {
     const skillMd = readFileSync(entryAbs, "utf8");
     const fm = skillMd.match(/^---\s*\n([\s\S]*?)\n---/);
     if (fm) {
       const block = fm[1];
-      for (const trig of s.triggers || []) {
+      for (const trig of (s.triggers || []).filter(isTechnical)) {
         if (!block.includes(`"${trig}"`) && !block.includes(`'${trig}'`) && !block.includes(trig)) {
-          warn(`${s.name}: trigger "${trig}" not in SKILL.md frontmatter`);
+          warn(`${s.name}: technical trigger "${trig}" not in SKILL.md frontmatter`);
         }
       }
     } else {

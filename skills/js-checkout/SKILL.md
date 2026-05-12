@@ -15,6 +15,7 @@ triggers:
   - "paytmchecksum"
   - "CheckoutJS"
   - "Paytm.CheckoutJS"
+  - "3DS"
 ---
 
 # Paytm JS Checkout (One-Time Payment)

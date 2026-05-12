@@ -15,6 +15,8 @@ triggers:
   - "subscriptionFrequency"
   - "subscriptionPaymentMode"
   - "UPI Autopay"
+  - "auto-debit"
+  - "eMandate"
 ---
 
 # Paytm Subscriptions (UPI Autopay / Native Subscription)
