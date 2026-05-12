@@ -103,6 +103,16 @@
       ]
     },
     {
+      "name": "migrate-from-razorpay",
+      "path": "skills/migrate-from-razorpay",
+      "entry": "SKILL.md",
+      "description": "Migration playbook from Razorpay to Paytm: per-flow API mapping, signature scheme differences, dual-write rollout, reconciliation, cutover checklist.",
+      "triggers": ["razorpay", "rzp_live_", "rzp_test_", "razorpay.orders.create", "razorpay.payments", "razorpay.subscriptions", "razorpay-node", "razorpay-python", "validateWebhookSignature", "migrate from razorpay", "switch from razorpay"],
+      "references": [
+        { "path": "skills/migrate-from-razorpay/references/REFERENCE.md", "load": "lazy", "summary": "Per-endpoint mapping, signature scheme deep dive, dual-write architecture, canary helper, reconciliation, cutover checklist." }
+      ]
+    },
+    {
       "name": "troubleshooting",
       "path": "skills/troubleshooting",
       "entry": "SKILL.md",
@@ -156,7 +166,14 @@
     { "id": "github-copilot-cli", "name": "GitHub Copilot CLI",   "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "Copilot CLI has no skills convention - use the bundle as reference and paste relevant content into 'gh copilot' prompts." }
   ],
 
-  "migrations": [],
+  "migrations": [
+    {
+      "id": "razorpay",
+      "title": "Razorpay -> Paytm",
+      "path": "skills/migrate-from-razorpay",
+      "summary": "Full migration playbook including dual-write rollout, reconciliation, and cutover checklist."
+    }
+  ],
 
   "telemetry": {
     "default": "opt-in",

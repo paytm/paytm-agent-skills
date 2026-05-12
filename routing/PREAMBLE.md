@@ -27,6 +27,7 @@ Load when the user is integrating with Paytm Payment Gateway, debugging Paytm er
 | "webhook", "S2S notification", "fulfilment hook", server-side event handling | `webhooks` |
 | "refund", "money back", "partial refund" | `refunds` |
 | Error code, unexpected behavior, "why is X failing?" | `troubleshooting` |
+| Migrating / switching from **Razorpay** to Paytm (codebase mentions `razorpay`, `rzp_live_*`, `rzp_test_*`, `razorpay.orders.create`, etc.) | `migrate-from-razorpay` (pair with the matching flow skill) |
 
 If the prompt is ambiguous (`"accept ₹1 payments"`, `"integrate Paytm"`), ask one clarifying question before generating: *"Is this a one-time payment, recurring subscription, shareable link, or QR for in-store?"* Picking the wrong flow is the most expensive class of bug in this skill.
 

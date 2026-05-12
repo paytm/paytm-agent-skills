@@ -25,6 +25,53 @@ Full callback field list, alternative non-SDK form-POST flow, every event the mo
 
 ---
 
+## Environments — pick the right base URL (critical)
+
+There is **no `{BASE_URL}` placeholder you "figure out later"** — these are the only two valid Paytm PG domains. Hardcoding the wrong one is the single most common cause of 501 / 401 errors in this skill.
+
+| Environment | `PAYTM_PG_DOMAIN` | When |
+|---|---|---|
+| **Staging / Test** | `https://securestage.paytmpayments.com` | MID starts with `PaytmT...` or any non-production key |
+| **Production** | `https://secure.paytmpayments.com` | MID is a production-issued identifier (no `T` prefix; provisioned after KYC) |
+
+**Do NOT use any of these — they are old / wrong domains that show up in stale tutorials and LLM training data:** `securegw.paytm.in`, `securegw-stage.paytm.in`, `pguat.paytm.com`. Paytm migrated off them years ago.
+
+In code, derive once from `PAYTM_ENVIRONMENT`:
+
+```js
+const PAYTM_PG_DOMAIN =
+  process.env.PAYTM_PG_DOMAIN ||
+  (process.env.PAYTM_ENVIRONMENT === "production"
+    ? "https://secure.paytmpayments.com"
+    : "https://securestage.paytmpayments.com");
+```
+
+### `websiteName` per environment
+
+`websiteName` is per-MID, set on the Paytm dashboard. Defaults you'll see in the wild:
+
+| Environment | Common default | Other possibilities |
+|---|---|---|
+| Staging | `WEBSTAGING` | (almost always this — don't change unless dashboard says otherwise) |
+| Production | `DEFAULT` | `retail`, `WEB`, or a custom value provisioned per merchant |
+
+Wrong `websiteName` makes `initiateTransaction` succeed but the returned `txnToken` then fails when the JS Checkout tries to render. Check Developer Settings → API Keys → Test/Live API Details for the exact value.
+
+### Reference backends (copy these — don't reinvent)
+
+Working backends with the right env-var wiring, domain selection, and idempotency in `scripts/backend-{node,python,spring,spring-legacy}/`. Use one as your starting point:
+
+| Language | Path | Key file |
+|---|---|---|
+| Node.js | `scripts/backend-node/` | `server.js`, `paytmService.js`, `paytmConfig.js` |
+| Python | `scripts/backend-python/` | `app.py`, `paytm_service.py`, `paytm_config.py` |
+| Spring Boot 3 | `scripts/backend-spring/` | `PaytmController.java`, `PaytmService.java` |
+| Spring legacy (WAR) | `scripts/backend-spring-legacy/` | same files, `javax.servlet` instead of Jakarta |
+
+The reference frontend at `scripts/frontend/checkout.html` shows the correct browser pattern — match it.
+
+---
+
 ## Step 1 — Generate Checksum (server-side)
 
 Every API call requires a `CHECKSUMHASH` in the request header (as `signature`).
@@ -53,10 +100,19 @@ is_valid = PaytmChecksum.verifySignature(response_body, MERCHANT_KEY, checksumha
 
 ## Step 2 — Initiate Transaction API
 
-Server-side call to mint a `txnToken`.
+Server-side call to mint a `txnToken`. **Use the PG domain from the env table above** — do not hardcode an alternative.
 
 ```
-POST {BASE_URL}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
+POST {PAYTM_PG_DOMAIN}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER_ID}
+```
+
+Concrete examples:
+```
+# Staging:
+POST https://securestage.paytmpayments.com/theia/api/v1/initiateTransaction?mid=PaytmTxxxxx&orderId=ORD_001
+
+# Production:
+POST https://secure.paytmpayments.com/theia/api/v1/initiateTransaction?mid=YOURMID&orderId=ORD_001
 ```
 
 Body for one-time payment (all fields shown are required):
@@ -90,14 +146,93 @@ Body for one-time payment (all fields shown are required):
 
 Browser-only — never paste into Next.js / Remix / RSC server components. Wrap in `"use client"` or guard with `typeof window !== "undefined"`.
 
-```html
-<script src="{pgDomain}/merchantpgpui/checkoutjs/merchants/{MID}.js"
-        type="application/javascript" crossorigin="anonymous"></script>
+The merchant script URL is:
+
+```
+{PAYTM_PG_DOMAIN}/merchantpgpui/checkoutjs/merchants/{MID}.js
 ```
 
-### ❗ The most common bug: `CheckoutJS.onLoad()` inside a click handler
+Two ways to load it. **Use the static loader unless you have a specific reason not to.**
 
-`CheckoutJS.onLoad(cb)` fires **exactly once**, when the merchant `.js` finishes loading. By click time it has already fired and your callback never runs. The modal silently fails to open.
+### Recommended — static loader tag in HTML
+
+Put a regular `<script src="...">` tag in your HTML. `window.Paytm` exists by the time your inline JS runs. Fewest failure modes.
+
+```html
+<!doctype html>
+<html>
+  <body>
+    <button id="payBtn" disabled>Pay</button>
+
+    <!-- Don't use crossorigin="anonymous" - Paytm's CDN doesn't always return
+         CORS headers, and the browser will fire onerror silently. -->
+    <script src="https://securestage.paytmpayments.com/merchantpgpui/checkoutjs/merchants/YOUR_MID.js"></script>
+
+    <script>
+      // window.Paytm is guaranteed to exist here because the <script> above
+      // ran first. Safe to use Paytm.CheckoutJS.onLoad to enable the button.
+      window.Paytm.CheckoutJS.onLoad(function () {
+        document.getElementById("payBtn").disabled = false;
+      });
+
+      document.getElementById("payBtn").addEventListener("click", async () => {
+        const res = await fetch("/paytm/create-order", { method: "POST" });
+        const data = await res.json();
+        const config = {
+          root: "",
+          flow: "DEFAULT",
+          data: {
+            orderId: data.orderId,
+            token: data.txnToken,
+            tokenType: "TXN_TOKEN",
+            amount: data.amount,
+          },
+          merchant: { redirect: true },   // full-page redirect fallback
+          handler: { /* see step 3.5 */ },
+        };
+        // Call init/invoke DIRECTLY in the click handler.
+        // Do NOT wrap in another Paytm.CheckoutJS.onLoad() - that's the bug below.
+        await window.Paytm.CheckoutJS.init(config);
+        window.Paytm.CheckoutJS.invoke();
+      });
+    </script>
+  </body>
+</html>
+```
+
+### Alternative — dynamic loader (only when you must)
+
+Use this only when your backend mints the loader URL at runtime (e.g. config endpoint that returns env-dependent values). It has three silent-failure traps; if you can avoid it, do.
+
+```javascript
+const cfg = await (await fetch("/paytm-client-config.json")).json();
+
+const s = document.createElement("script");
+s.src = cfg.loader_url;        // built from PAYTM_PG_DOMAIN + MID server-side
+
+// (1) Do NOT set s.crossOrigin = "anonymous". Paytm CDN may not return CORS
+//     headers; with crossOrigin set, the browser fires `onerror` silently
+//     and your button stays disabled forever.
+
+// (2) Wait for the script's native `load` event - NOT Paytm.CheckoutJS.onLoad.
+//     The latter doesn't exist until the script you're trying to load has run.
+s.onload = () => { document.getElementById("payBtn").disabled = false; };
+
+// (3) ALWAYS handle onerror with user-visible feedback. Silent failure here is
+//     the #1 "Pay button does nothing" support ticket.
+s.onerror = (e) => {
+  console.error("[paytm] loader failed", e);
+  alert("Payment system failed to load. Please refresh.");
+};
+
+document.head.appendChild(s);
+```
+
+Click handler is the same as the static case — call `init` / `invoke` directly, never inside `Paytm.CheckoutJS.onLoad`.
+
+### ❗ The bug: `CheckoutJS.onLoad()` inside a click handler
+
+`Paytm.CheckoutJS.onLoad(cb)` fires **exactly once**, when the merchant `.js` finishes loading. By the time the user clicks Pay, it has already fired — your callback never runs and the modal silently never opens.
 
 **Broken (do not generate):**
 ```javascript
@@ -111,35 +246,12 @@ button.addEventListener("click", function () {
 });
 ```
 
-There's a second trap: you can't call `window.Paytm.CheckoutJS.onLoad(...)` *anywhere* until the merchant `.js` script has loaded — it's what creates `window.Paytm`. If you load the script dynamically (after a `/paytm-client-config.json` fetch), `window.Paytm` is `undefined` at page-eval time.
+Use `Paytm.CheckoutJS.onLoad` **only** for one-time setup at page load (e.g. enabling the Pay button). In the click handler, call `init`/`invoke` directly.
 
-**Correct — dynamic loader (matches `scripts/frontend/checkout.html`):**
-```javascript
-fetch("/paytm-client-config.json")
-  .then(r => r.json())
-  .then(cfg => {
-    const s = document.createElement("script");
-    s.src = cfg.loader_url;
-    s.crossOrigin = "anonymous";
-    s.onload = () => { payBtn.disabled = false; };       // ✅ native script onload
-    document.head.appendChild(s);
-  });
-
-button.addEventListener("click", function () {
-  fetch("/paytm/create-order", ...)
-    .then(data => {
-      const config = { /* ... */ };
-      return window.Paytm.CheckoutJS.init(config).then(() => window.Paytm.CheckoutJS.invoke());
-    });
-});
-```
-
-**Alternative — static loader tag:** if you embed the merchant `.js` as a normal `<script src="...">` in HTML, then `window.Paytm` exists by the time inline JS runs and you *can* use `Paytm.CheckoutJS.onLoad(() => { payBtn.disabled = false; })` for the same purpose. Don't mix the two — pick one.
-
-### Init config
+### Init config — always use `redirect: true` unless you have a UX reason not to
 
 ```javascript
-window.Paytm.CheckoutJS.init({
+const config = {
   root: "",
   flow: "DEFAULT",
   data: {
@@ -148,12 +260,14 @@ window.Paytm.CheckoutJS.init({
     tokenType: "TXN_TOKEN",
     amount: "1.00"
   },
-  merchant: { redirect: false },
+  merchant: { redirect: true },   // ✅ full-page redirect when modal can't open
   handler: { /* see step 3.5 below */ }
-}).then(function () { window.Paytm.CheckoutJS.invoke(); });
+};
+await window.Paytm.CheckoutJS.init(config);
+window.Paytm.CheckoutJS.invoke();
 ```
 
-`merchant.redirect: true` falls back to a full-page redirect — useful when popup blockers kill the modal (common on mobile).
+`merchant: { redirect: false }` (modal-only) silently does **nothing** when the browser blocks the popup — common on mobile Safari, in iframes, and with strict ad blockers. Use `redirect: true` for the safe default; switch to `false` only if you've user-tested the modal in your specific UX.
 
 ### Step 3.5 — wire BOTH handlers
 
