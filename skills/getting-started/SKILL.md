@@ -58,11 +58,32 @@ Store both in environment variables (`PAYTM_MID`, `PAYTM_MERCHANT_KEY`) — neve
 
 ## .env conventions (apply to every generated `.env` / `.env.example`)
 
+### Two non-negotiable rules
+
+1. **`.env` is always created by copying `.env.example`, never written from scratch.** Generate `.env.example` first (or use the shipped one at `assets/.env.example`). When the project needs a `.env`, do:
+   ```bash
+   cp .env.example .env
+   # then edit .env with real values
+   ```
+   Never `echo > .env`, never produce a `.env` directly. This keeps the file structure, comments, and ordering identical between the template and the runtime file — and it stays gitignored at the `.env` level while `.env.example` is committed.
+
+2. **Every value in `.env` AND `.env.example` MUST be wrapped in double quotes.** No exceptions — not just secrets, not just strings with special chars. Every line.
+   ```bash
+   PAYTM_ENVIRONMENT="staging"          # ✅ quoted
+   PAYTM_MID="YOUR_MID"                 # ✅ quoted
+   PAYTM_MERCHANT_KEY="YOUR_KEY"        # ✅ quoted
+   PAYTM_CALLBACK_BASE="http://localhost:3001"   # ✅ quoted (even though no special chars)
+   PAYTM_ENVIRONMENT=staging            # ❌ unquoted - reject this format
+   ```
+   Why: Paytm Merchant Keys often contain `#`, `@`, `!`, `$`. An unquoted `#` is treated as a comment and silently truncates the value — symptom is checksum mismatch (`resultCode: 227`) with no obvious cause. Uniform quoting also keeps tooling (`dotenv`, `python-dotenv`, Spring's `@Value`, Docker `env_file`) consistent.
+
+### Other rules
+
 - **`PAYTM_ENVIRONMENT` is always the first variable** — everything else derives from it.
-- **Pre-fill staging values** so the file works out of the box.
-- **Wrap every value in double quotes**, not just secrets. Avoids edge cases — `#` in keys silently truncates unquoted values.
+- **Pre-fill staging values** in `.env.example` so the file works out of the box.
 - **Generic placeholders** — `YOUR_MID`, not `YOUR_STAGING_MID_HERE`. Environment lives in `PAYTM_ENVIRONMENT`.
 - **All mandatory keys at the top, comments / optional overrides in a later section.**
+- **`.env` is in `.gitignore`. `.env.example` is committed.** Always.
 
 Canonical `.env.example`:
 
