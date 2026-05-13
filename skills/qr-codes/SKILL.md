@@ -44,24 +44,37 @@ POST {BASE}/paymentservices/qr/create
 
 ## When the response looks "empty" — error-parsing rule
 
-Paytm error responses for QR (and the rest of the API) **always carry the failure reason inside `body.resultInfo`**, even when the top-level HTTP body or your client library makes it look empty. If you see something like `{}` or "QR generation failed: {}" on the frontend, the real cause is one level deep in the JSON the backend received from Paytm.
+Paytm error responses for QR (and the rest of the API) **always carry the failure reason inside `body.resultInfo`**, even when the top-level HTTP body or your client library makes it look empty. If you see something like `{}`, `"QR generation failed: {}"`, or `"undefined: undefined"` on the frontend, the parsing is reaching for the wrong field.
 
-When debugging, **always log the full response body server-side** before responding to the frontend:
+### Bulletproof error extractor (use this verbatim)
+
+Never directly interpolate `info.resultCode` / `info.resultMsg` into a string without first checking they exist. That's how `"undefined: undefined"` ends up in production. Use this defensive pattern:
 
 ```js
 const r = await fetch(`${PAYTM_PG_DOMAIN}/paymentservices/qr/create`, { ... });
 const json = await r.json();
 console.log("[paytm qr] full response:", JSON.stringify(json, null, 2));
 
-// The reason for failure lives here, NOT in r.status or r.statusText:
-const info = json?.body?.resultInfo;
-if (info?.resultStatus !== "S") {
-  // info.resultCode is the numeric code; info.resultMsg is the human reason
-  throw new Error(`QR failed: ${info?.resultCode} ${info?.resultMsg}`);
+// `resultInfo` lives in different places across Paytm endpoints. Check all the spots.
+const info =
+  json?.body?.resultInfo ||      // most endpoints
+  json?.resultInfo ||            // some legacy responses
+  json?.head?.resultInfo;        // very rare
+
+const code = info?.resultCode ?? info?.code ?? "UNKNOWN";
+const msg  = info?.resultMsg  ?? info?.message ?? info?.resultMessage ?? JSON.stringify(json);
+
+if (info?.resultStatus !== "S" && info?.resultStatus !== "TXN_SUCCESS") {
+  throw new Error(`Paytm QR failed (${code}): ${msg}`);
 }
 ```
 
-Never report "{}" or "empty body" to the user — that's a sign the parsing missed `body.resultInfo`.
+Three rules baked in:
+1. Look for `resultInfo` in **multiple locations** (some Paytm endpoints nest it under `head` or omit `body`).
+2. Use `??` (nullish coalescing), never `||` for code/msg lookups — `||` on an empty string falls through to "UNKNOWN" which loses real info.
+3. Fall back to `JSON.stringify(json)` for `msg` so the user always sees the raw response when nothing else matches. Never report literal `"undefined"`.
+
+Never report `"{}"`, `"empty body"`, or `"undefined: undefined"` to the user — those are tells that the parser is broken.
 
 ## Required fields & gotchas
 

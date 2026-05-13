@@ -209,33 +209,62 @@ Put a regular `<script src="...">` tag in your HTML. `window.Paytm` exists by th
 
 ### Alternative — dynamic loader (only when you must)
 
-Use this only when your backend mints the loader URL at runtime (e.g. config endpoint that returns env-dependent values). It has three silent-failure traps; if you can avoid it, do.
+Use this only when your backend mints the loader URL at runtime (e.g. config endpoint that returns env-dependent values). Two sub-patterns depending on **when you call `init`/`invoke`**:
+
+**Sub-pattern A — dynamic load + click handler later (button enables on load, user clicks later):**
 
 ```javascript
 const cfg = await (await fetch("/paytm-client-config.json")).json();
 
 const s = document.createElement("script");
-s.src = cfg.loader_url;        // built from PAYTM_PG_DOMAIN + MID server-side
+s.src = cfg.loader_url;                   // built from PAYTM_PG_DOMAIN + MID server-side
 
 // (1) Do NOT set s.crossOrigin = "anonymous". Paytm CDN may not return CORS
 //     headers; with crossOrigin set, the browser fires `onerror` silently
 //     and your button stays disabled forever.
-
-// (2) Wait for the script's native `load` event - NOT Paytm.CheckoutJS.onLoad.
-//     The latter doesn't exist until the script you're trying to load has run.
+// (2) Use the script's native `load` event to enable the button.
+//     By click time CheckoutJS internal init has finished, so `init`/`invoke`
+//     in the click handler can be called directly.
 s.onload = () => { document.getElementById("payBtn").disabled = false; };
-
-// (3) ALWAYS handle onerror with user-visible feedback. Silent failure here is
-//     the #1 "Pay button does nothing" support ticket.
 s.onerror = (e) => {
   console.error("[paytm] loader failed", e);
   alert("Payment system failed to load. Please refresh.");
 };
+document.head.appendChild(s);
 
+document.getElementById("payBtn").addEventListener("click", async () => {
+  // Direct - no onLoad wrap needed; CheckoutJS is fully ready by now.
+  await window.Paytm.CheckoutJS.init(config);
+  window.Paytm.CheckoutJS.invoke();
+});
+```
+
+**Sub-pattern B — dynamic load + immediate invoke (no user-click wait):**
+
+If you want to inject the script and **immediately** open the modal (e.g. on page load, after a server-side authorization), `script.onload` fires before `CheckoutJS` has finished its own internal async setup. Calling `init()` directly inside `onload` then throws:
+
+```
+TypeError: Cannot read properties of undefined (reading 'then')
+```
+
+**Fix:** wrap `init`/`invoke` inside `Paytm.CheckoutJS.onLoad()` for this case — that callback fires when CheckoutJS is fully ready, not just when the script has downloaded.
+
+```javascript
+const s = document.createElement("script");
+s.src = cfg.loader_url;
+s.onload = () => {
+  // CheckoutJS may still be initialising internally - wait for its onLoad.
+  window.Paytm.CheckoutJS.onLoad(() => {
+    window.Paytm.CheckoutJS
+      .init(config)
+      .then(() => window.Paytm.CheckoutJS.invoke());
+  });
+};
+s.onerror = (e) => { /* ... user-visible feedback ... */ };
 document.head.appendChild(s);
 ```
 
-Click handler is the same as the static case — call `init` / `invoke` directly, never inside `Paytm.CheckoutJS.onLoad`.
+This is the **only** legitimate use of `Paytm.CheckoutJS.onLoad` inside dynamic flows — when the loader is dynamic AND the invocation is immediate (no user gesture between load and invoke).
 
 ### ❗ The bug: `CheckoutJS.onLoad()` inside a click handler
 
@@ -253,7 +282,15 @@ button.addEventListener("click", function () {
 });
 ```
 
-Use `Paytm.CheckoutJS.onLoad` **only** for one-time setup at page load (e.g. enabling the Pay button). In the click handler, call `init`/`invoke` directly.
+Use `Paytm.CheckoutJS.onLoad` **only** for one-time setup at page load (e.g. enabling the Pay button), or for the dynamic-load + immediate-invoke case (sub-pattern B above). In a click handler that fires after the script has fully loaded, call `init`/`invoke` directly.
+
+### Decision summary
+
+| Loader pattern | When to invoke | Wrap in `Paytm.CheckoutJS.onLoad()`? |
+|---|---|---|
+| Static `<script src=>` tag in HTML | On user click | **No** — direct `init`/`invoke` |
+| Dynamic `document.createElement("script")` + button enables on load + click later | On user click | **No** — direct `init`/`invoke` (CheckoutJS finished initialising by click time) |
+| Dynamic `document.createElement("script")` + invoke immediately on load | Inside `script.onload` | **Yes** — wrap init/invoke in `Paytm.CheckoutJS.onLoad()`, else `Cannot read properties of undefined (reading 'then')` |
 
 ### Init config — always use `redirect: true` unless you have a UX reason not to
 

@@ -46,20 +46,22 @@ All `/link/*` endpoints share the **same head shape** — different from `/v3/or
 
 ---
 
-## ❗ The five quirks that keep biting
+## ❗ The six quirks that keep biting
 
 1. **`linkId` is a JSON number, NOT a string.** Wrong: `"linkId": "12345"`. Right: `"linkId": 12345`. Wrong type returns `"invalid link id"`.
 
 2. **`linkName` charset is alphanumerics ONLY — no spaces.** Several MIDs reject space as a special character despite the docs, returning `5007`. **`linkDescription` allows alphanumerics + spaces.** Sanitize each with its own regex on the server. Both ≥ 3 chars.
 
-3. **Status fields are dual-shape.** Create / fetch responses return *either* `linkStatus: "ACTIVE"` (string) *or* `isActive: true` (boolean) depending on MID. Read defensively:
+3. **`expiryDate` format is `DD/MM/YYYY HH:MM:SS` — NOT ISO `YYYY-MM-DD`.** ISO format returns error `5021: Date should be in format DD/MM/YYYY or DD/MM/YYYY HH:MM:SS`. This is the most common payment-link 5021. Default to `DD/MM/YYYY HH:MM:SS` (IST). Example: `"31/12/2026 23:59:59"`.
+
+4. **Status fields are dual-shape.** Create / fetch responses return *either* `linkStatus: "ACTIVE"` (string) *or* `isActive: true` (boolean) depending on MID. Read defensively:
    ```js
    const active = body.linkStatus === "ACTIVE" || body.isActive === true;
    ```
 
-4. **`/link/fetchTransaction` `orderStatus` is dual-shape too.** Match BOTH `"SUCCESS"` AND `"TXN_SUCCESS"` for paid orders — hard-coding only `"TXN_SUCCESS"` silently misses every paid link on MIDs that return `"SUCCESS"`.
+5. **`/link/fetchTransaction` `orderStatus` is dual-shape too.** Match BOTH `"SUCCESS"` AND `"TXN_SUCCESS"` for paid orders — hard-coding only `"TXN_SUCCESS"` silently misses every paid link on MIDs that return `"SUCCESS"`.
 
-5. **Reconcile via `/link/fetchTransaction`, NOT `/v3/order/status`.** They're different endpoints with different head shapes. `/v3/order/status` is for JS-Checkout payments only.
+6. **Reconcile via `/link/fetchTransaction`, NOT `/v3/order/status`.** They're different endpoints with different head shapes. `/v3/order/status` is for JS-Checkout payments only.
 
 ---
 
@@ -75,7 +77,7 @@ All `/link/*` endpoints share the **same head shape** — different from `/v3/or
     "linkName": "Order1234",
     "amount": "100.00",
     "currency": "INR",
-    "expiryDate": "2026-06-09",
+    "expiryDate": "31/12/2026 23:59:59",
     "customerContact": {
       "customerName": "Buyer",
       "customerEmail": "buyer@example.com",

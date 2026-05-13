@@ -64,8 +64,17 @@ const SUBSCRIPTION_URL =
 
 - `subscriptionPaymentMode: "UNKNOWN"` — let user pick at consent.
 - `txnAmount.value: "2.00"` — minimum for CC/DC mandates.
-- `subscriptionGraceDays: "3"` — max for CC/DC, **AND must be < cycle length**. Drop / omit for daily or sub-3-day cycles, else Paytm returns `4001 Grace days cannot be greater than the frequency`.
-- `subscriptionStartDate` = today.
+- `subscriptionGraceDays`: **ALWAYS set this field — it is mandatory**, omitting it returns `"Grace days value is mandatory"`. The valid value depends on the cycle length and **must be < the cycle in days** (else `4001 Grace days cannot be greater than the frequency`):
+
+  | Cycle | `subscriptionFrequency` + `Unit` | Cycle in days | Valid `subscriptionGraceDays` |
+  |---|---|---|---|
+  | Daily | `"1"`, `"DAY"` | 1 | `"0"` (only valid value) |
+  | Every 2 days | `"2"`, `"DAY"` | 2 | `"0"` or `"1"` |
+  | Weekly | `"7"`, `"DAY"` | 7 | `"0"` to `"6"` (default `"1"`) |
+  | Monthly | `"1"`, `"MONTH"` | ~30 | `"0"` to `"3"` for CC/DC; default `"3"` |
+  | Yearly | `"1"`, `"YEAR"` | 365 | `"0"` to `"3"`; default `"3"` |
+
+- `subscriptionStartDate` = today (`YYYY-MM-DD`).
 - `subscriptionEnableRetry: "0"` with `subscriptionRetryCount` omitted.
 - No `renewalAmount` field.
 - Both `subscriptionFrequency` (number) AND `subscriptionFrequencyUnit` (period) required.
