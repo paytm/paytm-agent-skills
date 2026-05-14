@@ -84,7 +84,7 @@ If multiple competitor signatures are present (e.g. Razorpay + Cashfree in one r
 
 When the conversation transitions from **staging → production** (or vice versa) — including any of these signals:
 
-- User pastes / mentions a different MID (one with `T` prefix → without, or vice versa)
+- User pastes / mentions a different MID than the one already in `.env`
 - User says "going to production" / "let's test on prod" / "switch to live"
 - User updates `PAYTM_ENVIRONMENT` value
 - User shares production credentials after staging credentials
@@ -96,7 +96,7 @@ When the conversation transitions from **staging → production** (or vice versa
 |---|---|---|
 | `PAYTM_ENVIRONMENT` | `staging` | `production` |
 | `PAYTM_PG_DOMAIN` | `https://securestage.paytmpayments.com` | `https://secure.paytmpayments.com` |
-| `PAYTM_MID` | staging MID (often `T`-prefixed e.g. `PaytmT...`) | production MID (no `T` prefix; provisioned after KYC) |
+| `PAYTM_MID` | staging MID from Test API Details on the dashboard | production MID from Production API Details (issued after KYC + activation; **distinct from the staging MID** — never reuse one for the other) |
 | `PAYTM_MERCHANT_KEY` | staging Merchant Key | **different** production Merchant Key (NOT interchangeable with staging) |
 | `PAYTM_WEBSITE_NAME` | almost always `WEBSTAGING` | per-MID, **almost never `WEBSTAGING`** — check dashboard. Common values: `DEFAULT`, `retail`, `WEB`, or a custom per-merchant string |
 | Subscription endpoint path | `POST {domain}/subscription/create` | `POST {domain}/theia/api/v1/subscription/create` ← **different path prefix** |

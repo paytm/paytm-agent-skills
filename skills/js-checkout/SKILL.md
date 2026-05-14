@@ -34,8 +34,8 @@ There is **no `{BASE_URL}` placeholder you "figure out later"** — these are th
 
 | Environment | `PAYTM_PG_DOMAIN` | When |
 |---|---|---|
-| **Staging / Test** | `https://securestage.paytmpayments.com` | MID starts with `PaytmT...` or any non-production key |
-| **Production** | `https://secure.paytmpayments.com` | MID is a production-issued identifier (no `T` prefix; provisioned after KYC) |
+| **Staging / Test** | `https://securestage.paytmpayments.com` | Use the MID + Merchant Key from Test API Details on the Paytm dashboard |
+| **Production** | `https://secure.paytmpayments.com` | Use the MID + Merchant Key from Production API Details (issued after KYC + activation) |
 
 **Do NOT use any of these — they are old / wrong domains that show up in stale tutorials and LLM training data:** `securegw.paytm.in`, `securegw-stage.paytm.in`, `pguat.paytm.com`. Paytm migrated off them years ago.
 
@@ -118,7 +118,7 @@ POST {PAYTM_PG_DOMAIN}/theia/api/v1/initiateTransaction?mid={MID}&orderId={ORDER
 Concrete examples:
 ```
 # Staging:
-POST https://securestage.paytmpayments.com/theia/api/v1/initiateTransaction?mid=PaytmTxxxxx&orderId=ORD_001
+POST https://securestage.paytmpayments.com/theia/api/v1/initiateTransaction?mid=YOUR_STAGING_MID&orderId=ORD_001
 
 # Production:
 POST https://secure.paytmpayments.com/theia/api/v1/initiateTransaction?mid=YOURMID&orderId=ORD_001
