@@ -10,6 +10,7 @@ description: >
   or has Juspay integration code (HyperSDK, hyperServices, juspay.in, /orders endpoint,
   JUSPAY_API_KEY, juspay-node, in.juspay.hypersdk).
 triggers:
+  # Code-context signals
   - "juspay"
   - "Juspay"
   - "HyperSDK"
@@ -23,8 +24,50 @@ triggers:
   - "JUSPAY_MERCHANT_ID"
   - "in.juspay.hypersdk"
   - "juspay-node"
+  - "client_auth_token"
+  # Direct migration intent
   - "migrate from juspay"
+  - "migrating from juspay"
+  - "migration from juspay"
+  - "juspay to paytm"
+  - "juspay → paytm"
+  - "juspay -> paytm"
+  - "from juspay to paytm"
   - "switch from juspay"
+  - "switching from juspay"
+  - "move from juspay"
+  - "port from juspay"
+  - "shift from juspay"
+  - "replace juspay"
+  - "replacing juspay"
+  - "remove juspay"
+  - "drop juspay"
+  - "ditch juspay"
+  - "leave juspay"
+  - "exit juspay"
+  - "retire juspay"
+  - "phase out juspay"
+  - "replace hypersdk"
+  - "replace hyper sdk"
+  - "replace hypercheckout"
+  - "remove smart routing juspay"
+  - "juspay orchestrator replacement"
+  # Merchant conversational
+  - "want to use paytm instead of juspay"
+  - "thinking of switching from juspay"
+  - "considering paytm over juspay"
+  - "juspay alternative"
+  - "alternative to juspay"
+  - "instead of juspay"
+  - "unhappy with juspay"
+  - "juspay not working for us"
+  - "juspay smart routing not needed"
+  - "moving away from juspay orchestration"
+  - "change payment gateway from juspay"
+  - "change pg from juspay"
+  - "stop using juspay"
+  - "get rid of juspay"
+  - "dual write juspay paytm"
 ---
 
 # Juspay → Paytm Migration
