@@ -80,7 +80,9 @@ Juspay is fundamentally **different from Razorpay / PayU / Cashfree** — it's a
 
 This is a bigger architectural change than the other migrations. Make sure the merchant understands what they're giving up before generating code.
 
-Full per-flow mapping, signature schemes, common porting pitfalls: `references/REFERENCE.md`.
+> This skill is split across two files. `SKILL.md` (this file) gives the orchestrator-vs-PG mental model + per-flow summary + when NOT to migrate. `references/REFERENCE.md` contains the full Juspay product surface (8 products — only 4 map cleanly), pre-migration questions to ask the merchant, HTTP Basic auth deep dive (the empty-password trap), per-step code diff, Juspay's 15+ status enum mapped to Paytm's 3 statuses, dual-write tweaks (mobile-app-size doubling, success-rate parity check), and 120-day cutover checklist — all NOT repeated here.
+>
+> **Do not generate any Juspay → Paytm migration code until you have read `references/REFERENCE.md`.**
 
 ---
 

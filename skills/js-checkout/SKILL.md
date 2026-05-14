@@ -22,7 +22,9 @@ triggers:
 
 Use this skill when the user wants a **checkout page with a "Pay" button** for one-time payments. For subscriptions, links, or QR, load the matching skill from `getting-started`.
 
-Full callback field list, alternative non-SDK form-POST flow, every event the modal emits, and the corp-proxy TLS guidance: `references/REFERENCE.md`.
+> This skill is split across two files. `SKILL.md` (this file) gives the integration flow + the most common bugs. `references/REFERENCE.md` contains the full callback field list, the alternative non-SDK form-POST flow, every event the modal emits, the GET-vs-POST callback quirk, and the corp-proxy TLS guidance — all NOT repeated here.
+>
+> **Do not generate any JS Checkout code until you have read `references/REFERENCE.md`.**
 
 ---
 

@@ -23,7 +23,9 @@ triggers:
 
 Recurring charges use a **different endpoint, different requestType, different field placement** from one-time Payment. Picking the wrong flow is the most expensive mistake in this skill — a "monthly subscription" generated as a one-time Payment charges once and never recurs.
 
-Full field reference, error code table, worked example, charge / cancel / edit flows: `references/REFERENCE.md` — **read it before writing code**.
+> This skill is split across two files. `SKILL.md` (this file) gives the overview, defaults, and most common errors. `references/REFERENCE.md` contains the full field table, required fields per `subscriptionAmountType` (FIX vs VARIABLE), per-rail constraints (CC/DC vs UPI vs BANK_MANDATE), the IST date generation snippets per language, the charge / cancel / edit flows, and the full error code table — all NOT repeated here.
+>
+> **Do not generate any subscription code until you have read `references/REFERENCE.md`.**
 
 ---
 
@@ -74,7 +76,7 @@ const SUBSCRIPTION_URL =
   | Monthly | `"1"`, `"MONTH"` | ~30 | `"0"` to `"3"` for CC/DC; default `"3"` |
   | Yearly | `"1"`, `"YEAR"` | 365 | `"0"` to `"3"`; default `"3"` |
 
-- `subscriptionStartDate` = today (`YYYY-MM-DD`).
+- `subscriptionStartDate` = today **in IST** (`YYYY-MM-DD`). Generate at request time using an IST-aware helper (see `references/REFERENCE.md` § rule 17 for per-language snippets). **Do NOT use `new Date().toISOString().slice(0, 10)` in Node** — it returns UTC, and between 00:00–05:30 IST every night UTC is still "yesterday" → Paytm rejects with `5028 subscription start in past`.
 - `subscriptionEnableRetry: "0"` with `subscriptionRetryCount` omitted.
 - No `renewalAmount` field.
 - Both `subscriptionFrequency` (number) AND `subscriptionFrequencyUnit` (period) required.

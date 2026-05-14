@@ -86,7 +86,9 @@ triggers:
 
 Use this skill when a merchant has a working Razorpay integration and wants to switch to Paytm — either fully or in parallel. Covers the API mapping, signature scheme differences, dual-write rollout, and reconciliation patterns. Sample backend implementations under `scripts/backend-{node,python,spring,spring-legacy}/razorpay-migration/`.
 
-Full per-flow API mapping table, field-name translation, every endpoint's request/response diff: `references/REFERENCE.md`.
+> This skill is split across two files. `SKILL.md` (this file) gives the at-a-glance mapping + per-flow summary. `references/REFERENCE.md` contains the full per-endpoint diff with code samples (Razorpay side + Paytm side), the auth model deep dive, the subscription frequency / event mapping table, the webhook signature scheme deep dive (header vs body), the dual-write architecture diagram, the canary helper, the reconciliation script, the cutover checklist, and common porting pitfalls — all NOT repeated here.
+>
+> **Do not generate any Razorpay → Paytm migration code until you have read `references/REFERENCE.md`.**
 
 ---
 

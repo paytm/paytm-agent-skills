@@ -19,6 +19,10 @@ triggers:
 
 The browser callback can be lost (popup blockers, network drops, browser back button). The S2S webhook is the **source of truth** — Paytm POSTs the same payment event server-to-server, retrying until you 200.
 
+> This skill is split across two files. `SKILL.md` (this file) gives the endpoint contract and the receiver sketch. `references/REFERENCE.md` contains the full event-type table (SALE / REFUND / SUBSCRIPTION_INIT / SUBSCRIPTION_DEBIT / SUBSCRIPTION_CANCEL / QR_PAYMENT), the canonical body shape, Paytm's retry/backoff schedule, raw-body extraction code per language (Node / Python / Spring Boot 3 / Spring legacy), the dedup pattern with TTL, the security checklist, and common failure modes — all NOT repeated here.
+>
+> **Do not generate any webhook receiver code until you have read `references/REFERENCE.md`.**
+
 Reference implementation in every backend: `scripts/backend-{node,python,spring,spring-legacy}/` — copy verbatim.
 
 ---

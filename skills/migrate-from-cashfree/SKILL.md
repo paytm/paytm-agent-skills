@@ -81,7 +81,9 @@ triggers:
 
 Use this skill when a merchant has a working Cashfree Payments integration and wants to switch to Paytm. Covers the API mental-model translation, signature scheme differences, recurring payments, refunds, dual-write rollout, and cutover.
 
-Full per-flow mapping, signature deep dive, and pitfalls in `references/REFERENCE.md`.
+> This skill is split across two files. `SKILL.md` (this file) gives the at-a-glance mapping + per-flow summary. `references/REFERENCE.md` contains the full Cashfree product surface (PG / Subscriptions / Payment Links / Easy Split / Payouts / Auto-collect — what migrates and what doesn't), the per-endpoint diff with code samples, header-auth vs body-checksum deep dive, subscription field/frequency mapping, webhook signature scheme (`timestamp + rawBody` HMAC vs Paytm checksum), dual-write tweaks for header-based auth, and 90-day cutover checklist — all NOT repeated here.
+>
+> **Do not generate any Cashfree → Paytm migration code until you have read `references/REFERENCE.md`.**
 
 ---
 

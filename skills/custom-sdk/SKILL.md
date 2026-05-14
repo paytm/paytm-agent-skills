@@ -35,7 +35,9 @@ Trade-offs:
 
 When to load this skill: user explicitly says they want their own UI on the payment screen, OR is willing to take on PCI compliance for cards in exchange for full UX control.
 
-Full request shapes per payment instrument, security checklist, PCI implications: `references/REFERENCE.md`.
+> This skill is split across two files. `SKILL.md` (this file) gives the high-level flow + the tradeoffs vs All-in-One. `references/REFERENCE.md` contains the per-instrument request shapes (Card / UPI Collect / UPI Intent / Net Banking / EMI), the honest PCI scope reality (SAQ A-EP vs SAQ D), 3DS WebView quirks per issuing bank (HDFC / ICICI / SBI / Axis), the UPI Collect polling backoff, the `fetchPaymentOptions` response shape, the per-step error codes, and the "when NOT to use Custom SDK" guidance — all NOT repeated here.
+>
+> **Do not generate any Custom SDK code until you have read `references/REFERENCE.md`.**
 
 ---
 

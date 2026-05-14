@@ -17,7 +17,9 @@ triggers:
 
 Server-only. `POST /paymentservices/qr/create` returns an image + `qrData` UPI deep link. Display or print. Customer scans with any UPI app. Status arrives via webhook + polling.
 
-Full reconciliation flow + error codes: `references/REFERENCE.md`.
+> This skill is split across two files. `SKILL.md` (this file) gives the request/response shape and the bulletproof error parser. `references/REFERENCE.md` contains the full reconciliation flow, the polling backoff table, the QR-vs-VPA-collect distinction, the printed-QR static-amount variant, and the full error code table — all NOT repeated here.
+>
+> **Do not generate any QR code until you have read `references/REFERENCE.md`.**
 
 ---
 

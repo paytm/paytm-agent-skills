@@ -19,7 +19,9 @@ triggers:
 
 Refund a successful payment (full or partial). Refunds go through your funded settlement balance and credit the customer's source instrument (card / UPI VPA / bank account).
 
-For end-to-end reconciliation and dispute handling: `references/REFERENCE.md`.
+> This skill is split across two files. `SKILL.md` (this file) gives the pre-flight checklist + apply/status request shapes. `references/REFERENCE.md` contains the full API surface, refund state lifecycle (INITIATED → PENDING → SUCCESS / FAILURE), webhook payload distinction from payment events, idempotency-per-`refId` semantics, partial-refund tracking schema, dispute / chargeback distinction, settlement impact, and the extended error code table — all NOT repeated here.
+>
+> **Do not generate any refund code until you have read `references/REFERENCE.md`.**
 
 ---
 

@@ -344,4 +344,27 @@ Staging path is `/subscription/create`; production path is `/theia/api/v1/subscr
 14. **`response.body.authenticated` is the string `"True"` / `"False"`**, not a boolean. Compare as strings.
 15. **CC / DC mandate constraints:** `txnAmount.value` must be **> ₹1** (use `"2.00"` minimum); `subscriptionGraceDays` must be **≤ 3**. When using `subscriptionPaymentMode: "UNKNOWN"`, apply the stricter limits to stay compatible with whatever rail the user picks.
 16. **Don't send `renewalAmount`** by default - optional field, most flows don't need it. Only add if you want a different recurring amount than `txnAmount.value` shown on consent.
-17. **`subscriptionStartDate` defaults to today.** Generate at request time: `new Date().toISOString().slice(0, 10)` (Node) or equivalent. Don't hard-code a date.
+17. **`subscriptionStartDate` defaults to today (IST), NOT UTC.** Generate at request time. **Common bug:** `new Date().toISOString().slice(0, 10)` returns UTC, which between **00:00–05:30 IST every night** is still "yesterday" → Paytm rejects with `5028 subscription start in past`. Use the IST-offset snippet for your stack:
+
+    ```js
+    // Node — add 5h30m to UTC, then take the date portion
+    const istToday = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);   // "2026-05-14" in IST regardless of server timezone
+    ```
+
+    ```python
+    # Python — use the IST timezone explicitly
+    from datetime import datetime, timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
+    ist_today = datetime.now(IST).strftime("%Y-%m-%d")
+    ```
+
+    ```java
+    // Java — explicit Asia/Kolkata zone
+    import java.time.LocalDate;
+    import java.time.ZoneId;
+    String istToday = LocalDate.now(ZoneId.of("Asia/Kolkata")).toString();
+    ```
+
+    Don't hard-code a date and don't trust the server's local timezone (could be UTC on AWS / Heroku / GCP defaults).

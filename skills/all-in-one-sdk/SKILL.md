@@ -21,7 +21,9 @@ Native mobile SDK that drops a full Paytm-styled payment screen into your app. S
 
 When to load this skill: user is building an Android (Kotlin/Java) or iOS (Swift/Objective-C) app and wants the **shortest path** to accepting payments. The trade-off is the UI is Paytm-branded (logo, colors, language) and not customizable beyond a few config options. If they want their own UI, load `custom-sdk` instead.
 
-Full event lifecycle, callback fields, deep-link return handling, error codes: `references/REFERENCE.md`.
+> This skill is split across two files. `SKILL.md` (this file) gives the 4-step integration flow + Android / iOS code skeletons. `references/REFERENCE.md` contains the full callback bundle field table, the complete `PaytmPaymentTransactionCallback` (Android) and `AIDelegate` (iOS) lifecycle paths, deep-link return handling for `singleTask` activities and iOS URL schemes (`Info.plist`), per-bank 3DS quirks, ProGuard rules, the subscription-mandate-on-mobile flow, and the operational checklist — all NOT repeated here.
+>
+> **Do not generate any All-in-One SDK code until you have read `references/REFERENCE.md`.**
 
 ---
 

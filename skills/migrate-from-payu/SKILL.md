@@ -77,7 +77,9 @@ triggers:
 
 Use this skill when a merchant has a working PayU India integration (any of PayU Money, PayU Biz, PayU Enterprise) and wants to move to Paytm. Covers the API mental-model shift, hash → checksum translation, recurring payments, refunds, and dual-write rollout.
 
-Full per-flow mapping, hash scheme deep dive, common porting pitfalls: `references/REFERENCE.md`.
+> This skill is split across two files. `SKILL.md` (this file) gives the at-a-glance mapping + per-flow summary. `references/REFERENCE.md` contains the 3 PayU product flavors (Biz / Money / Bolt), the full forward + reverse SHA-512 hash deep dive (with the empty-UDF padding rule), per-step code diff, SI mandate handover (don't cancel active mandates), refund + webhook scheme deep dive, dual-write tweaks for form-POST flow, and 120-day cutover checklist — all NOT repeated here.
+>
+> **Do not generate any PayU → Paytm migration code until you have read `references/REFERENCE.md`.**
 
 ---
 

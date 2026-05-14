@@ -22,6 +22,10 @@ triggers:
 
 Symptom-driven debugging. Always start at the decision tree, then dive into the matching section in `references/REFERENCE.md`.
 
+> This skill is split across two files. `SKILL.md` (this file) gives the decision tree + quick RESPCODE lookup. `references/REFERENCE.md` contains per-symptom deep dives: Initiate Transaction failures by code, "Pay button does nothing" causes, JS Checkout render issues, callback verification failures, refund-stuck-PENDING, the corp-proxy TLS interception fix (with extracted CA commands per OS), and full env / config gotchas — all NOT repeated here.
+>
+> **Do not propose a fix for a Paytm integration error until you have read `references/REFERENCE.md`.**
+
 ---
 
 ## Decision tree

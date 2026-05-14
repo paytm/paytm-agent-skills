@@ -23,7 +23,9 @@ triggers:
 
 A **server-only** flow: you POST `/link/create`, get back a `shortUrl`, share it. Paytm hosts the checkout page — no JS Checkout, no merchant `.js`, no frontend wiring needed.
 
-Full pitfall list (20+), error code table, fetch-transaction reconciliation, and worked examples: `references/REFERENCE.md`.
+> This skill is split across two files. `SKILL.md` (this file) gives the endpoint family and the highest-impact gotchas. `references/REFERENCE.md` contains the 20+ MID-specific pitfalls, full per-endpoint field tables for create / fetch / update / expire / resendNotification / fetchTransaction, the dual-shape response patterns, and the full error code table — all NOT repeated here.
+>
+> **Do not generate any payment-link code until you have read `references/REFERENCE.md`.**
 
 ---
 
