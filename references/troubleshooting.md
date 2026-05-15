@@ -140,6 +140,42 @@ For unfamiliar codes: query Transaction Status API with the orderId - `body.resu
 
 ---
 
+## `ENOTFOUND` on a previously-working integration
+
+**Symptom.** Node server returns `ENOTFOUND` (or a custom-mapped error like "Cannot resolve Paytm hostname / DNS error") when calling `initiateTransaction`, `/v3/order/status`, etc. User says "but it was working an hour ago" or "the same code works on my colleague's machine".
+
+**Most likely cause.** Process-state staleness in a long-running Node server. The process is alive, but its internal DNS / network state was poisoned by a transient failure (VPN toggle, laptop sleep/wake, Wi-Fi handover, brief Zscaler interception). Once Node + libuv + macOS `mDNSResponder` hold onto a negative resolution result, subsequent requests in the same process keep failing - even after the underlying network has fully recovered.
+
+**This is NOT a code bug.** Before changing any code, prove the failure is in code.
+
+### Diagnostic order (do not skip)
+
+1. **Shell DNS:** `dig +short secure.paytmpayments.com` (or `securestage.paytmpayments.com` for staging). Expect an answer. If empty, it's a network/DNS problem - *not* this case; jump to the corp-proxy section below.
+2. **Shell HTTPS:** `curl -I https://securestage.paytmpayments.com`. Expect `HTTP/2 404` or similar - TCP + TLS + HTTP works. If this fails, also jump to the corp-proxy section.
+3. **Process age:** `ps -o pid,etime,command -p $(lsof -ti:<port>)`. If the Node process is more than a few minutes old AND the user reports the failure started suddenly, this is almost certainly the cause.
+4. **Fresh-process sanity:** `node -e "require('dns').lookup('securestage.paytmpayments.com', console.log)"`. If a fresh Node process resolves fine, it confirms the running server is the problem, not the environment.
+
+### Fix
+
+```bash
+lsof -ti:<port> | xargs kill -9
+npm start
+```
+
+That's it. No code change. Retest immediately.
+
+### Anti-pattern: don't do this
+
+When `ENOTFOUND` appears, the instinct is to **change code**: add proxy-env strippers, write a custom `https.request` with a custom CA bundle, build hostname allowlists, add a `/api/paytm-health` endpoint with helpful error mapping. All of that is reasonable defensive engineering for *real* corp-proxy environments - but it does not fix process-state staleness, and adding it on top of a stale-process bug just hides the actual fix behind extra accidental complexity.
+
+Only escalate to code-level workarounds (the Corp proxy TLS section below) once you have confirmed that a freshly-restarted process **also** fails against the same network.
+
+### Why this happens (one-liner for the curious)
+
+On macOS, the system DNS cache (`mDNSResponder`) can return a stale negative answer for a short window after a network change. A long-running Node process that called `getaddrinfo` during that window can end up with the failure surfaced through its connection pool / keep-alive state in ways that don't naturally clear on a network recovery. A new process gets a clean lookup. Linux can exhibit a similar pattern under `systemd-resolved` with `Cache=yes`.
+
+---
+
 ## Corp proxy TLS interception (`UNABLE_TO_GET_ISSUER_CERT_LOCALLY`)
 
 Symptom: Node `fetch` to `https://secure.paytmpayments.com` (prod) fails with `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`, `SELF_SIGNED_CERT_IN_CHAIN`, or `unable to verify the first certificate`. Staging (`securestage.paytmpayments.com`) often works because many corp proxies exempt non-prod hosts from TLS inspection.
