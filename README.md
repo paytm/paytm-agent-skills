@@ -1,5 +1,5 @@
 # Paytm Agent Skills
-### For Paytm PG Integration
+### Paytm PG Integration
 
 
 **Integrate Paytm Payment Gateway in minutes, just by describing what you want to build.**
