@@ -1,5 +1,6 @@
 # Paytm Agent Skills
-## For PG Integration
+### For Paytm PG Integration
+
 
 **Integrate Paytm Payment Gateway in minutes, just by describing what you want to build.**
 
@@ -12,7 +13,7 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 
 ---
 
-## 1. Supported Products
+## 1. Supported Products for Integration
 
 | Product | Description |
 |---|---|
@@ -24,6 +25,7 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 | **Custom SDK** | Fully branded mobile checkout, your UI on top of the Paytm rails |
 | **Webhooks** | Real-time payment notifications delivered to your server |
 | **Refunds** | Issue full and partial refund and check refund status |
+| **PG Migration** | Migrate to Paytm PG from existing PG |
 
 ---
 
@@ -49,6 +51,9 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 
 **Refunds**
 > *"I run an online clothing store. Sometimes customers return products. Integrate Paytm refunds into my website so that I can make refunds to my customers."*
+
+**PG Migration**
+> *"I have payments set up on my book store website. I want to switch to Paytm. Help me migrate my existing payment integration to Paytm PG."*
 
 ---
 
@@ -90,7 +95,7 @@ After install:
 
 ## 4. What's inside
 
-Skills are **modular**  eight focused skills load only the context relevant to the user's prompt.
+Skills are **modular** , each prompt loads only the relevant skill, keeping the AI focused and the generated code accurate.
 
 ```
 .
@@ -135,7 +140,7 @@ Skills are **modular**  eight focused skills load only the context relevant to t
 
 ```
 
-### How Paytm Integration Skill Works
+## 5. How Paytm Integration Skill Works
 
 1. You describe what you want to build in plain English, for example, "Integrate Paytm JS Checkout on my website." The skill's decision tree maps your prompt to the right Paytm product automatically.
 2. Only the relevant skill loads  asking about JS Checkout loads just the js-checkout skill, not all skills. This keeps the AI focused and makes the generated code more accurate.
@@ -145,7 +150,7 @@ Skills are **modular**  eight focused skills load only the context relevant to t
 
 ---
 
-## 5. Important notes
+## 6. Important notes
 
 To go live with Paytm, you will need a **MID** (your unique Merchant ID) and a **Merchant Key** (your secret key) for both staging and production. Each environment has its own pair, staging keys will not work in production and vice versa.
 
