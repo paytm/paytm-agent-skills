@@ -21,6 +21,17 @@ npx paytm-agent-skills install
 
 Auto-detects every AI tool on your machine (Claude Code, Codex, Cursor etc.) and installs the skill bundle into each tool in a single command. Re-run any time to upgrade.
 
+### Pre Requisites
+
+Node.js v18 or above is required. To check if it is already installed, run this command:
+
+```bash
+node -v
+```
+
+If you don't see a node version, download and install it from [nodejs.org](https://nodejs.org) — choose the **LTS** version. It works on both Mac and Windows.
+
+
 ### Supported AI tools
 
 <img width="790" height="233" alt="AI Tools Supported" src="https://github.com/user-attachments/assets/14aa20ae-a24f-4a8e-9aa3-4bc84595819b" />
