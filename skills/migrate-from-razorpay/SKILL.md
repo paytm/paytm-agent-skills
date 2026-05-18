@@ -190,7 +190,7 @@ Razorpay                                          Paytm
 POST /v1/payments/:id/refund                →     POST /refund/apply
   { amount: 5000, notes: { ... } }                 { body: { txnType: "REFUND", orderId, txnId,
                                                      refId, refundAmount: "50.00" } }
-GET /v1/refunds/:id                         →     POST /refund/status
+GET /v1/refunds/:id                         →     POST /v2/refund/status
 Refund webhook event                        →     Same /paytm/webhook endpoint, txnType: "REFUND"
 ```
 

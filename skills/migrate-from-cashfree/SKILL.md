@@ -170,7 +170,7 @@ Cashfree                                            Paytm
 POST /pg/orders/:order_id/refunds             →     POST /refund/apply
   { refund_amount, refund_id, refund_note }          { body: { txnType: "REFUND", orderId, txnId,
                                                        refId, refundAmount } }
-GET /pg/orders/:order_id/refunds/:refund_id   →     POST /refund/status
+GET /pg/orders/:order_id/refunds/:refund_id   →     POST /v2/refund/status
 Refund webhook                                       Same /paytm/webhook endpoint, txnType: "REFUND"
 ```
 

@@ -177,7 +177,7 @@ POST /orders/:order_id/refunds                →     POST /refund/apply
                                                        body: { txnType: "REFUND", orderId, txnId,
                                                                refId, refundAmount } }
 
-GET /orders/:order_id/refunds/:refund_id      →     POST /refund/status
+GET /orders/:order_id/refunds/:refund_id      →     POST /v2/refund/status
 ```
 
 → Load the `refunds` skill alongside.

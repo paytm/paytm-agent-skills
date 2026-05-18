@@ -174,7 +174,7 @@ POST /merchant/postservice?form=2              →    POST /refund/apply
 
 Response: status, mihpayid, request_id            Response: resultStatus, refundId
 
-Status: command=check_action_status            →    POST /refund/status
+Status: command=check_action_status            →    POST /v2/refund/status
 ```
 
 → Load the `refunds` skill alongside.

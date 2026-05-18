@@ -75,7 +75,7 @@ Paytm retries on **any non-2xx response** (or timeout > 30 s) with the following
 | 7 | ~24 hours |
 | ...stops after ~10 attempts over ~7 days |
 
-After Paytm gives up, the event is lost. **Pair webhook delivery with polling on `/v3/order/status` or `/refund/status`** as a safety net for events you might have missed.
+After Paytm gives up, the event is lost. **Pair webhook delivery with polling on `/v3/order/status` or `/v2/refund/status`** as a safety net for events you might have missed.
 
 Your endpoint should:
 - Return **200** within 30 s for success OR for a duplicate event already processed.

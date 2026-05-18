@@ -260,7 +260,7 @@ SUBSCRIPTION_CANCELLED                  →   txnType: "SUBSCRIPTION_CANCEL", st
 | Body | `{ refund_amount, refund_id, refund_note, refund_speed: "STANDARD" / "INSTANT" }` | `{ body: { txnType: "REFUND", orderId, txnId, refId, refundAmount } }` |
 | Refund id | You provide `refund_id`; Cashfree returns `cf_refund_id` | You provide `refId`; Paytm returns `refundId` |
 | Idempotency | Reuse same `refund_id` (Cashfree dedups per `refund_id`) | Reuse same `refId` (Paytm dedups per `refId`) |
-| Status | `GET /pg/orders/:order_id/refunds/:refund_id` | `POST /refund/status` |
+| Status | `GET /pg/orders/:order_id/refunds/:refund_id` | `POST /v2/refund/status` |
 | Webhook event | `REFUND_STATUS_WEBHOOK` (`type`) | Same `/paytm/webhook` with `txnType: "REFUND"` |
 | Speed control | `refund_speed: "INSTANT"` available on some flows | Not configurable per refund |
 

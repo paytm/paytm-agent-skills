@@ -248,7 +248,7 @@ subscription.cancelled              →   txnType: "SUBSCRIPTION_CANCEL", status
 | Body | `{ amount, notes, speed: "normal"/"optimum" }` | `{ body: { txnType: "REFUND", orderId, txnId, refId, refundAmount } }` |
 | Refund id | Razorpay returns `id: "rfnd_xxx"` | You provide `refId`; Paytm returns `refundId` |
 | Idempotency | Pass `Idempotency-Key` header | Reuse same `refId` (Paytm dedups per `refId`) |
-| Status check | `GET /v1/refunds/:id` | `POST /refund/status` |
+| Status check | `GET /v1/refunds/:id` | `POST /v2/refund/status` |
 | Webhook event | `refund.created`, `refund.processed`, `refund.failed` | Same /paytm/webhook with `txnType: "REFUND"` |
 | Speed control | `speed: "optimum"` for instant refunds | Not configurable per-refund |
 

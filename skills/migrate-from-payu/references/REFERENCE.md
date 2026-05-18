@@ -278,7 +278,7 @@ Paytm:   POST /subscription/cancel
 | Command | `command=cancel_refund_transaction` | (no command field; endpoint implies refund) |
 | Identifier | `var1=<mihpayid>`, `var2=<token>` (your refund id), `var3=<amount>` | `body.txnId` (Paytm-issued), `body.refId` (your id), `body.refundAmount` |
 | Hash field | `sha512(key|command|var1|salt)` | `head.signature` over JSON body |
-| Status check | `command=check_action_status&var1=<request_id>` | `POST /refund/status` |
+| Status check | `command=check_action_status&var1=<request_id>` | `POST /v2/refund/status` |
 | Idempotency | Pass same `var2` for retries (token-scoped) | Reuse same `refId` (Paytm dedups per `refId`) |
 | Speed control | `cancel_refund_transaction` is async; PayU has no speed flag | Not configurable per refund |
 

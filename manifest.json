@@ -123,6 +123,16 @@
       ]
     },
     {
+      "name": "migrate-from-ccavenue",
+      "path": "skills/migrate-from-ccavenue",
+      "entry": "SKILL.md",
+      "description": "Migration playbook from CCAvenue (Avenues India) to Paytm: AES-256-CBC encrypted form-POST -> REST JSON, three credentials -> two, billing/shipping field reduction, Subscription Information (SI) -> NATIVE_SUBSCRIPTION, refund via Non-Seamless API, dual-write rollout.",
+      "triggers": ["ccavenue", "CCAvenue", "cc avenue", "ccavenew", "ccavnue", "ccavanue", "CCAVENUE_MERCHANT_ID", "CCAVENUE_ACCESS_CODE", "CCAVENUE_WORKING_KEY", "secure.ccavenue.com", "test.ccavenue.com", "/transaction/transaction.do", "/transaction/initTrans", "AES-256 ccavenue", "ccavenue working key", "migrate from ccavenue", "switch from ccavenue"],
+      "references": [
+        { "path": "skills/migrate-from-ccavenue/references/REFERENCE.md", "load": "lazy", "summary": "CCAvenue product surface (5 integration methods), AES-256-CBC encrypt/decrypt per language (Node/Python/Java) for the dual-write phase, billing/shipping field reduction, SI mapping + handover, endpoint table covering transaction / status / refund / SI status / SI charge list URLs, 150-day cutover." }
+      ]
+    },
+    {
       "name": "migrate-from-juspay",
       "path": "skills/migrate-from-juspay",
       "entry": "SKILL.md",
@@ -220,6 +230,12 @@
       "title": "Juspay -> Paytm",
       "path": "skills/migrate-from-juspay",
       "summary": "Migration from Juspay (orchestrator). HyperSDK / HyperCheckout / ExpressCheckout -> Paytm direct. Includes smart-routing loss caveat and success-rate parity check."
+    },
+    {
+      "id": "ccavenue",
+      "title": "CCAvenue -> Paytm",
+      "path": "skills/migrate-from-ccavenue",
+      "summary": "Migration from CCAvenue (Avenues India). AES-256-CBC encrypted form-POST -> REST JSON architecture shift, 3 credentials -> 2, billing/shipping field reduction, SI mandate handover, 150-day cutover."
     }
   ],
 

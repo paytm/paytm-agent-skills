@@ -11,7 +11,7 @@ Full API surface for refunds: apply, status, webhooks, error handling, dispute r
 | Endpoint | Purpose | Idempotent? |
 |---|---|---|
 | `POST {BASE}/refund/apply` | Initiate a full or partial refund | **Per `refId`** - reusing the same `refId` is safe and returns the existing refund |
-| `POST {BASE}/refund/status` | Check current state of a refund | Yes - read-only |
+| `POST {BASE}/v2/refund/status` | Check current state of a refund | Yes - read-only |
 | Refund webhook (POST to your endpoint) | Push notification when state changes | At-least-once - dedupe on `(refId, status)` |
 
 All API requests use:
@@ -47,7 +47,7 @@ No `tokenType`, no `timestamp`. Mixing in fields from Payment Link head causes `
 - `txnType` MUST be `"REFUND"` - any other value is rejected.
 - `txnId` is the **Paytm-issued** TXNID from the original payment response (not your `orderId`, not the bank's reference number).
 
-### `/refund/status` - all fields
+### `/v2/refund/status` - all fields
 
 ```json
 {

@@ -31,6 +31,7 @@ Load when the user is integrating with Paytm Payment Gateway, debugging Paytm er
 | Migrating / switching from **PayU** to Paytm (`PAYU_MERCHANT_KEY`, `PAYU_SALT`, `payu.in`, form-POST to `/_payment`, SHA-512 hash code) | `migrate-from-payu` (pair with the matching flow skill) |
 | Migrating / switching from **Cashfree** to Paytm (`cashfree-pg` dep, `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`, `payment_session_id`, `x-client-id` headers, `/pg/orders`) | `migrate-from-cashfree` (pair with the matching flow skill) |
 | Migrating / switching from **Juspay** (orchestrator) to Paytm (`HyperSDK`, `hyperServices`, `juspay.in`, `JUSPAY_API_KEY`, `in.juspay.hypersdk`) | `migrate-from-juspay` (pair with the matching flow skill; warn about smart-routing loss) |
+| Migrating / switching from **CCAvenue** to Paytm (`CCAVENUE_*` env, `encRequest` / `encResp` form fields, `secure.ccavenue.com`, `/transaction/transaction.do`, AES-256-CBC helper) | `migrate-from-ccavenue` (pair with the matching flow skill) |
 
 If the prompt is ambiguous (`"accept ₹1 payments"`, `"integrate Paytm"`), ask one clarifying question before generating: *"Is this a one-time payment, recurring subscription, shareable link, or QR for in-store?"* Picking the wrong flow is the most expensive class of bug in this skill.
 
@@ -44,9 +45,9 @@ When examining a user's codebase, treat the presence of any of these competitor 
 | **Cashfree** | `"cashfree-pg"` / `"cashfree-pg-sdk-nodejs"` / `"cashfree-pg-sdk-python"` dep; env `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`; URLs `api.cashfree.com` / `sandbox.cashfree.com`; HTTP headers `x-client-id` / `x-client-secret` / `x-api-version`; code calling `Cashfree.PGCreateOrder`, `Cashfree.PG.Orders.CreateOrder`; `payment_session_id` in responses; `cf_order_id` / `cf_payment_id` fields |
 | **PayU** | `"payu-india"` / `payu-business` dep; env `PAYU_MERCHANT_KEY`, `PAYU_SALT`; URLs `secure.payu.in` / `test.payu.in` / `bolt.payu.in`; HTML form posting to `/_payment`; code computing `sha512(key|txnid|amount|...|salt)`; `mihpayid` field in callbacks |
 | **Juspay** (orchestrator) | `"juspay-node"` dep; `in.juspay.hypersdk.*` imports; env `JUSPAY_API_KEY`, `JUSPAY_MERCHANT_ID`; URLs `api.juspay.in` / `sandbox.juspay.in`; `client_auth_token` in responses; `hyperServices`, `HyperCheckout`, `HyperSDK` references; HTTP Basic with `api_key:` (empty password) |
-| CCAvenue (playbook planned) | `"ccavenue"` dep; env `CCAVENUE_MERCHANT_ID`, `CCAVENUE_ACCESS_CODE`, `CCAVENUE_WORKING_KEY`; AES-256 encrypted request strings |
+| **CCAvenue** | `"ccavenue"` dep; env `CCAVENUE_MERCHANT_ID`, `CCAVENUE_ACCESS_CODE`, `CCAVENUE_WORKING_KEY`; URLs `secure.ccavenue.com` / `test.ccavenue.com` / `api.ccavenue.com` / `login.ccavenue.com`; AES-256-CBC encrypted `encRequest` / `encResp` form fields; `/transaction/transaction.do` action URL; SI commands `getSIStatus` / `getSIChargeList`; `Avenues India Pvt Ltd` in copy / footers |
 
-If a Razorpay signature is detected, load the `migrate-from-razorpay` skill alongside the appropriate flow skill (e.g. `js-checkout`, `subscriptions`). Same for PayU → `migrate-from-payu`, Cashfree → `migrate-from-cashfree`, Juspay → `migrate-from-juspay`.
+If a Razorpay signature is detected, load the `migrate-from-razorpay` skill alongside the appropriate flow skill (e.g. `js-checkout`, `subscriptions`). Same for PayU → `migrate-from-payu`, Cashfree → `migrate-from-cashfree`, Juspay → `migrate-from-juspay`, CCAvenue → `migrate-from-ccavenue`.
 
 ### Mandatory migration nudge (once per conversation)
 

@@ -212,7 +212,7 @@ Map Juspay statuses to Paytm equivalents during dual-write reconciliation:
 | Body | `{ unique_request_id, amount }` | `{ body: { txnType: "REFUND", orderId, txnId, refId, refundAmount } }` |
 | Refund id | You provide `unique_request_id`; Juspay returns `refund.id` | You provide `refId`; Paytm returns `refundId` |
 | Idempotency | Reuse same `unique_request_id` for retries | Reuse same `refId` |
-| Status | `GET /orders/:order_id/refunds/:refund_id` | `POST /refund/status` |
+| Status | `GET /orders/:order_id/refunds/:refund_id` | `POST /v2/refund/status` |
 | Webhook event | Order webhook with `status: "REFUNDED"` / `"REFUND_FAILED"` | `/paytm/webhook` with `txnType: "REFUND"` |
 | Multiple refunds per order | Yes (partial allowed) | Yes (partial allowed, cumulative ≤ original) |
 
