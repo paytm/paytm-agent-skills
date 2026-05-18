@@ -2,7 +2,7 @@
   "$schema": "./manifest.schema.json",
   "manifest_version": "2.0",
 
-  "name": "paytm",
+  "name": "paytm-agent-skills",
   "version": "0.0.1",
   "description": "Paytm Payment Gateway integration skills bundle - one-time payments, subscriptions, payment links, dynamic QR, webhooks, refunds, and troubleshooting. Loaded modularly per intent.",
   "license": "MIT",
@@ -192,16 +192,16 @@
   ],
 
   "targets": [
-    { "id": "claude-code", "name": "Claude Code",                "status": "supported", "install_dir": "~/.claude/skills/paytm",                "format": "skill-md",   "routing_file": "SKILL.md",      "verify_command": "/skills" },
+    { "id": "claude-code", "name": "Claude Code",                "status": "supported", "install_dir": "~/.claude/skills/paytm-agent-skills",                "format": "skill-md",   "routing_file": "SKILL.md",      "verify_command": "/skills" },
     { "id": "claude-ai",   "name": "Claude.ai (Projects)",       "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "Upload skill files manually as project files." },
-    { "id": "codex",       "name": "Codex (CLI or ChatGPT desktop)", "status": "supported", "install_dir": "~/.codex/skills/paytm",            "format": "skill-md",   "routing_file": "SKILL.md",      "notes": "Both Codex CLI and the ChatGPT desktop app read from ~/.codex/skills/." },
-    { "id": "cursor",      "name": "Cursor",                      "status": "supported", "install_dir": "~/.cursor/skills-cursor/paytm",        "format": "skill-md",   "routing_file": "~/.cursor/rules/paytm.mdc" },
-    { "id": "continue",    "name": "Continue",                    "status": "supported", "install_dir": "~/.continue/rules/paytm",              "format": "skill-md",   "routing_file": "ROUTING.md" },
+    { "id": "codex",       "name": "Codex (CLI or ChatGPT desktop)", "status": "supported", "install_dir": "~/.codex/skills/paytm-agent-skills",            "format": "skill-md",   "routing_file": "SKILL.md",      "notes": "Both Codex CLI and the ChatGPT desktop app read from ~/.codex/skills/." },
+    { "id": "cursor",      "name": "Cursor",                      "status": "supported", "install_dir": "~/.cursor/skills-cursor/paytm-agent-skills",        "format": "skill-md",   "routing_file": "~/.cursor/rules/paytm-agent-skills.mdc" },
+    { "id": "continue",    "name": "Continue",                    "status": "supported", "install_dir": "~/.continue/rules/paytm-agent-skills",              "format": "skill-md",   "routing_file": "ROUTING.md" },
     { "id": "windsurf",    "name": "Windsurf",                    "status": "supported", "install_dir": "~/.codeium/windsurf/memories",         "format": "bundled-md", "routing_file": null },
-    { "id": "gemini-cli",  "name": "Gemini CLI",                  "status": "supported", "install_dir": "~/.gemini/skills/paytm",               "format": "skill-md",   "routing_file": "GEMINI.md" },
+    { "id": "gemini-cli",  "name": "Gemini CLI",                  "status": "supported", "install_dir": "~/.gemini/skills/paytm-agent-skills",               "format": "skill-md",   "routing_file": "GEMINI.md" },
     { "id": "antigravity", "name": "Antigravity",                 "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "No stable filesystem skills convention yet." },
     { "id": "aider",       "name": "Aider",                       "status": "supported", "install_dir": "~/.config/aider/conventions",          "format": "bundled-md", "routing_file": null },
-    { "id": "opencode",    "name": "OpenCode",                    "status": "supported", "install_dir": "~/.opencode/skills/paytm",             "format": "skill-md",   "routing_file": "AGENTS.md" },
+    { "id": "opencode",    "name": "OpenCode",                    "status": "supported", "install_dir": "~/.opencode/skills/paytm-agent-skills",             "format": "skill-md",   "routing_file": "AGENTS.md" },
     { "id": "vscode-copilot", "name": "VS Code Copilot",          "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "Copy routing/PREAMBLE.md into .github/copilot-instructions.md at each project root. Copilot has no global skills folder." },
     { "id": "github-copilot-cli", "name": "GitHub Copilot CLI",   "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "Copilot CLI has no skills convention - use the bundle as reference and paste relevant content into 'gh copilot' prompts." }
   ],

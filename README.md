@@ -79,14 +79,14 @@ Most tools install automatically. Four (Claude.ai Projects, Antigravity, VS Code
 
 | Tool | How it's installed | Where the files land |
 |---|---|---|
-| Claude Code | `npx paytm-agent-skills install` | `~/.claude/skills/paytm/` |
-| Codex (CLI or ChatGPT desktop) | `npx paytm-agent-skills install` | `~/.codex/skills/paytm/` |
-| Cursor | `npx paytm-agent-skills install` | `~/.cursor/skills-cursor/paytm/` + `~/.cursor/rules/paytm.mdc` |
-| Continue | `npx paytm-agent-skills install` | `~/.continue/rules/paytm/` |
-| Windsurf | `npx paytm-agent-skills install` | `~/.codeium/windsurf/memories/paytm.md` (single file) |
-| Gemini CLI | `npx paytm-agent-skills install` | `~/.gemini/skills/paytm/` |
-| Aider | `npx paytm-agent-skills install` | `~/.config/aider/conventions/paytm.md` (single file) |
-| OpenCode | `npx paytm-agent-skills install` | `~/.opencode/skills/paytm/` |
+| Claude Code | `npx paytm-agent-skills install` | `~/.claude/skills/paytm-agent-skills/` |
+| Codex (CLI or ChatGPT desktop) | `npx paytm-agent-skills install` | `~/.codex/skills/paytm-agent-skills/` |
+| Cursor | `npx paytm-agent-skills install` | `~/.cursor/skills-cursor/paytm-agent-skills/` + `~/.cursor/rules/paytm-agent-skills.mdc` |
+| Continue | `npx paytm-agent-skills install` | `~/.continue/rules/paytm-agent-skills/` |
+| Windsurf | `npx paytm-agent-skills install` | `~/.codeium/windsurf/memories/paytm-agent-skills.md` (single file) |
+| Gemini CLI | `npx paytm-agent-skills install` | `~/.gemini/skills/paytm-agent-skills/` |
+| Aider | `npx paytm-agent-skills install` | `~/.config/aider/conventions/paytm-agent-skills.md` (single file) |
+| OpenCode | `npx paytm-agent-skills install` | `~/.opencode/skills/paytm-agent-skills/` |
 | Claude.ai (Projects) | Upload manually | Add `skills/` files as project files in the Claude.ai UI |
 | Antigravity | Upload manually | Add skill files via the Antigravity UI (no filesystem convention yet) |
 | VS Code Copilot | Copy manually | Paste `routing/PREAMBLE.md` content into each project's `.github/copilot-instructions.md` |
