@@ -23,23 +23,7 @@ Auto-detects every AI tool on your machine (Claude Code, Codex, Cursor etc.) and
 
 ### Supported AI tools
 
-Most tools install automatically. Four (Claude.ai Projects, Antigravity, VS Code Copilot, GitHub Copilot CLI) don't expose a filesystem skills folder, so you copy the skill files through the tool's own UI / config the installer skips them with a clear message.
 
-| Tool | How it's installed | Where the files land |
-|---|---|---|
-| Claude Code | `npx paytm-skills install` | `~/.claude/skills/paytm/` |
-| Codex | `npx paytm-skills install` | `~/.codex/skills/paytm/` |
-| Cursor | `npx paytm-skills install` | `~/.cursor/skills-cursor/paytm/` + `~/.cursor/rules/paytm.mdc` |
-| Continue | `npx paytm-skills install` | `~/.continue/rules/paytm/` |
-| Windsurf | `npx paytm-skills install` | `~/.codeium/windsurf/memories/paytm.md` (single file) |
-| Gemini CLI | `npx paytm-skills install` | `~/.gemini/skills/paytm/` |
-| Aider | `npx paytm-skills install` | `~/.config/aider/conventions/paytm.md` (single file) |
-| OpenCode | `npx paytm-skills install` | `~/.opencode/skills/paytm/` |
-
-After install:
-- **Claude Code:** restart, run `/skills` to verify.
-- **Cursor / Continue / Windsurf:** restart the IDE.
-- **Codex / Gemini CLI:** new sessions pick up the skill automatically.
 
 ---
 
@@ -55,7 +39,6 @@ After install:
 | **Custom SDK** | Fully branded mobile checkout, your UI on top of the Paytm rails |
 | **Webhooks** | Real-time payment notifications delivered to your server |
 | **Refunds** | Issue full and partial refund and check refund status |
-| **PG Migration** | Migrate to Paytm PG from existing PG |
 
 ---
 
@@ -82,13 +65,19 @@ After install:
 **Refunds**
 > *"I run an online clothing store. Sometimes customers return products. Integrate Paytm refunds into my website so that I can make refunds to my customers."*
 
-**PG Migration**
-> *"I have payments set up on my book store website. I want to switch to Paytm. Help me migrate my existing payment integration to Paytm PG."*
+---
+
+## 4. How Paytm Integration Skill Works
+
+1. Describe what you want to build in plain English. The skill maps your prompt to the right Paytm product skill automatically.
+2. Only the relevant skill loads, keeping the AI focused and the generated code accurate.
+3. The skill injects Paytm-specific knowledge API endpoints, checksum logic, token flows, and common errors.
+4. Code is generated for your tech stack Node.js, Python, or Java using verified reference implementations.
+5. Every integration ends with a checklist staging credentials, webhook setup, and production go-live steps.
 
 ---
 
-
-## 4. What's inside
+## 5. What's inside
 
 Skills are **modular**, each prompt loads only the relevant skill, keeping the AI tool focused and the generated code accurate.
 
@@ -135,13 +124,25 @@ Skills are **modular**, each prompt loads only the relevant skill, keeping the A
 
 ```
 
-## 5. How Paytm Integration Skill Works
+### Where the Paytm Agent Skill is installed 
 
-1. You describe what you want to build in plain English, for example, "Integrate Paytm JS Checkout on my website." The skill's decision tree maps your prompt to the right Paytm product automatically.
-2. Only the relevant skill loads asking about JS Checkout loads just the js-checkout skill, not all skills. This keeps the AI focused and makes the generated code more accurate.
-3. The skill injects Paytm-specific knowledge into the AI correct API endpoints, checksum logic, token flows, and common errors so the code it generates works on the first try.
-4. Code is generated for your specific tech stack Node.js, Python, Java using verified reference implementations as the base.
-5. Every integration ends with a checklist staging test credentials, webhook setup, and production go live steps.
+| Tool | How it's installed | Where the files land |
+|---|---|---|
+| Claude Code | `npx paytm-agent-skills install` | `~/.claude/skills/paytm-agent-skills/` |
+| Codex | `npx paytm-agent-skills install` | `~/.codex/skills/paytm-agent-skills/` |
+| Cursor | `npx paytm-agent-skills install` | `~/.cursor/skills-cursor/paytm-agent-skills/` + `~/.cursor/rules/paytm-agent-skills.mdc` |
+| Continue | `npx paytm-agent-skills install` | `~/.continue/rules/paytm-agent-skills/` |
+| Windsurf | `npx paytm-agent-skills install` | `~/.codeium/windsurf/memories/paytm-agent-skills.md` (single file) |
+| Gemini CLI | `npx paytm-agent-skills install` | `~/.gemini/skills/paytm-agent-skills/` |
+| Aider | `npx paytm-agent-skills install` | `~/.config/aider/conventions/paytm-agent-skills.md` (single file) |
+| OpenCode | `npx paytm-agent-skills install` | `~/.opencode/skills/paytm-agent-skills/` |
+
+Most tools install automatically. Four (Claude.ai Projects, Antigravity, VS Code Copilot, GitHub Copilot CLI) don't expose a filesystem skills folder, so you copy the skill files through the tool's own UI / config the installer skips them with a clear message.
+
+After install:
+- **Claude Code:** restart, run `/skills` to verify.
+- **Cursor / Continue / Windsurf:** restart the IDE.
+- **Codex / Gemini CLI:** new sessions pick up the skill automatically.
 
 ---
 
