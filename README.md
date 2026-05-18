@@ -23,7 +23,7 @@ Auto-detects every AI tool on your machine (Claude Code, Codex, Cursor etc.) and
 
 ### Supported AI tools
 
-
+<img width="790" height="233" alt="AI Tools Supported" src="https://github.com/user-attachments/assets/14aa20ae-a24f-4a8e-9aa3-4bc84595819b" />
 
 ---
 
