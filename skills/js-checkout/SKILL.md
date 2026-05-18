@@ -337,6 +337,51 @@ handler: {
 
 `transactionStatus` is the user-facing status. `notifyMerchant` covers lifecycle events (popup closed, session expired) where `transactionStatus` doesn't fire.
 
+### ❗ Handlers must be plain functions — never `async`
+
+Some CheckoutJS builds throw `"notifyMerchant should be of function type"` when handlers are declared with the `async` keyword. The check is stricter than `typeof === 'function'`: `async function` stringifies to `'async function ...'` and its `constructor.name` is `'AsyncFunction'`, so it fails type validation.
+
+Even when the type check passes, CheckoutJS does NOT `await` the handler's returned Promise. Any awaited work (fetch / DB write / state update) runs **after** CheckoutJS has already disposed the modal context — the visible result is a stuck UI where success appears in console but nothing renders.
+
+**Bad — do not generate:**
+```javascript
+handler: {
+  notifyMerchant: async function (eventName, data) {   // ❌ AsyncFunction
+    await logEvent(eventName, data);
+    setStatus("...");
+  },
+  transactionStatus: async function (data) {           // ❌ AsyncFunction
+    const ok = await reconcile(data.ORDERID);
+    setStatus(ok ? "Payment successful." : "Reconcile failed.");
+    window.Paytm.CheckoutJS.close();
+  },
+}
+```
+
+**Good — plain function, dispatch async work via `.then` / `.catch`:**
+```javascript
+handler: {
+  notifyMerchant: function (eventName, data) {         // ✅ plain Function
+    logEvent(eventName, data).catch(console.error);    // fire-and-forget the async helper
+    if (eventName === "APP_CLOSED")     setStatus("Payment cancelled.");
+    if (eventName === "SESSION_EXPIRED") setStatus("Session expired. Retry.");
+  },
+  transactionStatus: function (data) {                 // ✅ plain Function
+    // Render the UX state immediately - synchronously - so it survives
+    // CheckoutJS tearing down the modal.
+    if (data.STATUS === "TXN_SUCCESS") setStatus("Payment successful.");
+    else if (data.STATUS === "PENDING") setStatus("Payment pending - we'll confirm shortly.");
+    else                                setStatus("Payment failed: " + data.RESPMSG);
+    window.Paytm.CheckoutJS.close();
+
+    // Defer server reconciliation to a separate, non-awaited Promise chain.
+    reconcile(data.ORDERID).catch(console.error);
+  },
+}
+```
+
+Same rule applies to any other CheckoutJS callback (e.g. `onError` if you wire it).
+
 ### Don't render debug dumps on the user-facing screen
 
 Never add an on-screen logger / status panel / debug `<pre>` block / `JSON.stringify(data)` blob in production UI. Use `console.log` / `console.warn` for developer visibility. The user-facing UI shows only clean messages:
@@ -414,6 +459,7 @@ SDK docs: <https://www.paytmpayments.com/docs/server-sdk/>
 5. JSON bytes used to sign equal bytes sent.
 6. Callback handler verifies CHECKSUMHASH AND reconfirms via Transaction Status API.
 7. `transactionStatus` AND `notifyMerchant` both wired.
+8. CheckoutJS handlers are **plain `function` callbacks, not `async function`** — and any async work inside them is dispatched via `.then` / `.catch`, never `await`ed inline.
 8. Callback URL reachable from user's browser AND matches backend listener.
 9. Frontend `fetch` calls are browser-only — guard SSR contexts.
 10. Production code has no on-screen debug dump.

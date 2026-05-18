@@ -70,6 +70,7 @@ Payment failed?
 | `5007` | Payment Link: invalid char in `linkName` | Strip spaces — `linkName` is alphanumerics only |
 | `GW00460` | Custom SDK / WebView: "Invalid tranportal id" — stale `txnToken` reused on retry | Treat every `txnToken` as single-use. On retry, fetch a fresh `txnToken` AND a fresh `orderId` (timestamp-suffix the orderId). See `custom-sdk` skill § Bug A. |
 | `ENOTFOUND` / "Cannot resolve hostname" on a previously-working integration | Stale process state after VPN toggle / sleep-wake / Wi-Fi handover. **NOT a code bug.** | `lsof -ti:<port> \| xargs kill -9 && npm start`. Verify with `dig`, `curl`, fresh `node -e "dns.lookup(...)"` first. See `references/REFERENCE.md` § ENOTFOUND. |
+| `notifyMerchant should be of function type` (or `transactionStatus should be of function type`); modal opens then UI sits stuck | Handler declared as `async function (...) {}` — CheckoutJS rejects AsyncFunction. Even when the type check passes, CheckoutJS does NOT `await` the handler, so awaited work runs after the modal disposes. | Use plain `function (...) {}`. Dispatch any async work via `.then` / `.catch`, never `await` inline. See `js-checkout` skill § Handlers must be plain functions. |
 
 For unfamiliar codes, query `/v3/order/status` with the orderId — `body.resultInfo.resultMsg` is canonical.
 
