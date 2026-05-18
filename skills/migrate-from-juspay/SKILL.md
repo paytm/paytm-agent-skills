@@ -220,6 +220,38 @@ When the merchant still wants to migrate, full mapping in `references/REFERENCE.
 
 ---
 
+## ✅ Final step — codebase cleanup scan (mandatory, do not skip)
+
+After all functional code is migrated, run this scan to catch non-functional Juspay references:
+
+```bash
+grep -rn \
+  --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" --include="*.kt" --include="*.swift" \
+  --include="*.html" --include="*.json" --include="*.md" \
+  --include="*.env*" --include="*.yaml" --include="*.yml" \
+  "juspay\|Juspay\|JUSPAY\|HyperSDK\|hyperServices\|HyperCheckout\|client_auth_token\|in.juspay" \
+  . 2>/dev/null
+```
+
+Common survivors:
+
+| File / Surface | What to replace |
+|---|---|
+| HTML / JSX footer & copy | "Powered by Juspay" → "Secured by Paytm" |
+| `package.json` `description` field | Remove "Juspay" mention |
+| `.env.example` placeholders | `JUSPAY_API_KEY=...`, `JUSPAY_MERCHANT_ID=...` → Paytm equivalents |
+| Mobile bundle | Remove `HyperSDK` / `HyperCheckout` dependencies from `build.gradle` / `Podfile` (large app-size win) |
+| Code comments | `// Juspay smart routing` / `// HyperSDK callback` |
+| UI labels / loading text | "Juspay Checkout" → product name |
+| DB schema | `client_auth_token`, `juspay_order_id` columns repurposed or dropped |
+| Translation files (i18n) | `payment.gateway.juspay` keys |
+| Loader script tags in HTML | `<script src=".../hyperloader.js">` removed |
+| CI / deploy configs | Lingering env-var names |
+
+If any survive after the grep, ship a follow-up commit before declaring the migration complete.
+
+---
+
 ## When to load related skills
 
 - One-time payment (web) → also load `js-checkout`

@@ -49,16 +49,16 @@ const PAYTM_PG_DOMAIN =
     : "https://securestage.paytmpayments.com");
 ```
 
-### `websiteName` per environment — the second-most-common 501 cause
+### `websiteName` per environment
 
-`websiteName` is per-MID, set on the Paytm dashboard. **It is NOT the same across environments.** Reusing the staging value on production is one of the top two causes of `resultCode: 501 System Error` in this skill.
+`websiteName` is per-MID, set on the Paytm dashboard. **It is NOT the same across environments.** Reusing the staging value on production is one of the top causes of `resultCode: 501 System Error` in this skill.
 
-| Environment | Common default | Other possibilities |
+| Environment | Default value to generate | Override if dashboard says otherwise |
 |---|---|---|
-| Staging | `WEBSTAGING` | (almost always this — don't change unless dashboard says otherwise) |
-| Production | `DEFAULT` | `retail`, `WEB`, or a custom value provisioned per merchant |
+| **Staging** | **`WEBSTAGING`** | Almost never overridden |
+| **Production** | **`DEFAULT`** | Some merchants have custom values: `retail`, `WEB`, or a provisioned string |
 
-**Rule when switching staging → production:** `WEBSTAGING` is almost never valid in production. If you don't know the production value, **stop and ask the user to read it from Developer Settings → API Keys → Production API Details on https://dashboard.paytmpayments.com/next/apikeys**. Do not guess.
+**Rule:** generate `.env` / `.env.example` with `PAYTM_WEBSITE_NAME="DEFAULT"` for production by default — do NOT pause to ask the user. If the first production call returns `resultCode: 501`, that's the signal to check Developer Settings → API Keys → Production API Details on https://dashboard.paytmpayments.com/next/apikeys for a custom value.
 
 Wrong `websiteName` produces one of two failure modes:
 - HTTP 200 with `resultStatus: "F"` + `resultCode: "501"` and `resultMsg: "System Error"` — the *most common* case.

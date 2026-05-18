@@ -68,6 +68,7 @@ Payment failed?
 | `911` / `BANK_PENDING` | Bank confirmation pending | Poll, do not refund |
 | `4001` | Subscription: grace > frequency | Drop `subscriptionGraceDays` or set < cycle length |
 | `5007` | Payment Link: invalid char in `linkName` | Strip spaces — `linkName` is alphanumerics only |
+| `GW00460` | Custom SDK / WebView: "Invalid tranportal id" — stale `txnToken` reused on retry | Treat every `txnToken` as single-use. On retry, fetch a fresh `txnToken` AND a fresh `orderId` (timestamp-suffix the orderId). See `custom-sdk` skill § Bug A. |
 
 For unfamiliar codes, query `/v3/order/status` with the orderId — `body.resultInfo.resultMsg` is canonical.
 

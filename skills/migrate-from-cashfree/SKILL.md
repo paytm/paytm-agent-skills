@@ -211,6 +211,37 @@ Event types:                                        body.txnType distinguishes:
 
 ---
 
+## ✅ Final step — codebase cleanup scan (mandatory, do not skip)
+
+After all functional code is migrated, run this scan to catch non-functional Cashfree references that survive every "complete" migration:
+
+```bash
+grep -rn \
+  --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" \
+  --include="*.html" --include="*.json" --include="*.md" \
+  --include="*.env*" --include="*.yaml" --include="*.yml" \
+  "cashfree\|Cashfree\|CASHFREE\|cf_order_id\|cf_payment_id\|payment_session_id\|x-client-id" \
+  . 2>/dev/null
+```
+
+Common survivors:
+
+| File / Surface | What to replace |
+|---|---|
+| HTML / JSX footer & copy | "Secured by Cashfree Payments" → "Secured by Paytm" |
+| `package.json` `description` field | Remove "Cashfree" mention |
+| `.env.example` placeholders | `CASHFREE_APP_ID=...` → `PAYTM_MID=...` |
+| `README.md` / docs | Setup steps, screenshots, badges |
+| Code comments | `// Cashfree session id` / `// x-client-secret header` |
+| UI labels / modal titles | "Cashfree Checkout" → product name |
+| Test fixtures | Hardcoded sandbox app IDs / order tokens |
+| Translation files (i18n) | `payment.gateway.cashfree` keys |
+| CI / deploy configs | Lingering env-var names |
+
+If any survive after the grep, ship a follow-up commit before declaring the migration complete.
+
+---
+
 ## When to load related skills
 
 This skill is the **migration translator**. Always pair with the matching flow skill:

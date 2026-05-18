@@ -255,6 +255,38 @@ Full reconciliation script + cutover checklist in `references/REFERENCE.md`.
 
 ---
 
+## ✅ Final step — codebase cleanup scan (mandatory, do not skip)
+
+After all functional code is migrated, run this scan to catch non-functional PayU references:
+
+```bash
+grep -rn \
+  --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" \
+  --include="*.html" --include="*.json" --include="*.md" \
+  --include="*.env*" --include="*.yaml" --include="*.yml" \
+  "payu\|PayU\|PAYU\|mihpayid\|bolt.payu\|_payment\b" \
+  . 2>/dev/null
+```
+
+Common survivors:
+
+| File / Surface | What to replace |
+|---|---|
+| HTML / JSX footer & copy | "Powered by PayU" → "Secured by Paytm" |
+| `package.json` `description` field | Remove "PayU" mention |
+| `.env.example` placeholders | `PAYU_MERCHANT_KEY=...`, `PAYU_SALT=...` → `PAYTM_MID=...`, `PAYTM_MERCHANT_KEY=...` |
+| `README.md` / docs | Setup steps, screenshots, badges |
+| Code comments | `// reverse hash for PayU surl` / `// SHA-512 pipe` |
+| UI labels / modal titles | "PayU Checkout" → product name |
+| Form action URLs in HTML | `action="https://secure.payu.in/_payment"` removed |
+| `mihpayid` field references in DB schema / models | Replace with Paytm `txnId` mapping |
+| Translation files (i18n) | `payment.gateway.payu` keys |
+| CI / deploy configs | Lingering env-var names |
+
+If any survive after the grep, ship a follow-up commit before declaring the migration complete.
+
+---
+
 ## When to load related skills
 
 This skill is the **migration translator**. For Paytm-side details, always pair with the relevant flow skill:

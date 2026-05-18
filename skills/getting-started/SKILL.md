@@ -84,6 +84,7 @@ Store both in environment variables (`PAYTM_MID`, `PAYTM_MERCHANT_KEY`) — neve
 - **Generic placeholders** — `YOUR_MID`, not `YOUR_STAGING_MID_HERE`. Environment lives in `PAYTM_ENVIRONMENT`.
 - **All mandatory keys at the top, comments / optional overrides in a later section.**
 - **`.env` is in `.gitignore`. `.env.example` is committed.** Always.
+- **dotenv does NOT override shell-level environment variables.** If `NODE_ENV` (or any other variable) is already exported in the shell, `require('dotenv').config()` silently ignores the `.env` value for that key. Common symptom: env-detection code like `process.env.NODE_ENV !== "production"` evaluates wrong because the shell has `NODE_ENV=production` set globally. Fix: detect environment from a Paytm-specific variable instead (e.g. `process.env.PAYTM_ENVIRONMENT`) or use `dotenv.config({ override: true })` if you must override shell state — usually a sign you should fix the shell, not the code.
 
 Canonical `.env.example`:
 

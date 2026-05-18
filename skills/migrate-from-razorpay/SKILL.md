@@ -263,6 +263,37 @@ Each shows: dual-write order create, signature verification on both sides, recon
 
 ---
 
+## ✅ Final step — codebase cleanup scan (mandatory, do not skip)
+
+After all functional code is migrated, run this scan to catch non-functional Razorpay references that survive every "complete" migration:
+
+```bash
+grep -rn \
+  --include="*.js" --include="*.ts" --include="*.jsx" --include="*.tsx" \
+  --include="*.html" --include="*.json" --include="*.md" \
+  --include="*.env*" --include="*.yaml" --include="*.yml" \
+  "razorpay\|Razorpay\|RAZORPAY\|rzp_" \
+  . 2>/dev/null
+```
+
+Common survivors to check by hand:
+
+| File / Surface | What to replace |
+|---|---|
+| HTML / JSX footer & copy | "Secured by Razorpay" → "Secured by Paytm" |
+| `package.json` `description` field | Remove "Razorpay" mention |
+| `.env.example` placeholders | `RAZORPAY_KEY_ID=...` → `PAYTM_MID=...` |
+| `README.md` / docs | Setup steps, screenshots, badges |
+| Code comments | `// Razorpay-style hash` / `// from Razorpay docs` |
+| UI labels / modal titles | "Razorpay Checkout" → product name |
+| Test fixtures | Hardcoded `rzp_test_*` keys, fake order ids |
+| Translation files (i18n) | `payment.gateway.razorpay` keys |
+| CI / deploy configs | Lingering env-var names |
+
+If any of the above remain after the grep cleanup, the migration is **not** done — ship a follow-up commit before declaring it complete.
+
+---
+
 ## When to load related skills
 
 This skill is the **migration translator**. For Paytm-side details, always pair with the relevant skill:

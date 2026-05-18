@@ -165,6 +165,101 @@ Always. Same as JS Checkout / All-in-One. SDK responses are the UX truth, your b
 
 ---
 
+## ❗ Three field-discovered bugs you MUST handle
+
+These have all hit production. The skill is incomplete if your generated code doesn't handle all three.
+
+### Bug A — `GW00460 "Invalid tranportal id"` on retry (stale `txnToken`)
+
+**Symptom:** user enters card → taps Pay → Paytm shows `GW00460 Invalid tranportal id`. Often on the second attempt of the same session.
+
+**Cause:** Paytm invalidates a `txnToken` **immediately** after any payment attempt completes (success, failure, OR user cancellation). Reusing the same token on a retry — even within seconds, well inside the 15-min TTL — fails with `GW00460`. This is different from the TTL expiry.
+
+**Fix:** treat every `txnToken` as **single-use**. When the user returns to your checkout screen from the SDK / WebView, discard the token AND generate a **fresh `orderId`** (otherwise `334 Duplicate orderId` from the next initiateTransaction). Pattern:
+
+```kotlin
+// Android — orderId refresh on every attempt
+fun fetchToken() {
+  orderId = "${baseOrderId}_${System.currentTimeMillis()}"  // fresh orderId
+  // ... call initiateTransaction with this orderId, store returned txnToken
+}
+
+override fun onResume() {
+  super.onResume()
+  if (returningFromPaymentScreen) {
+    returningFromPaymentScreen = false
+    txnToken = ""        // discard stale token
+    fetchToken()         // fetch fresh token + fresh orderId
+  }
+}
+```
+
+### Bug B — WebView callback never fires after bank 3DS (the silent killer)
+
+**Symptom:** payment completes successfully on the bank's 3DS page. WebView shows Paytm's "Redirect back to app" message. Your `shouldOverrideUrlLoading` is **never called**. User is stuck, no result delivered.
+
+**Cause:** Android `WebViewClient.shouldOverrideUrlLoading` is only fired for navigations initiated by the renderer (JS, link clicks). It is **NOT fired for server-side HTTP 302 redirects following a cross-origin form POST** — which is exactly the chain bank 3DS uses (browser POSTs to bank → bank POSTs to Paytm → Paytm 302s to your callback URL).
+
+**Fix:** wire the callback check into **three hooks** with a `callbackHandled` guard (since all three can fire for the same URL):
+
+```kotlin
+private var callbackHandled = false
+
+private fun checkForCallback(url: String): Boolean {
+  if (callbackHandled) return false
+  if (!CALLBACK_PREFIXES.any { url.startsWith(it) }) return false
+
+  callbackHandled = true
+  val uri    = Uri.parse(url)
+  val status = uri.getQueryParameter("STATUS") ?: "UNKNOWN"
+  val txnId  = uri.getQueryParameter("TXNID")  ?: ""
+  goToResultScreen(orderId, status, txnId)
+  return true
+}
+
+// Hook 1: catches JS / link-click navigations
+override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+  return checkForCallback(request.url.toString())
+}
+
+// Hook 2: ⭐ THE CRITICAL ONE — catches 302 redirects after cross-origin POST
+override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+  checkForCallback(url)
+}
+
+// Hook 3: last-resort safety net
+override fun onPageFinished(view: WebView, url: String) {
+  checkForCallback(url)
+}
+```
+
+Without the `callbackHandled` flag the result screen launches up to 3 times.
+
+### Bug C — Back button takes user back into a completed payment flow
+
+**Symptom:** after the payment result screen, pressing Back navigates back to the WebView / checkout, letting the user re-enter a completed (or refunded) order.
+
+**Fix:** use `finishAffinity()` (Android) when launching the result screen to clear the entire payment flow from the back stack:
+
+```kotlin
+private fun goToResultScreen(orderId: String, status: String, txnId: String) {
+  lifecycleScope.launch {
+    val confirmed = BackendApi.fetchOrderStatus(orderId).getOrNull()?.txnStatus ?: status
+    startActivity(Intent(this@WebViewActivity, PaymentResultActivity::class.java).apply {
+      putExtra(RESULT_ORDER_ID,   orderId)
+      putExtra(RESULT_TXN_STATUS, confirmed)
+      putExtra(RESULT_TXN_ID,     txnId)
+      flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+    })
+    finishAffinity()    // clears WebViewActivity + checkout from stack
+  }
+}
+```
+
+iOS equivalent: pop to root of the navigation stack with the result screen as the new root, or use `setViewControllers([resultVC], animated: true)`.
+
+---
+
 ## Critical gotchas
 
 1. **PCI scope.** Your app touches raw card data. You're responsible for PCI DSS SAQ A-EP / SAQ D depending on flow. **This is the single biggest reason to use All-in-One SDK instead** - if PCI compliance is a non-starter, don't go custom for cards. UPI / Net Banking don't have this issue.

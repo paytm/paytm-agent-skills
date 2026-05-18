@@ -25,7 +25,7 @@ import { loadManifest } from "../lib/manifest.mjs";
 import { installTarget, uninstallTarget } from "../lib/install.mjs";
 import { defaultTargets, detectInstalledTools } from "../lib/detect.mjs";
 import { resolveInstallDir } from "../lib/paths.mjs";
-import { printBanner, runInteractiveInstall, isInteractive } from "../lib/ui.mjs";
+import { printBanner, runInteractiveInstall, isInteractive, makeStepReporter, printUpgradeNoticeIfAny } from "../lib/ui.mjs";
 
 // Flags that can be repeated (collected into arrays).
 const MULTI_FLAGS = new Set(["skill"]);
@@ -36,11 +36,19 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a.startsWith("--")) {
-      const [k, vEq] = a.slice(2).split("=");
+      let k = a.slice(2);
+      const [rawK, vEq] = k.split("=");
+      k = rawK;
       let v;
       if (vEq !== undefined) v = vEq;
       else if (argv[i + 1] && !argv[i + 1].startsWith("--")) v = argv[++i];
       else v = true;
+
+      // --no-X normalizes to X=false (used by --no-with-backends)
+      if (k.startsWith("no-")) {
+        args.flags[k.slice(3)] = false;
+        continue;
+      }
 
       if (MULTI_FLAGS.has(k)) {
         if (!Array.isArray(args.flags[k])) args.flags[k] = [];
@@ -86,7 +94,8 @@ Options:
   --all-targets            Apply to every supported target.
   --skill <name>           Install only the named skill (e.g. subscriptions). Repeat to pick several.
                            Default: install every skill.
-  --with-backends          Also copy reference backend implementations.
+  --no-with-backends       Skip reference backend implementations (Node, Python, Java).
+                           Backends are included by default.
   --force                  Wipe target dir before install.
   --dry-run                Print actions without writing.
   --version                Print version and exit.
@@ -144,51 +153,67 @@ function filterManifestSkills(manifest, requestedNames) {
   return { ...manifest, skills: requestedNames.map((n) => known.get(n)) };
 }
 
-function cmdInstall(manifest, flags) {
-  const targets = pickTargets(manifest, flags, { command: "install" });
+async function cmdInstall(manifest, flags) {
   const dryRun = !!flags["dry-run"];
+  // #6: backends bundled by default; use --no-with-backends to opt out.
+  const withBackends = flags["with-backends"] === false ? false : true;
   const force = !!flags.force;
-  const withBackends = !!flags["with-backends"];
 
   // Skill filter (--skill X --skill Y) returns a manifest view with only those skills.
   const requestedSkills = Array.isArray(flags.skill) ? flags.skill : (flags.skill ? [flags.skill] : []);
   const effectiveManifest = filterManifestSkills(manifest, requestedSkills);
 
-  console.log(c.bold(`paytm-skills v${manifest.version} - installing bundle: ${manifest.name}`));
+  const targets = pickTargets(manifest, flags, { command: "install" });
+
+  // Branded banner replaces the plain version line on every install run.
+  printBanner(manifest.version, "Paytm Skill installer");
   if (requestedSkills.length) {
-    console.log(c.dim(`(skills filter: ${requestedSkills.join(", ")})`));
+    console.log(c.dim(`  skills filter: ${requestedSkills.join(", ")}`));
   }
-  if (dryRun) console.log(c.dim("(dry-run mode - nothing will be written)"));
+  const langs = [...new Set((effectiveManifest.backends || []).map((b) => b.language))].join(", ");
+  if (withBackends && langs) {
+    console.log(c.dim(`  reference backends: ${langs}`));
+  }
+  if (dryRun) console.log(c.dim("  (dry-run - nothing written)"));
   console.log("");
 
+  // #1: openclaw-style step progress
+  const step = makeStepReporter(targets.length);
   let okCount = 0, skipCount = 0;
+
   for (const t of targets) {
-    process.stdout.write(`  ${t.name} (${t.id})  ... `);
+    step.start(`${t.name}`);
     try {
       const res = installTarget(effectiveManifest, t, { force, dryRun, withBackends });
       if (res.installed) {
-        console.log(c.green(`ok`) + c.dim(`  -> ${res.dir} (${res.files} files)`));
+        step.done(`${res.files} files -> ${res.dir}`);
         okCount++;
       } else {
-        console.log(c.yellow(`skipped`) + c.dim(`  ${res.skipped}`));
+        step.skip(res.skipped);
         skipCount++;
       }
     } catch (e) {
-      console.log(c.red(`failed`) + `  ${e.message}`);
+      step.fail(e.message);
       process.exitCode = 2;
     }
   }
 
   console.log("");
-  console.log(`${c.green(okCount + " installed")}, ${c.yellow(skipCount + " skipped")}`);
+  console.log(`  ${c.green(okCount + " installed")}, ${c.yellow(skipCount + " skipped")}`);
 
   if (okCount > 0 && !dryRun) {
     const verifiable = targets.filter((t) => t.verify_command);
     if (verifiable.length) {
       console.log("");
-      console.log(c.dim("Verify with:"));
-      for (const t of verifiable) console.log(c.dim(`  ${t.name}: ${t.verify_command}`));
+      console.log(c.dim("  Verify with:"));
+      for (const t of verifiable) console.log(c.dim(`    ${t.name}: ${t.verify_command}`));
     }
+  }
+
+  // #4: check GitHub for a newer bundle version (silent on network failure).
+  if (!dryRun) {
+    console.log("");
+    await printUpgradeNoticeIfAny(manifest.version);
   }
 }
 
@@ -216,8 +241,8 @@ function padVisible(s, width) {
 }
 
 function cmdListTargets(manifest) {
+  printBanner(manifest.version, "Paytm Skill · list targets");
   const detected = new Set(detectInstalledTools());
-  console.log(c.bold(`Targets declared in manifest (skill: ${manifest.name}@${manifest.version}):`));
   console.log("");
   console.log(`  ${"ID".padEnd(16)} ${"STATUS".padEnd(13)} ${"DETECTED".padEnd(10)} INSTALL DIR`);
   console.log(`  ${"-".repeat(16)} ${"-".repeat(13)} ${"-".repeat(10)} ${"-".repeat(40)}`);
@@ -282,9 +307,11 @@ async function runInteractive(preLoadedManifest) {
     ? { ...manifest, skills: manifest.skills.filter((s) => requestedSkills.includes(s.name)) }
     : manifest;
 
+  // #1: openclaw-style step progress
+  const step = makeStepReporter(targets.length);
   let okCount = 0, skipCount = 0;
   for (const t of targets) {
-    process.stdout.write(`  ${t.name} (${t.id})  ... `);
+    step.start(`${t.name}`);
     try {
       const res = installTarget(effective, t, {
         force: result.force,
@@ -292,27 +319,30 @@ async function runInteractive(preLoadedManifest) {
         withBackends: result.withBackends,
       });
       if (res.installed) {
-        console.log(c.green("ok") + c.dim(`  -> ${res.dir} (${res.files} files)`));
+        step.done(`${res.files} files -> ${res.dir}`);
         okCount++;
       } else {
-        console.log(c.yellow("skipped") + c.dim(`  ${res.skipped}`));
+        step.skip(res.skipped);
         skipCount++;
       }
     } catch (e) {
-      console.log(c.red("failed") + `  ${e.message}`);
+      step.fail(e.message);
       process.exitCode = 2;
     }
   }
 
   console.log("");
-  console.log(c.bold(`Done.`) + ` ${c.green(okCount + " installed")}, ${c.yellow(skipCount + " skipped")}`);
+  console.log(`  ${c.bold("Done.")} ${c.green(okCount + " installed")}, ${c.yellow(skipCount + " skipped")}`);
   console.log("");
-  console.log(c.dim("Try it: open your AI tool and type \"Set up Paytm payments\"."));
+  console.log(c.dim('  Try it: open your AI tool and type "Set up Paytm payments".'));
+  console.log("");
+
+  // #4: version check at the end
+  await printUpgradeNoticeIfAny(manifest.version);
 }
 
 function cmdListSkills(manifest) {
-  console.log(c.bold(`Skills in bundle ${manifest.name}@${manifest.version}:`));
-  console.log("");
+  printBanner(manifest.version, "Paytm Skill · list skills");
   console.log(`  ${"NAME".padEnd(18)} ${"STATUS".padEnd(10)} ${"REFS".padEnd(6)} DESCRIPTION`);
   console.log(`  ${"-".repeat(18)} ${"-".repeat(10)} ${"-".repeat(6)} ${"-".repeat(60)}`);
   for (const s of manifest.skills || []) {
@@ -346,7 +376,7 @@ function cmdPath(manifest, flags) {
 
 // --- main ---
 
-function main() {
+async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   if (args.flags.version) {
@@ -378,12 +408,12 @@ function main() {
   }
 
   switch (cmd) {
-    case "install":      return cmdInstall(manifest, args.flags);
+    case "install":      return await cmdInstall(manifest, args.flags);
     case "uninstall":    return cmdUninstall(manifest, args.flags);
     case "list-targets": return cmdListTargets(manifest);
     case "list-skills":  return cmdListSkills(manifest);
     case "path":         return cmdPath(manifest, args.flags);
-    case "add":          return cmdAdd(manifest, args);
+    case "add":          return await cmdAdd(manifest, args);
     default:
       console.error(c.red(`✗ Unknown command: ${cmd}`));
       console.error(`  Run 'npx paytm-skills help' for usage.`);
