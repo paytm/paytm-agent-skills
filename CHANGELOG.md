@@ -5,7 +5,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version
 
 ## [0.0.1] - Unreleased
 
-Initial pre-release of the Paytm Agent Skills bundle and `paytm-skills` CLI installer.
+Initial pre-release of the Paytm Agent Skills bundle and `paytm-agent-skills` CLI installer.
 
 ### Bundle
 
@@ -15,10 +15,10 @@ Initial pre-release of the Paytm Agent Skills bundle and `paytm-skills` CLI inst
 - `routing/PREAMBLE.md` is the single source of truth for global rules (decision tree, terminology, credentials block, test creds).
 - Per-framework routing manifest (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursor/rules/paytm.mdc`, `ROUTING.md`) auto-generated at install time from `routing/PREAMBLE.md` + an auto-generated skill index table. Never edited by hand.
 
-### CLI (`paytm-skills`)
+### CLI (`paytm-agent-skills`)
 
-- `npx paytm-skills` launches a branded interactive installer (Paytm Payments theme, auto-detects AI tools, prompts for target / skill selection / backends / force).
-- `npx paytm-skills add skills` alias for the interactive flow.
+- `npx paytm-agent-skills` launches a branded interactive installer (Paytm Payments theme, auto-detects AI tools, prompts for target / skill selection / backends / force).
+- `npx paytm-agent-skills add skills` alias for the interactive flow.
 - Scripted commands: `install`, `uninstall`, `list-targets`, `list-skills`, `path`, `help`, `--version`.
 - Flags: `--target <id>`, `--all-targets`, `--skill <name>` (repeatable), `--with-backends`, `--force`, `--dry-run`.
 - 9 AI tool targets supported: Claude Code, Claude.ai (Projects), Codex (CLI + ChatGPT desktop), Cursor, Continue, Windsurf, Gemini CLI, Antigravity, Aider.

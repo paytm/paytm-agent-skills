@@ -36,20 +36,20 @@ jobs:
       - name: Install + uninstall round-trip (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
-          export PAYTM_SKILLS_INSTALL_DIR_CODEX=/tmp/paytm-skills-test
+          export PAYTM_AGENT_SKILLS_INSTALL_DIR_CODEX=/tmp/paytm-agent-skills-test
           node bin/cli.mjs install --target codex
-          test -f /tmp/paytm-skills-test/SKILL.md
-          test -f /tmp/paytm-skills-test/manifest.json
-          test -f /tmp/paytm-skills-test/references/troubleshooting.md
+          test -f /tmp/paytm-agent-skills-test/SKILL.md
+          test -f /tmp/paytm-agent-skills-test/manifest.json
+          test -f /tmp/paytm-agent-skills-test/references/troubleshooting.md
           node bin/cli.mjs uninstall --target codex
-          test ! -d /tmp/paytm-skills-test
+          test ! -d /tmp/paytm-agent-skills-test
       - name: Install + uninstall round-trip (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $env:PAYTM_SKILLS_INSTALL_DIR_CODEX = "$env:RUNNER_TEMP\paytm-skills-test"
+          $env:PAYTM_AGENT_SKILLS_INSTALL_DIR_CODEX = "$env:RUNNER_TEMP\paytm-agent-skills-test"
           node bin/cli.mjs install --target codex
-          if (-not (Test-Path "$env:RUNNER_TEMP\paytm-skills-test\SKILL.md")) { exit 1 }
-          if (-not (Test-Path "$env:RUNNER_TEMP\paytm-skills-test\manifest.json")) { exit 1 }
+          if (-not (Test-Path "$env:RUNNER_TEMP\paytm-agent-skills-test\SKILL.md")) { exit 1 }
+          if (-not (Test-Path "$env:RUNNER_TEMP\paytm-agent-skills-test\manifest.json")) { exit 1 }
           node bin/cli.mjs uninstall --target codex
-          if (Test-Path "$env:RUNNER_TEMP\paytm-skills-test") { exit 1 }
+          if (Test-Path "$env:RUNNER_TEMP\paytm-agent-skills-test") { exit 1 }

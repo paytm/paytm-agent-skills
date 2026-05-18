@@ -69,6 +69,7 @@ Payment failed?
 | `4001` | Subscription: grace > frequency | Drop `subscriptionGraceDays` or set < cycle length |
 | `5007` | Payment Link: invalid char in `linkName` | Strip spaces — `linkName` is alphanumerics only |
 | `GW00460` | Custom SDK / WebView: "Invalid tranportal id" — stale `txnToken` reused on retry | Treat every `txnToken` as single-use. On retry, fetch a fresh `txnToken` AND a fresh `orderId` (timestamp-suffix the orderId). See `custom-sdk` skill § Bug A. |
+| `ENOTFOUND` / "Cannot resolve hostname" on a previously-working integration | Stale process state after VPN toggle / sleep-wake / Wi-Fi handover. **NOT a code bug.** | `lsof -ti:<port> \| xargs kill -9 && npm start`. Verify with `dig`, `curl`, fresh `node -e "dns.lookup(...)"` first. See `references/REFERENCE.md` § ENOTFOUND. |
 
 For unfamiliar codes, query `/v3/order/status` with the orderId — `body.resultInfo.resultMsg` is canonical.
 

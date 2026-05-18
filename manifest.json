@@ -243,7 +243,7 @@
     "default": "opt-in",
     "endpoint": null,
     "payload_version": 1,
-    "opt_out_env": "PAYTM_SKILLS_TELEMETRY",
+    "opt_out_env": "PAYTM_AGENT_SKILLS_TELEMETRY",
     "fields": ["skill_version", "manifest_version", "target", "os", "node_version", "install_outcome"]
   },
 
