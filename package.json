@@ -43,13 +43,13 @@
     "ai",
     "upi"
   ],
-  "homepage": "https://github.com/paytm/paytm-integration-skills",
+  "homepage": "https://github.com/paytm/paytm-agent-skills",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/paytm/paytm-integration-skills.git"
+    "url": "git+https://github.com/paytm/paytm-agent-skills.git"
   },
   "bugs": {
-    "url": "https://github.com/paytm/paytm-integration-skills/issues"
+    "url": "https://github.com/paytm/paytm-agent-skills/issues"
   },
   "license": "MIT",
   "author": "Paytm"

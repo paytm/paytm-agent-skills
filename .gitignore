@@ -3,6 +3,7 @@
 
 # Claude Code session state
 .claude/
+.ai-tracking/
 
 # Env / secrets
 .env
@@ -14,6 +15,11 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Lockfiles - this is a zero-dep library, lockfiles are local-only noise
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
 # Python
 __pycache__/

@@ -7,9 +7,9 @@
   "description": "Paytm Payment Gateway integration skills bundle - one-time payments, subscriptions, payment links, dynamic QR, webhooks, refunds, and troubleshooting. Loaded modularly per intent.",
   "license": "MIT",
 
-  "homepage": "https://github.com/paytm/paytm-integration-skills",
-  "repository": { "type": "git", "url": "https://github.com/paytm/paytm-integration-skills.git" },
-  "bugs": "https://github.com/paytm/paytm-integration-skills/issues",
+  "homepage": "https://github.com/paytm/paytm-agent-skills",
+  "repository": { "type": "git", "url": "https://github.com/paytm/paytm-agent-skills.git" },
+  "bugs": "https://github.com/paytm/paytm-agent-skills/issues",
   "changelog": "CHANGELOG.md",
 
   "routing_preamble": "routing/PREAMBLE.md",
