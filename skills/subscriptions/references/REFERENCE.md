@@ -18,7 +18,17 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 > 7. **`subscriptionPaymentMode` - default to `"UNKNOWN"`.** Doc says required and lists `CC` / `DC` / `BANK_MANDATE`. In practice the safest cross-MID value is **`"UNKNOWN"`** - Paytm then renders all enabled rails on the consent screen and the user picks. Send a specific value (`"CC"`, `"DC"`, `"BANK_MANDATE"`, etc.) only when restricting to one rail and confirmed for your MID. `"BANK_MANDATE"` additionally needs `mandateType: "E_MANDATE"` + bank-account details.
 > 8. **`subscriptionEnableRetry` is a string `"1"` / `"0"`** (not boolean). If you set it to `"0"`, **also omit `subscriptionRetryCount`** - sending a retry count with retry disabled returns `"Invalid subscription retry count"`. If retry is enabled (`"1"`), supply a count.
 > 9. **`autoRenewal` / `autoRetry` / `communicationManager` ARE booleans** (true/false). Inconsistent with `subscriptionEnableRetry`, but that's how the API is.
-> 10. Dates (`subscriptionStartDate`, `subscriptionExpiryDate`) are `YYYY-MM-DD`.
+> 10. Dates (`subscriptionStartDate`, `subscriptionExpiryDate`) are **`YYYY-MM-DD`** — NOT the payment-link format (`DD/MM/YYYY HH:MM:SS`). If your codebase has a `toPaytmExpiryDate()` helper that produces `DD/MM/YYYY HH:MM:SS` for payment links, **do NOT reuse it for subscription dates** — Paytm returns `"Validation failed"` with NO `resultCode` when the format is wrong (silent failure, hard to debug). Generate subscription dates with a separate IST-aware helper:
+>
+>     ```js
+>     // Correct: YYYY-MM-DD in IST (works for both startDate and expiryDate)
+>     const IST_MS = 5.5 * 60 * 60 * 1000;
+>     function getISTDateString(offsetMs = 0) {
+>       return new Date(Date.now() + IST_MS + offsetMs).toISOString().slice(0, 10);
+>     }
+>     const startDate  = getISTDateString();                            // today
+>     const expiryDate = getISTDateString(365 * 24 * 60 * 60 * 1000);   // +1 year
+>     ```
 > 11. `subscriptionStartDate` and `subscriptionGraceDays` are **conditionally paired** - if you send one, send both.
 > 12. **`userInfo.custId` must be sanitized** - alphanumerics + `_` `@` `!` `$` `.` are accepted; spaces, special characters, and unicode otherwise are rejected with `"Invalid Customer ID"`. Safest: `custId.replace(/[^a-zA-Z0-9_]/g, "_")`.
 > 13. **"No payment options available" on the consent screen** = subscription product is not enabled on the MID. Ask Paytm support / KAM to enable Subscription / UPI Autopay; the API will let you generate `txnToken` even when the product isn't entitled, so it surfaces only at JS Checkout time.
@@ -344,4 +354,27 @@ Staging path is `/subscription/create`; production path is `/theia/api/v1/subscr
 14. **`response.body.authenticated` is the string `"True"` / `"False"`**, not a boolean. Compare as strings.
 15. **CC / DC mandate constraints:** `txnAmount.value` must be **> ₹1** (use `"2.00"` minimum); `subscriptionGraceDays` must be **≤ 3**. When using `subscriptionPaymentMode: "UNKNOWN"`, apply the stricter limits to stay compatible with whatever rail the user picks.
 16. **Don't send `renewalAmount`** by default - optional field, most flows don't need it. Only add if you want a different recurring amount than `txnAmount.value` shown on consent.
-17. **`subscriptionStartDate` defaults to today.** Generate at request time: `new Date().toISOString().slice(0, 10)` (Node) or equivalent. Don't hard-code a date.
+17. **`subscriptionStartDate` defaults to today (IST), NOT UTC.** Generate at request time. **Common bug:** `new Date().toISOString().slice(0, 10)` returns UTC, which between **00:00–05:30 IST every night** is still "yesterday" → Paytm rejects with `5028 subscription start in past`. Use the IST-offset snippet for your stack:
+
+    ```js
+    // Node — add 5h30m to UTC, then take the date portion
+    const istToday = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);   // "2026-05-14" in IST regardless of server timezone
+    ```
+
+    ```python
+    # Python — use the IST timezone explicitly
+    from datetime import datetime, timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
+    ist_today = datetime.now(IST).strftime("%Y-%m-%d")
+    ```
+
+    ```java
+    // Java — explicit Asia/Kolkata zone
+    import java.time.LocalDate;
+    import java.time.ZoneId;
+    String istToday = LocalDate.now(ZoneId.of("Asia/Kolkata")).toString();
+    ```
+
+    Don't hard-code a date and don't trust the server's local timezone (could be UTC on AWS / Heroku / GCP defaults).

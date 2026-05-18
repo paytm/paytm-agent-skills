@@ -1,0 +1,56 @@
+{
+  "name": "paytm-skills",
+  "version": "0.0.1",
+  "description": "One-command installer for the Paytm Payment Gateway integration skill across Claude Code, Codex, Cursor, Continue, Windsurf, Gemini CLI, and more.",
+  "bin": {
+    "paytm-skills": "bin/cli.mjs"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "manifest.json",
+    "manifest.schema.json",
+    "skills/",
+    "routing/",
+    "assets/",
+    "scripts/frontend/",
+    "scripts/backend-node/",
+    "scripts/backend-python/",
+    "scripts/backend-spring/",
+    "scripts/backend-spring-legacy/",
+    "scripts/manifest/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "validate": "node scripts/manifest/validate.mjs",
+    "test": "node scripts/manifest/validate.mjs && node bin/cli.mjs --version"
+  },
+  "keywords": [
+    "paytm",
+    "payment-gateway",
+    "skill",
+    "claude",
+    "codex",
+    "cursor",
+    "continue",
+    "windsurf",
+    "ai",
+    "upi"
+  ],
+  "homepage": "https://github.com/paytm/paytm-integration-skills",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paytm/paytm-integration-skills.git"
+  },
+  "bugs": {
+    "url": "https://github.com/paytm/paytm-integration-skills/issues"
+  },
+  "license": "MIT",
+  "author": "Paytm"
+}

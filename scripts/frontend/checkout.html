@@ -62,13 +62,25 @@
           if (!cfg.loader_url) throw new Error("Missing loader_url");
           var s = document.createElement("script");
           s.type = "application/javascript";
+          // Do NOT set s.crossOrigin = "anonymous" - Paytm's CDN does not always
+          // return CORS headers, and with crossOrigin set the browser fires
+          // `onerror` silently. Buttons end up stuck disabled with no signal.
           s.src = cfg.loader_url;
-          s.crossOrigin = "anonymous";
           s.onload = function () { payBtn.disabled = false; };
           s.onerror = function () {
-            console.error("[paytm] loader failed");
+            console.error("[paytm] loader failed (script load error)");
             showResult("failure", "Could not load Paytm. Refresh and try again.");
+            payBtn.disabled = false;  // never leave the user stuck
           };
+          // Safety net: if neither onload nor onerror fires within 10s, treat
+          // as a load failure rather than leaving the button disabled forever.
+          setTimeout(function () {
+            if (payBtn.disabled) {
+              console.error("[paytm] loader timeout - no onload/onerror after 10s");
+              showResult("failure", "Payment system did not load. Refresh and try again.");
+              payBtn.disabled = false;
+            }
+          }, 10000);
           document.head.appendChild(s);
         })
         .catch(function (e) {
@@ -111,7 +123,10 @@
                 tokenType: "TXN_TOKEN",
                 amount: data.amount,
               },
-              merchant: { redirect: false },
+              // redirect: true falls back to a full-page redirect when the
+              // browser blocks the modal popup (common on mobile Safari / iframes).
+              // Switch to false only after you have user-tested the modal flow.
+              merchant: { redirect: true },
               handler: {
                 notifyMerchant: function (eventName, payload) {
                   console.log("[paytm] notifyMerchant", eventName, payload);

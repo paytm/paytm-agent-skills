@@ -1,0 +1,256 @@
+{
+  "$schema": "./manifest.schema.json",
+  "manifest_version": "2.0",
+
+  "name": "paytm",
+  "version": "0.0.1",
+  "description": "Paytm Payment Gateway integration skills bundle - one-time payments, subscriptions, payment links, dynamic QR, webhooks, refunds, and troubleshooting. Loaded modularly per intent.",
+  "license": "MIT",
+
+  "homepage": "https://github.com/paytm/paytm-integration-skills",
+  "repository": { "type": "git", "url": "https://github.com/paytm/paytm-integration-skills.git" },
+  "bugs": "https://github.com/paytm/paytm-integration-skills/issues",
+  "changelog": "CHANGELOG.md",
+
+  "routing_preamble": "routing/PREAMBLE.md",
+
+  "skills": [
+    {
+      "name": "getting-started",
+      "path": "skills/getting-started",
+      "entry": "SKILL.md",
+      "description": "First-step setup: MID/Merchant Key, environments, .env conventions, decision tree for picking the right Paytm flow.",
+      "triggers": ["PAYTM_MID", "PAYTM_MERCHANT_KEY", "WEBSTAGING", "paytmpayments.com/docs", "dashboard.paytmpayments.com", "payment gateway setup", "PG integration", "accept payments", "merchant onboarding", "online payments"]
+    },
+    {
+      "name": "js-checkout",
+      "path": "skills/js-checkout",
+      "entry": "SKILL.md",
+      "description": "One-time payment via JS Checkout: Generate Checksum -> Initiate Transaction -> Render -> Callback -> Transaction Status.",
+      "triggers": ["txnToken", "CHECKSUMHASH", "/theia/api/v1/initiateTransaction", "/v3/order/status", "paytmchecksum", "CheckoutJS", "Paytm.CheckoutJS", "3DS", "OTP page", "payment modal", "checkout redirect", "hosted checkout", "pay button", "card payment", "one-time payment"],
+      "references": [
+        { "path": "skills/js-checkout/references/REFERENCE.md", "load": "lazy", "summary": "JS Checkout deep dive: full callback fields, non-SDK form POST, event lifecycle, corp-proxy TLS." }
+      ]
+    },
+    {
+      "name": "subscriptions",
+      "path": "skills/subscriptions",
+      "entry": "SKILL.md",
+      "description": "UPI Autopay / Native Subscription for recurring charges (mandates, monthly / weekly / yearly, SIPs).",
+      "triggers": ["subscription/create", "NATIVE_SUBSCRIPTION", "NATIVE_MF_SIP", "subscriptionFrequency", "subscriptionPaymentMode", "UPI Autopay", "recurring payments", "auto-debit", "NPCI mandate", "eMandate", "pre-debit notification", "monthly subscription", "recurring charges"],
+      "references": [
+        { "path": "skills/subscriptions/references/REFERENCE.md", "load": "lazy", "summary": "Subscription full field reference, error code table, charge/edit/cancel flows." }
+      ]
+    },
+    {
+      "name": "payment-links",
+      "path": "skills/payment-links",
+      "entry": "SKILL.md",
+      "description": "Server-only payment link flow - returns a shortUrl shared via SMS / WhatsApp / email. No frontend needed.",
+      "triggers": ["/link/create", "/link/fetch", "/link/fetchTransaction", "/link/expire", "/link/resendNotification", "linkId", "shortUrl", "share payment link", "WhatsApp invoice", "SMS payment link", "link reconciliation", "invoice link", "payment link via SMS", "payment link via WhatsApp"],
+      "references": [
+        { "path": "skills/payment-links/references/REFERENCE.md", "load": "lazy", "summary": "Payment link 20+ pitfalls, MID quirks, error code table, fetch-transaction reconciliation." }
+      ]
+    },
+    {
+      "name": "qr-codes",
+      "path": "skills/qr-codes",
+      "entry": "SKILL.md",
+      "description": "Dynamic QR for in-store / counter / printed payments. Server creates QR, customer scans with any UPI app.",
+      "triggers": ["/paymentservices/qr/create", "posId", "Dynamic QR", "DQR", "static QR", "merchant QR", "UPI QR", "scan to pay", "print QR", "counter QR", "in-store payment"],
+      "references": [
+        { "path": "skills/qr-codes/references/REFERENCE.md", "load": "lazy", "summary": "QR reconciliation flow, posId rules, base64 prefix gotcha." }
+      ]
+    },
+    {
+      "name": "webhooks",
+      "path": "skills/webhooks",
+      "entry": "SKILL.md",
+      "description": "S2S webhook receiver - source of truth that outlives lost browser callbacks. Event types, raw body, signature verify, dedup, retry behavior.",
+      "triggers": ["/paytm/webhook", "S2S notification", "head.signature", "raw body", "verifySignature", "webhook signature", "event delivery", "webhook retry", "S2S webhook", "server to server notification", "payment notification", "fulfilment hook"],
+      "references": [
+        { "path": "skills/webhooks/references/REFERENCE.md", "load": "lazy", "summary": "Webhook event types, retry/backoff schedule, raw-body extraction per language, dedup patterns, security checklist." }
+      ]
+    },
+    {
+      "name": "refunds",
+      "path": "skills/refunds",
+      "entry": "SKILL.md",
+      "description": "Full and partial refunds via /refund/apply and /refund/status, refund webhooks, partial-refund cumulative limit, PENDING state and dispute relationship.",
+      "triggers": ["/refund/apply", "/refund/status", "refId", "refundAmount", "REFUND_STATUS", "chargeback", "dispute", "refund webhook", "partial refund", "full refund", "money back", "customer refund"],
+      "references": [
+        { "path": "skills/refunds/references/REFERENCE.md", "load": "lazy", "summary": "Full refund API surface, state lifecycle, error codes table, settlement impact, dispute relationship, idempotency patterns." }
+      ]
+    },
+    {
+      "name": "all-in-one-sdk",
+      "path": "skills/all-in-one-sdk",
+      "entry": "SKILL.md",
+      "description": "Paytm All-in-One SDK for native Android/iOS - turn-key mobile checkout with Paytm-branded UI. Same backend flow as JS Checkout (Initiate Transaction -> txnToken), SDK renders payment screens.",
+      "triggers": ["All-in-One SDK", "AIOSDK", "PaytmSDK.startTransaction", "AppInvokeSDK", "com.paytm.pgsdk", "PaytmAllInOneSDK", "Android payment SDK", "iOS payment SDK", "mobile checkout", "native payment SDK", "in-app payment"],
+      "references": [
+        { "path": "skills/all-in-one-sdk/references/REFERENCE.md", "load": "lazy", "summary": "Callback fields, event lifecycle (Android/iOS), deep-link & scheme registration, SDK error codes, subscription consent on mobile." }
+      ]
+    },
+    {
+      "name": "custom-sdk",
+      "path": "skills/custom-sdk",
+      "entry": "SKILL.md",
+      "description": "Paytm Custom SDK for native Android/iOS - headless SDK where merchant builds their own payment UI. fetchPaymentOptions + processTransaction. PCI scope for cards.",
+      "triggers": ["Custom SDK", "fetchPaymentOptions", "processTransaction", "Paytm Custom", "headless payment SDK", "custom payment screen", "branded checkout", "headless payment", "mobile SDK card UI", "PCI scope card UI"],
+      "references": [
+        { "path": "skills/custom-sdk/references/REFERENCE.md", "load": "lazy", "summary": "Per-instrument request shapes (Card / UPI / Net Banking / EMI), PCI scope reality, 3DS WebView gotchas per bank, UPI polling pattern, fetchPaymentOptions response shape." }
+      ]
+    },
+    {
+      "name": "migrate-from-razorpay",
+      "path": "skills/migrate-from-razorpay",
+      "entry": "SKILL.md",
+      "description": "Migration playbook from Razorpay to Paytm: per-flow API mapping, signature scheme differences, dual-write rollout, reconciliation, cutover checklist.",
+      "triggers": ["razorpay", "rzp_live_", "rzp_test_", "razorpay.orders.create", "razorpay.payments", "razorpay.subscriptions", "razorpay-node", "razorpay-python", "validateWebhookSignature", "migrate from razorpay", "migrating from razorpay", "migration from razorpay", "razorpay to paytm", "razorpay → paytm", "razorpay -> paytm", "from razorpay to paytm", "switch from razorpay", "switching from razorpay", "switched from razorpay", "move from razorpay", "moving from razorpay", "port from razorpay", "porting from razorpay", "shift from razorpay", "transition from razorpay", "convert from razorpay", "swap razorpay", "swap out razorpay", "replace razorpay", "replacing razorpay", "rip out razorpay", "remove razorpay", "drop razorpay", "ditch razorpay", "leave razorpay", "exit razorpay", "retire razorpay", "deprecate razorpay", "phase out razorpay", "decommission razorpay", "cutover from razorpay", "cut over from razorpay", "want to use paytm instead of razorpay", "thinking of switching from razorpay", "considering paytm over razorpay", "evaluating paytm vs razorpay", "paytm better than razorpay", "razorpay alternative", "alternative to razorpay", "instead of razorpay", "unhappy with razorpay", "razorpay not working for us", "razorpay is expensive", "razorpay high mdr", "looking for razorpay alternative", "change the pg from razorpay", "change pg to paytm", "change payment gateway to paytm", "new payment gateway instead of razorpay", "razorpay account suspended", "razorpay account frozen", "razorpay support is bad", "razorpay settlement delay", "stop using razorpay", "get rid of razorpay", "no longer want razorpay", "razorpay is not right for us"],
+      "references": [
+        { "path": "skills/migrate-from-razorpay/references/REFERENCE.md", "load": "lazy", "summary": "Per-endpoint mapping, signature scheme deep dive, dual-write architecture, canary helper, reconciliation, cutover checklist." }
+      ]
+    },
+    {
+      "name": "migrate-from-cashfree",
+      "path": "skills/migrate-from-cashfree",
+      "entry": "SKILL.md",
+      "description": "Migration playbook from Cashfree Payments (PG, Subscriptions, Payment Links, Easy Split, Payouts) to Paytm: x-client-id/x-client-secret header auth -> Paytm body checksum, payment_session_id -> txnToken, webhook signature scheme (timestamp+body HMAC -> Paytm checksum lib), recurring payments, refunds.",
+      "triggers": ["cashfree", "Cashfree", "cashfree-pg", "cashfree-pg-sdk-nodejs", "cashfree-pg-sdk-python", "cashfreepayments.com", "api.cashfree.com", "sandbox.cashfree.com", "CASHFREE_APP_ID", "CASHFREE_SECRET_KEY", "Cashfree.PG.Orders", "Cashfree.PGCreateOrder", "payment_session_id", "cf_order_id", "cf_payment_id", "/pg/orders", "x-client-id", "x-client-secret", "migrate from cashfree", "migrating from cashfree", "migration from cashfree", "cashfree to paytm", "cashfree → paytm", "cashfree -> paytm", "from cashfree to paytm", "switch from cashfree", "switching from cashfree", "move from cashfree", "moving from cashfree", "port from cashfree", "shift from cashfree", "transition from cashfree", "swap cashfree", "swap out cashfree", "replace cashfree", "replacing cashfree", "remove cashfree", "drop cashfree", "ditch cashfree", "leave cashfree", "exit cashfree", "retire cashfree", "phase out cashfree", "decommission cashfree", "cutover from cashfree", "want to use paytm instead of cashfree", "thinking of switching from cashfree", "considering paytm over cashfree", "cashfree alternative", "alternative to cashfree", "instead of cashfree", "unhappy with cashfree", "cashfree not working for us", "cashfree is expensive", "cashfree account suspended", "cashfree settlement delay", "cashfree support bad", "change payment gateway from cashfree", "change pg from cashfree", "stop using cashfree", "get rid of cashfree", "dual write cashfree paytm"],
+      "references": [
+        { "path": "skills/migrate-from-cashfree/references/REFERENCE.md", "load": "lazy", "summary": "Cashfree product surface, header-auth vs body-checksum, full per-step diff for payments / subscriptions / links / refunds, webhook signature deep dive (timestamp+body HMAC), Easy Split / Payouts caveats, cutover checklist." }
+      ]
+    },
+    {
+      "name": "migrate-from-ccavenue",
+      "path": "skills/migrate-from-ccavenue",
+      "entry": "SKILL.md",
+      "description": "Migration playbook from CCAvenue (Avenues India) to Paytm: AES-256-CBC encrypted form-POST -> REST JSON, three credentials -> two, billing/shipping field reduction, Subscription Information (SI) -> NATIVE_SUBSCRIPTION, refund via Non-Seamless API, dual-write rollout.",
+      "triggers": ["ccavenue", "CCAvenue", "cc avenue", "ccavenew", "ccavnue", "ccavanue", "CCAVENUE_MERCHANT_ID", "CCAVENUE_ACCESS_CODE", "CCAVENUE_WORKING_KEY", "secure.ccavenue.com", "test.ccavenue.com", "/transaction/transaction.do", "/transaction/initTrans", "AES-256 ccavenue", "ccavenue working key", "migrate from ccavenue", "switch from ccavenue"],
+      "references": [
+        { "path": "skills/migrate-from-ccavenue/references/REFERENCE.md", "load": "lazy", "summary": "CCAvenue product surface (5 integration methods), AES-256-CBC encrypt/decrypt per language (Node/Python/Java) for the dual-write phase, billing/shipping field reduction, SI mapping + handover, endpoint table covering transaction / status / refund / SI status / SI charge list URLs, 150-day cutover." }
+      ]
+    },
+    {
+      "name": "migrate-from-juspay",
+      "path": "skills/migrate-from-juspay",
+      "entry": "SKILL.md",
+      "description": "Migration playbook from Juspay (orchestrator across multiple PGs) to Paytm: orchestrator -> single-PG mental shift, HyperSDK -> Paytm All-in-One SDK, ExpressCheckout REST -> Paytm REST, smart-routing trade-offs, dual-write rollout.",
+      "triggers": ["juspay", "Juspay", "HyperSDK", "hyperServices", "HyperCheckout", "ExpressCheckout", "juspay.in", "api.juspay.in", "sandbox.juspay.in", "JUSPAY_API_KEY", "JUSPAY_MERCHANT_ID", "in.juspay.hypersdk", "juspay-node", "client_auth_token", "migrate from juspay", "migrating from juspay", "migration from juspay", "juspay to paytm", "juspay → paytm", "juspay -> paytm", "from juspay to paytm", "switch from juspay", "switching from juspay", "move from juspay", "port from juspay", "shift from juspay", "replace juspay", "replacing juspay", "remove juspay", "drop juspay", "ditch juspay", "leave juspay", "exit juspay", "retire juspay", "phase out juspay", "replace hypersdk", "replace hyper sdk", "replace hypercheckout", "remove smart routing juspay", "juspay orchestrator replacement", "want to use paytm instead of juspay", "thinking of switching from juspay", "considering paytm over juspay", "juspay alternative", "alternative to juspay", "instead of juspay", "unhappy with juspay", "juspay not working for us", "juspay smart routing not needed", "moving away from juspay orchestration", "change payment gateway from juspay", "change pg from juspay", "stop using juspay", "get rid of juspay", "dual write juspay paytm"],
+      "references": [
+        { "path": "skills/migrate-from-juspay/references/REFERENCE.md", "load": "lazy", "summary": "Juspay product surface, pre-migration questions, HTTP Basic auth -> body checksum, per-step diff with code samples, status-enum mapping, smart-routing loss caveats, success-rate parity check before cutover." }
+      ]
+    },
+    {
+      "name": "migrate-from-payu",
+      "path": "skills/migrate-from-payu",
+      "entry": "SKILL.md",
+      "description": "Migration playbook from PayU India (Biz / Money / Bolt) to Paytm: form-POST -> REST JSON shift, SHA-512 pipe hash -> Paytm checksum, recurring (SI) handover, refunds, dual-write rollout.",
+      "triggers": ["payu", "PayU", "payumoney", "PAYU_MERCHANT_KEY", "PAYU_SALT", "payu.in", "test.payu.in", "secure.payu.in", "bolt.payu.in", "/_payment", "payu-india", "payu-business", "mihpayid", "sha512", "migrate from payu", "migrating from payu", "migration from payu", "payu to paytm", "payu → paytm", "payu -> paytm", "from payu to paytm", "switch from payu", "switching from payu", "move from payu", "moving from payu", "port from payu", "shift from payu", "transition from payu", "swap payu", "replace payu", "replacing payu", "remove payu", "drop payu", "ditch payu", "leave payu", "exit payu", "retire payu", "phase out payu", "migrate from payumoney", "switch from payumoney", "payumoney to paytm", "migrate from payu biz", "want to use paytm instead of payu", "thinking of switching from payu", "considering paytm over payu", "payu alternative", "payumoney alternative", "alternative to payu", "instead of payu", "unhappy with payu", "payu not working for us", "payu account suspended", "payu settlement delay", "payu support bad", "change payment gateway from payu", "change pg from payu", "stop using payu", "get rid of payu", "dual write payu paytm"],
+      "references": [
+        { "path": "skills/migrate-from-payu/references/REFERENCE.md", "load": "lazy", "summary": "PayU product flavors, forward/reverse SHA-512 hash deep dive, per-step diff, SI mandate handover, dual-write tweaks for form-POST flow, cutover checklist." }
+      ]
+    },
+    {
+      "name": "troubleshooting",
+      "path": "skills/troubleshooting",
+      "entry": "SKILL.md",
+      "description": "Symptom -> cause -> fix tree, expanded RESPCODE reference, corp-proxy TLS interception guidance.",
+      "triggers": ["resultCode: 227", "resultCode: 330", "resultCode: 334", "resultCode: 400", "RESPCODE", "checksum mismatch", "UNABLE_TO_GET_ISSUER_CERT_LOCALLY", "MISSING_TXN_TOKEN", "payment failing", "txnToken expired", "webhook not received", "callback not firing", "payment stuck pending", "modal not opening"],
+      "references": [
+        { "path": "skills/troubleshooting/references/REFERENCE.md", "load": "lazy", "summary": "Full troubleshooting reference: per-symptom fixes, corp-proxy TLS deep dive, expanded RESPCODE table." }
+      ]
+    }
+  ],
+
+  "assets": [
+    "assets/.env.example",
+    "scripts/frontend/checkout.html",
+    "scripts/frontend/subscription.html",
+    "scripts/frontend/payment-link.html",
+    "scripts/frontend/qr.html"
+  ],
+
+  "backends": [
+    { "id": "node",          "path": "scripts/backend-node",          "language": "javascript", "runtime": "node>=18", "default": true },
+    { "id": "python",        "path": "scripts/backend-python",        "language": "python",     "runtime": "python>=3.10" },
+    { "id": "spring-boot",   "path": "scripts/backend-spring",        "language": "java",       "runtime": "jdk>=17" },
+    { "id": "spring-legacy", "path": "scripts/backend-spring-legacy", "language": "java",       "runtime": "jdk>=8" }
+  ],
+
+  "capabilities": [
+    "one-time-payment",
+    "subscription",
+    "payment-link",
+    "dynamic-qr",
+    "callback-verification",
+    "transaction-status",
+    "refunds",
+    "webhook-receiver",
+    "idempotency"
+  ],
+
+  "targets": [
+    { "id": "claude-code", "name": "Claude Code",                "status": "supported", "install_dir": "~/.claude/skills/paytm",                "format": "skill-md",   "routing_file": "SKILL.md",      "verify_command": "/skills" },
+    { "id": "claude-ai",   "name": "Claude.ai (Projects)",       "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "Upload skill files manually as project files." },
+    { "id": "codex",       "name": "Codex (CLI or ChatGPT desktop)", "status": "supported", "install_dir": "~/.codex/skills/paytm",            "format": "skill-md",   "routing_file": "SKILL.md",      "notes": "Both Codex CLI and the ChatGPT desktop app read from ~/.codex/skills/." },
+    { "id": "cursor",      "name": "Cursor",                      "status": "supported", "install_dir": "~/.cursor/skills-cursor/paytm",        "format": "skill-md",   "routing_file": "~/.cursor/rules/paytm.mdc" },
+    { "id": "continue",    "name": "Continue",                    "status": "supported", "install_dir": "~/.continue/rules/paytm",              "format": "skill-md",   "routing_file": "ROUTING.md" },
+    { "id": "windsurf",    "name": "Windsurf",                    "status": "supported", "install_dir": "~/.codeium/windsurf/memories",         "format": "bundled-md", "routing_file": null },
+    { "id": "gemini-cli",  "name": "Gemini CLI",                  "status": "supported", "install_dir": "~/.gemini/skills/paytm",               "format": "skill-md",   "routing_file": "GEMINI.md" },
+    { "id": "antigravity", "name": "Antigravity",                 "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "No stable filesystem skills convention yet." },
+    { "id": "aider",       "name": "Aider",                       "status": "supported", "install_dir": "~/.config/aider/conventions",          "format": "bundled-md", "routing_file": null },
+    { "id": "opencode",    "name": "OpenCode",                    "status": "supported", "install_dir": "~/.opencode/skills/paytm",             "format": "skill-md",   "routing_file": "AGENTS.md" },
+    { "id": "vscode-copilot", "name": "VS Code Copilot",          "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "Copy routing/PREAMBLE.md into .github/copilot-instructions.md at each project root. Copilot has no global skills folder." },
+    { "id": "github-copilot-cli", "name": "GitHub Copilot CLI",   "status": "supported", "install_dir": null,                                    "format": "project-files", "routing_file": null, "notes": "Copilot CLI has no skills convention - use the bundle as reference and paste relevant content into 'gh copilot' prompts." }
+  ],
+
+  "migrations": [
+    {
+      "id": "razorpay",
+      "title": "Razorpay -> Paytm",
+      "path": "skills/migrate-from-razorpay",
+      "summary": "Full migration playbook including dual-write rollout, reconciliation, and cutover checklist."
+    },
+    {
+      "id": "payu",
+      "title": "PayU -> Paytm",
+      "path": "skills/migrate-from-payu",
+      "summary": "Migration from PayU India (Biz / Money / Bolt). Form-POST -> REST JSON architecture shift, SHA-512 pipe hash translation, SI mandate handover."
+    },
+    {
+      "id": "cashfree",
+      "title": "Cashfree -> Paytm",
+      "path": "skills/migrate-from-cashfree",
+      "summary": "Migration from Cashfree (PG / Subscriptions / Links). Header-auth -> body-checksum, payment_session_id -> txnToken, webhook timestamp+body HMAC -> Paytm checksum library."
+    },
+    {
+      "id": "juspay",
+      "title": "Juspay -> Paytm",
+      "path": "skills/migrate-from-juspay",
+      "summary": "Migration from Juspay (orchestrator). HyperSDK / HyperCheckout / ExpressCheckout -> Paytm direct. Includes smart-routing loss caveat and success-rate parity check."
+    },
+    {
+      "id": "ccavenue",
+      "title": "CCAvenue -> Paytm",
+      "path": "skills/migrate-from-ccavenue",
+      "summary": "Migration from CCAvenue (Avenues India). AES-256-CBC encrypted form-POST -> REST JSON architecture shift, 3 credentials -> 2, billing/shipping field reduction, SI mandate handover, 150-day cutover."
+    }
+  ],
+
+  "telemetry": {
+    "default": "opt-in",
+    "endpoint": null,
+    "payload_version": 1,
+    "opt_out_env": "PAYTM_SKILLS_TELEMETRY",
+    "fields": ["skill_version", "manifest_version", "target", "os", "node_version", "install_outcome"]
+  },
+
+  "min_runtime": { "node": "18.0.0" },
+
+  "categories": ["payments", "fintech", "india", "psp"],
+  "keywords": ["paytm", "payment-gateway", "upi", "subscription", "payment-link", "qr-code", "checkout", "psp"],
+
+  "maintainers": [{ "name": "Paytm", "url": "https://github.com/paytm" }]
+}

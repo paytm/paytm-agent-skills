@@ -5,9 +5,9 @@
 [![Claude Skill](https://img.shields.io/badge/Claude-Skill-D97757)](https://docs.anthropic.com/en/docs/claude-code/skills)
 [![Paytm PG](https://img.shields.io/badge/Paytm-Payment%20Gateway-002970)](https://www.paytmpayments.com/docs)
 
-This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, ChatGPT) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/docs). Just describe your business in plain English, the agent generates production-ready integration code for you.
+This repository provides ready-to-use integration skills that allow LLM-powered agents (Claude, Codex, Cursor, Continue, Windsurf, Gemini CLI, OpenCode, Aider, GitHub Copilot, and more) to initiate and manage payments via [Paytm PG](https://www.paytmpayments.com/docs). Just describe your business in plain English, the agent generates production-ready integration code for you.
 
-The skill teaches your AI agent the full Paytm spec, integration patterns, and common pitfalls, so the code it generates works on the first try.
+The skills teach your AI agent the full Paytm spec, integration patterns, and common pitfalls, so the code it generates works on the first try.
 
 ---
 
@@ -19,6 +19,10 @@ The skill teaches your AI agent the full Paytm spec, integration patterns, and c
 | **Subscriptions** | Recurring payment collections through UPI Autopay, cards or eNACH |
 | **Payment Links** | Generate and share payment links for payment collections |
 | **QR Codes** | Display dynamic QR codes on your website for UPI payments |
+| **All-in-One SDK** | Native Android / iOS SDK with Paytm-branded checkout UI built in |
+| **Custom SDK** | Native Android / iOS SDK for fully custom payment UI |
+| **Webhooks** | S2S notification receiver with signature verification |
+| **Refunds** | Full and partial refund APIs |
 
 ---
 
@@ -36,66 +40,100 @@ The skill teaches your AI agent the full Paytm spec, integration patterns, and c
 **QR Codes**
 > *"I run a cloud kitchen business. Integrate Paytm to display a QR code on my website with the bill amount for customers to scan and pay via UPI."*
 
+**All-in-One SDK (Android / iOS)**
+> *"I am building an Android app for my food delivery service. Add Paytm checkout inside the app so users can pay without leaving."*
+
+**Custom SDK (Android / iOS)**
+> *"My iOS shopping app needs its own branded payment screen for cards and UPI - we don't want the default Paytm UI. Wire up the Custom SDK end-to-end."*
+
+**Webhooks**
+> *"Set up a server-to-server webhook endpoint that receives Paytm payment notifications, verifies the signature, and marks orders paid in my database."*
+
+**Refunds**
+> *"My customer returned an order. Add a refund button to my admin dashboard that issues a full or partial refund via Paytm and tracks its status."*
+
 ---
 
 ## 3. Setup
 
-The skill file (`SKILL.md`) acts as the instruction layer that teaches the AI how to correctly implement Paytm integrations.
-
-### Claude (Claude Code, Claude.ai)
-
-Run this prompt in Claude Code to install the skill globally:
 ```bash
-Install the Paytm PG integration skill globally from https://github.com/paytm/paytm-integration-skills
-``` 
-OR
-
-```bash
-mkdir -p ~/.claude/skills
-git clone https://github.com/paytm/paytm-integration-skills.git ~/.claude/skills/paytm-integration
-``` 
-
-- **Claude Code:** Restart Claude Code, run `/skills` to verify. Any Paytm prompt now auto-loads the skill.  
-- **Claude.ai:** Add `SKILL.md` and the `references/` files as project files, every Paytm prompt in that project loads them automatically.    
-
-### Codex
-
-Run this prompt in Codex to install the skill:
-```bash
-Install the skill from https://github.com/paytm/paytm-integration-skills/
-```
-OR
-
-```bash
-$skill-installer install https://github.com/paytm/paytm-integration-skills/
+npx paytm-skills install
 ```
 
-Once installed, any Paytm-related prompt in Codex will auto-load the skill.
+Auto-detects every AI tool on your machine (Claude Code, Codex, Cursor, Windsurf, etc.) and installs the skill bundle into each one in a single command. Re-run any time to upgrade.
+
+### Other commands
+
+```bash
+npx paytm-skills                          # interactive UI (prompts for tools / skills)
+npx paytm-skills add skills               # alias for the interactive UI
+npx paytm-skills install --target cursor  # install for one tool
+npx paytm-skills install --all-targets    # install for every supported tool (incl. ones not detected)
+npx paytm-skills uninstall                # remove from detected tools
+npx paytm-skills help                     # full command + flag reference
+```
+
+### Supported AI tools
+
+Most tools install automatically. Four (Claude.ai Projects, Antigravity, VS Code Copilot, GitHub Copilot CLI) don't expose a filesystem skills folder, so you copy the skill files through the tool's own UI / config — the installer skips them with a clear message.
+
+| Tool | How it's installed | Where the files land |
+|---|---|---|
+| Claude Code | `npx paytm-skills install` | `~/.claude/skills/paytm/` |
+| Codex (CLI or ChatGPT desktop) | `npx paytm-skills install` | `~/.codex/skills/paytm/` |
+| Cursor | `npx paytm-skills install` | `~/.cursor/skills-cursor/paytm/` + `~/.cursor/rules/paytm.mdc` |
+| Continue | `npx paytm-skills install` | `~/.continue/rules/paytm/` |
+| Windsurf | `npx paytm-skills install` | `~/.codeium/windsurf/memories/paytm.md` (single file) |
+| Gemini CLI | `npx paytm-skills install` | `~/.gemini/skills/paytm/` |
+| Aider | `npx paytm-skills install` | `~/.config/aider/conventions/paytm.md` (single file) |
+| OpenCode | `npx paytm-skills install` | `~/.opencode/skills/paytm/` |
+| Claude.ai (Projects) | Upload manually | Add `skills/` files as project files in the Claude.ai UI |
+| Antigravity | Upload manually | Add skill files via the Antigravity UI (no filesystem convention yet) |
+| VS Code Copilot | Copy manually | Paste `routing/PREAMBLE.md` content into each project's `.github/copilot-instructions.md` |
+| GitHub Copilot CLI | Reference only | No skills convention - paste relevant skill content into `gh copilot` prompts as needed |
+
+After install:
+- **Claude Code:** restart, run `/skills` to verify.
+- **Cursor / Continue / Windsurf:** restart the IDE.
+- **Codex / Gemini CLI:** new sessions pick up the skill automatically.
 
 ---
 
 ## 4. What's inside
 
-Repository structure:
+Skills are **modular** — eight focused skills load only the context relevant to the user's prompt.
 
 ```
 .
-├── SKILL.md                  # Main instruction file that generates correct Paytm integrations. 
-├── references/               # Detailed guides for each product flow
-│   ├── js-checkout.md
-│   ├── subscriptions.md
-│   ├── payment-links.md
-│   └── qr-codes.md
-└── scripts/                  # Ready to run code samples. Pick your tech stack  
-    ├── backend-node/         # Node.js backend example for payment integration  
-    ├── backend-spring/       # Java backend example for payment integration  
-    ├── backend-python/       # Python backend example for payment integration
+├── skills/                      # One folder per skill - load only what's needed
+│   ├── getting-started/         # MID/key, environments, .env conventions, decision tree
+│   ├── js-checkout/             # One-time payments + JS Checkout
+│   │   └── references/REFERENCE.md
+│   ├── subscriptions/           # UPI Autopay / NATIVE_SUBSCRIPTION
+│   │   └── references/REFERENCE.md
+│   ├── payment-links/           # /link/* APIs
+│   │   └── references/REFERENCE.md
+│   ├── qr-codes/                # Dynamic QR
+│   │   └── references/REFERENCE.md
+│   ├── webhooks/                # S2S receiver + signature verification + dedup
+│   ├── refunds/                 # Full + partial refunds (stub - expanded soon)
+│   └── troubleshooting/         # Symptom -> cause -> fix tree
+│       └── references/REFERENCE.md
+└── scripts/                     # Reference backends + frontend examples
+    ├── backend-node/            # Node.js (Express + paytmchecksum)
+    ├── backend-python/          # Python (Flask + paytmchecksum)
+    ├── backend-spring/          # Spring Boot 3 + Jakarta + executable JAR
+    ├── backend-spring-legacy/   # Spring 5 + javax.servlet + WAR (Tomcat 9)
     └── frontend/
-        ├── checkout.html      # Demo page for Paytm checkout (One Time Payment)
-        ├── subscription.html  # Demo page for recurring payment setup
-        ├── payment-link.html  # Demo page to create and share payment links with customers
-        └── qr.html            # Demo page to display a dynamic UPI QR code for payments
+        ├── checkout.html        # JS Checkout (one-time payment)
+        ├── subscription.html    # Recurring payment setup
+        ├── payment-link.html    # Create and share payment links
+        └── qr.html              # Dynamic UPI QR
 ```
+
+### How modular skills help
+
+When a user asks *"how do I send a payment link via SMS?"*, only the `payment-links` skill content is loaded — not the full 144 KB of every flow. Smaller context per request = better LLM accuracy and faster responses.
 
 ---
 

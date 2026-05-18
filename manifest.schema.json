@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/paytm/paytm-integration-skills/manifest.schema.json",
+  "title": "Paytm Skill Bundle Manifest",
+  "description": "Distribution manifest for the paytm-skills bundle. Describes all skills, the global routing preamble, supported AI tool targets, and tooling config.",
+  "type": "object",
+  "required": ["manifest_version", "name", "version", "description", "skills", "targets"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "manifest_version": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+    "name": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.-]+)?$" },
+    "description": { "type": "string", "minLength": 1 },
+    "license": { "type": "string" },
+    "homepage": { "type": "string", "format": "uri" },
+    "repository": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "url": { "type": "string", "format": "uri" }
+      },
+      "required": ["type", "url"]
+    },
+    "bugs": { "type": "string", "format": "uri" },
+    "changelog": { "type": "string" },
+
+    "routing_preamble": {
+      "type": "string",
+      "description": "Path (relative to repo root) of the markdown file embedded at the top of every per-framework routing manifest."
+    },
+
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "path", "entry"],
+        "additionalProperties": false,
+        "properties": {
+          "name":        { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "path":        { "type": "string", "description": "Skill directory relative to repo root." },
+          "entry":       { "type": "string", "pattern": "\\.md$", "description": "Entry markdown file inside the skill dir (typically SKILL.md)." },
+          "description": { "type": "string" },
+          "triggers":    { "type": "array", "items": { "type": "string" } },
+          "references":  {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["path", "load"],
+              "additionalProperties": false,
+              "properties": {
+                "path":    { "type": "string", "pattern": "\\.md$" },
+                "load":    { "type": "string", "enum": ["eager", "lazy"] },
+                "summary": { "type": "string" }
+              }
+            }
+          },
+          "status": { "type": "string", "enum": ["stable", "stub", "deprecated"] }
+        }
+      }
+    },
+
+    "assets": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "backends": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path", "language"],
+        "additionalProperties": false,
+        "properties": {
+          "id":       { "type": "string" },
+          "path":     { "type": "string" },
+          "language": { "type": "string" },
+          "runtime":  { "type": "string" },
+          "default":  { "type": "boolean" }
+        }
+      }
+    },
+
+    "anti_triggers": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "status", "format"],
+        "additionalProperties": false,
+        "properties": {
+          "id":              { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "name":            { "type": "string" },
+          "status":          { "type": "string", "enum": ["supported", "planned", "experimental", "deprecated"] },
+          "install_dir":     { "type": ["string", "null"] },
+          "format":          { "type": "string", "enum": ["skill-md", "bundled-md", "project-files"] },
+          "routing_file":    { "type": ["string", "null"], "description": "Per-target file the bundle's routing preamble + skill index gets written to (e.g. CLAUDE.md, GEMINI.md, .cursor/rules/paytm.mdc). Null if the target reads skills directly without a top-level routing manifest." },
+          "verify_command":  { "type": "string" },
+          "notes":           { "type": "string" }
+        }
+      }
+    },
+
+    "migrations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "path"],
+        "properties": {
+          "id":      { "type": "string" },
+          "title":   { "type": "string" },
+          "path":    { "type": "string" },
+          "summary": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default":         { "type": "string", "enum": ["opt-in", "opt-out", "disabled"] },
+        "endpoint":        { "type": ["string", "null"], "format": "uri" },
+        "payload_version": { "type": "integer", "minimum": 1 },
+        "opt_out_env":     { "type": "string" },
+        "fields":          { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "min_runtime": { "type": "object", "additionalProperties": { "type": "string" } },
+
+    "categories": { "type": "array", "items": { "type": "string" } },
+    "keywords":   { "type": "array", "items": { "type": "string" } },
+    "maintainers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name":  { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "url":   { "type": "string", "format": "uri" }
+        }
+      }
+    }
+  }
+}
