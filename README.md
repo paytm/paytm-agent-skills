@@ -29,7 +29,7 @@ Node.js v18 or above is required. To check if it is already installed, run this 
 node -v
 ```
 
-If not installed, download and install it from [nodejs.org](https://nodejs.org) — choose the **LTS** version. It works on both Mac and Windows.
+If you don't see a node version, download and install it from [nodejs.org](https://nodejs.org) — choose the **LTS** version. It works on both Mac and Windows.
 
 
 ### Supported AI tools
