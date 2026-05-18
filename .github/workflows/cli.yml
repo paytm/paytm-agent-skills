@@ -38,9 +38,12 @@ jobs:
         run: |
           export PAYTM_AGENT_SKILLS_INSTALL_DIR_CODEX=/tmp/paytm-agent-skills-test
           node bin/cli.mjs install --target codex
+          # v2 multi-skill layout: routing manifest + per-skill folders at the bundle root
           test -f /tmp/paytm-agent-skills-test/SKILL.md
           test -f /tmp/paytm-agent-skills-test/manifest.json
-          test -f /tmp/paytm-agent-skills-test/references/troubleshooting.md
+          test -f /tmp/paytm-agent-skills-test/troubleshooting/SKILL.md
+          test -f /tmp/paytm-agent-skills-test/troubleshooting/references/REFERENCE.md
+          test -f /tmp/paytm-agent-skills-test/js-checkout/SKILL.md
           node bin/cli.mjs uninstall --target codex
           test ! -d /tmp/paytm-agent-skills-test
       - name: Install + uninstall round-trip (Windows)
@@ -51,5 +54,8 @@ jobs:
           node bin/cli.mjs install --target codex
           if (-not (Test-Path "$env:RUNNER_TEMP\paytm-agent-skills-test\SKILL.md")) { exit 1 }
           if (-not (Test-Path "$env:RUNNER_TEMP\paytm-agent-skills-test\manifest.json")) { exit 1 }
+          if (-not (Test-Path "$env:RUNNER_TEMP\paytm-agent-skills-test\troubleshooting\SKILL.md")) { exit 1 }
+          if (-not (Test-Path "$env:RUNNER_TEMP\paytm-agent-skills-test\troubleshooting\references\REFERENCE.md")) { exit 1 }
+          if (-not (Test-Path "$env:RUNNER_TEMP\paytm-agent-skills-test\js-checkout\SKILL.md")) { exit 1 }
           node bin/cli.mjs uninstall --target codex
           if (Test-Path "$env:RUNNER_TEMP\paytm-agent-skills-test") { exit 1 }
