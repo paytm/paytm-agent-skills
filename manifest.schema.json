@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/paytm/paytm-integration-skills/manifest.schema.json",
   "title": "Paytm Skill Bundle Manifest",
-  "description": "Distribution manifest for the paytm-skills bundle. Describes all skills, the global routing preamble, supported AI tool targets, and tooling config.",
+  "description": "Distribution manifest for the paytm-agent-skills bundle. Describes all skills, the global routing preamble, supported AI tool targets, and tooling config.",
   "type": "object",
   "required": ["manifest_version", "name", "version", "description", "skills", "targets"],
   "additionalProperties": false,

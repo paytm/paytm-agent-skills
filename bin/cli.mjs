@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * paytm-skills - one-command installer for the Paytm PG integration skill.
+ * paytm-agent-skills - one-command installer for the Paytm PG integration skill.
  *
  * Subcommands:
  *   install        Install into auto-detected AI tools (or --target <id> / --all-targets).
@@ -74,12 +74,12 @@ const c = {
 };
 
 function printHelp() {
-  console.log(`paytm-skills - install the Paytm PG integration skill bundle into your AI tools.
+  console.log(`paytm-agent-skills - install the Paytm PG integration skill bundle into your AI tools.
 
 Usage:
-  npx paytm-skills                       (interactive UI - recommended)
-  npx paytm-skills add skills            (same as above)
-  npx paytm-skills <command> [options]   (scripted / CI use)
+  npx paytm-agent-skills                       (interactive UI - recommended)
+  npx paytm-agent-skills add skills            (same as above)
+  npx paytm-agent-skills <command> [options]   (scripted / CI use)
 
 Commands:
   install                  Install into detected AI tools.
@@ -101,13 +101,13 @@ Options:
   --version                Print version and exit.
 
 Examples:
-  npx paytm-skills install
-  npx paytm-skills install --target claude-code
-  npx paytm-skills install --target cursor --skill subscriptions
-  npx paytm-skills install --all-targets --with-backends
-  npx paytm-skills uninstall --target codex
-  npx paytm-skills list-targets
-  npx paytm-skills list-skills
+  npx paytm-agent-skills install
+  npx paytm-agent-skills install --target claude-code
+  npx paytm-agent-skills install --target cursor --skill subscriptions
+  npx paytm-agent-skills install --all-targets --with-backends
+  npx paytm-agent-skills uninstall --target codex
+  npx paytm-agent-skills list-targets
+  npx paytm-agent-skills list-skills
 `);
 }
 
@@ -117,7 +117,7 @@ function pickTargets(manifest, flags, { command }) {
     const t = all.find((x) => x.id === flags.target);
     if (!t) {
       console.error(c.red(`✗ Unknown target: ${flags.target}`));
-      console.error(`  Run 'npx paytm-skills list-targets' to see options.`);
+      console.error(`  Run 'npx paytm-agent-skills list-targets' to see options.`);
       process.exit(1);
     }
     return [t];
@@ -130,9 +130,9 @@ function pickTargets(manifest, flags, { command }) {
   if (defaults.length === 0) {
     console.error(c.yellow(`⚠ No AI tools auto-detected on this machine.`));
     console.error(`  Specify a target explicitly:`);
-    console.error(`    npx paytm-skills ${command} --target claude-code`);
+    console.error(`    npx paytm-agent-skills ${command} --target claude-code`);
     console.error(`  Or list available targets:`);
-    console.error(`    npx paytm-skills list-targets`);
+    console.error(`    npx paytm-agent-skills list-targets`);
     process.exit(1);
   }
   return defaults;
@@ -146,7 +146,7 @@ function filterManifestSkills(manifest, requestedNames) {
   const missing = requestedNames.filter((n) => !known.has(n));
   if (missing.length) {
     console.error(c.red(`✗ Unknown skill(s): ${missing.join(", ")}`));
-    console.error(`  Run 'npx paytm-skills list-skills' to see available skills.`);
+    console.error(`  Run 'npx paytm-agent-skills list-skills' to see available skills.`);
     process.exit(1);
   }
   // Return a shallow clone of the manifest with only the requested skills.
@@ -221,7 +221,7 @@ function cmdUninstall(manifest, flags) {
   const targets = pickTargets(manifest, flags, { command: "uninstall" });
   const dryRun = !!flags["dry-run"];
 
-  console.log(c.bold(`paytm-skills - uninstalling`));
+  console.log(c.bold(`paytm-agent-skills - uninstalling`));
   console.log("");
   for (const t of targets) {
     process.stdout.write(`  ${t.name} (${t.id})  ... `);
@@ -256,10 +256,10 @@ function cmdListTargets(manifest) {
     console.log(`  ${padVisible(t.id, 16)} ${padVisible(status, 13)} ${padVisible(det, 10)} ${dir}`);
   }
   console.log("");
-  console.log(c.dim("Install one with: npx paytm-skills install --target <id>"));
+  console.log(c.dim("Install one with: npx paytm-agent-skills install --target <id>"));
 }
 
-// `npx paytm-skills add skills` -> interactive (mirrors Cashfree's UX)
+// `npx paytm-agent-skills add skills` -> interactive (mirrors Cashfree's UX)
 function cmdAdd(manifest, args) {
   const sub = args._[1];
   if (sub === "skills" || sub === undefined) {
@@ -352,8 +352,8 @@ function cmdListSkills(manifest) {
     console.log(`  ${padVisible(s.name, 18)} ${padVisible(status, 10)} ${refs.padEnd(6)} ${desc}`);
   }
   console.log("");
-  console.log(c.dim("Install one with: npx paytm-skills install --target <id> --skill <name>"));
-  console.log(c.dim("Install several:  npx paytm-skills install --target <id> --skill subscriptions --skill payment-links"));
+  console.log(c.dim("Install one with: npx paytm-agent-skills install --target <id> --skill <name>"));
+  console.log(c.dim("Install several:  npx paytm-agent-skills install --target <id> --skill subscriptions --skill payment-links"));
 }
 
 function cmdPath(manifest, flags) {
@@ -416,7 +416,7 @@ async function main() {
     case "add":          return await cmdAdd(manifest, args);
     default:
       console.error(c.red(`✗ Unknown command: ${cmd}`));
-      console.error(`  Run 'npx paytm-skills help' for usage.`);
+      console.error(`  Run 'npx paytm-agent-skills help' for usage.`);
       process.exit(1);
   }
 }
