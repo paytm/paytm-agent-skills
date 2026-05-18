@@ -1,5 +1,5 @@
 # Paytm Agent Skills
-### Paytm PG Integration
+### Paytm Payment Gateway (PG) Integration
 
 
 **Integrate Paytm Payment Gateway in minutes, just by describing what you want to build.**
@@ -13,12 +13,42 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 
 ---
 
-## 1. Supported Products for Integration
+## 1. Setup
+
+```bash
+npx paytm-agent-skills install
+```
+
+Auto-detects every AI tool on your machine (Claude Code, Codex, Cursor etc.) and installs the skill bundle into each tool in a single command. Re-run any time to upgrade.
+
+### Supported AI tools
+
+Most tools install automatically. Four (Claude.ai Projects, Antigravity, VS Code Copilot, GitHub Copilot CLI) don't expose a filesystem skills folder, so you copy the skill files through the tool's own UI / config the installer skips them with a clear message.
+
+| Tool | How it's installed | Where the files land |
+|---|---|---|
+| Claude Code | `npx paytm-skills install` | `~/.claude/skills/paytm/` |
+| Codex | `npx paytm-skills install` | `~/.codex/skills/paytm/` |
+| Cursor | `npx paytm-skills install` | `~/.cursor/skills-cursor/paytm/` + `~/.cursor/rules/paytm.mdc` |
+| Continue | `npx paytm-skills install` | `~/.continue/rules/paytm/` |
+| Windsurf | `npx paytm-skills install` | `~/.codeium/windsurf/memories/paytm.md` (single file) |
+| Gemini CLI | `npx paytm-skills install` | `~/.gemini/skills/paytm/` |
+| Aider | `npx paytm-skills install` | `~/.config/aider/conventions/paytm.md` (single file) |
+| OpenCode | `npx paytm-skills install` | `~/.opencode/skills/paytm/` |
+
+After install:
+- **Claude Code:** restart, run `/skills` to verify.
+- **Cursor / Continue / Windsurf:** restart the IDE.
+- **Codex / Gemini CLI:** new sessions pick up the skill automatically.
+
+---
+
+## 2. Supported Products for Integration
 
 | Product | Description |
 |---|---|
 | **JS Checkout** | Paytm hosted checkout page for web/app payments |
-| **Subscriptions** | Recurring payment collections through UPI Autopay, cards or eNACH |
+| **Subscriptions** | Recurring payment collections through UPI Autopay, Cards or eNACH |
 | **Payment Links** | Generate and share payment links for payment collections |
 | **QR Codes** | Display dynamic QR codes on your website for UPI payments |
 | **All-in-One SDK** | Native checkout on Android/ iOS, with Paytm-hosted UI |
@@ -29,7 +59,7 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 
 ---
 
-## 2. Sample queries
+## 3. Sample Prompts
 
 **JS Checkout**
 > *"I run an online store selling t-shirts. Help me integrate Paytm so customers can pay with UPI or cards at checkout."*
@@ -57,45 +87,10 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 
 ---
 
-## 3. Setup
-
-```bash
-npx paytm-skills install
-```
-
-Auto-detects every AI tool on your machine (Claude Code, Codex, Cursor etc.) and installs the skill bundle into each tool in a single command. Re-run any time to upgrade.
-
-### Install using a simple prompt (For Claude Code and Codex Only)
-
-```bash
-Install the Paytm PG integration skill globally from https://github.com/paytm/paytm-integration-skills 
-```
-
-### Supported AI tools
-
-Most tools install automatically. Four (Claude.ai Projects, Antigravity, VS Code Copilot, GitHub Copilot CLI) don't expose a filesystem skills folder, so you copy the skill files through the tool's own UI / config the installer skips them with a clear message.
-
-| Tool | How it's installed | Where the files land |
-|---|---|---|
-| Claude Code | `npx paytm-skills install` | `~/.claude/skills/paytm/` |
-| Codex | `npx paytm-skills install` | `~/.codex/skills/paytm/` |
-| Cursor | `npx paytm-skills install` | `~/.cursor/skills-cursor/paytm/` + `~/.cursor/rules/paytm.mdc` |
-| Continue | `npx paytm-skills install` | `~/.continue/rules/paytm/` |
-| Windsurf | `npx paytm-skills install` | `~/.codeium/windsurf/memories/paytm.md` (single file) |
-| Gemini CLI | `npx paytm-skills install` | `~/.gemini/skills/paytm/` |
-| Aider | `npx paytm-skills install` | `~/.config/aider/conventions/paytm.md` (single file) |
-| OpenCode | `npx paytm-skills install` | `~/.opencode/skills/paytm/` |
-
-After install:
-- **Claude Code:** restart, run `/skills` to verify.
-- **Cursor / Continue / Windsurf:** restart the IDE.
-- **Codex / Gemini CLI:** new sessions pick up the skill automatically.
-
----
 
 ## 4. What's inside
 
-Skills are **modular** , each prompt loads only the relevant skill, keeping the AI focused and the generated code accurate.
+Skills are **modular**, each prompt loads only the relevant skill, keeping the AI tool focused and the generated code accurate.
 
 ```
 .
@@ -143,10 +138,10 @@ Skills are **modular** , each prompt loads only the relevant skill, keeping the 
 ## 5. How Paytm Integration Skill Works
 
 1. You describe what you want to build in plain English, for example, "Integrate Paytm JS Checkout on my website." The skill's decision tree maps your prompt to the right Paytm product automatically.
-2. Only the relevant skill loads  asking about JS Checkout loads just the js-checkout skill, not all skills. This keeps the AI focused and makes the generated code more accurate.
-3. The skill injects Paytm-specific knowledge into the AI  correct API endpoints, checksum logic, token flows, and common errors so the code it generates works on the first try.
-4. Code is generated for your specific tech stack  Node.js, Python, Java using battle-tested reference implementations as the base.
-5. Every integration ends with a checklist staging test credentials, webhook setup, and production go-live steps.
+2. Only the relevant skill loads asking about JS Checkout loads just the js-checkout skill, not all skills. This keeps the AI focused and makes the generated code more accurate.
+3. The skill injects Paytm-specific knowledge into the AI correct API endpoints, checksum logic, token flows, and common errors so the code it generates works on the first try.
+4. Code is generated for your specific tech stack Node.js, Python, Java using verified reference implementations as the base.
+5. Every integration ends with a checklist staging test credentials, webhook setup, and production go live steps.
 
 ---
 
@@ -157,7 +152,7 @@ To go live with Paytm, you will need a **MID** (your unique Merchant ID) and a *
 - *Staging (test mode):* https://dashboard.paytmpayments.com/next/apikeys -> Generate now (under Test API Details)
 - *Production (Live Mode):* https://dashboard.paytmpayments.com/next/apikeys -> Get Merchant ID, Merchant Key from Production API details.
 
-  (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact your Paytm KAM.)
+  (Production keys are issued only after KYC + account activation. If the tab is empty, finish onboarding or contact Paytm merchant support.)
 
 Store keys in environment variables. Never commit them or expose them in client-side code.
 
