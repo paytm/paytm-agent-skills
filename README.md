@@ -23,6 +23,7 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 | **Custom SDK** | Native Android / iOS SDK for fully custom payment UI |
 | **Webhooks** | S2S notification receiver with signature verification |
 | **Refunds** | Full and partial refund APIs |
+| **Migration playbooks** | Move from Razorpay / PayU / Cashfree / Juspay / CCAvenue to Paytm with per-flow API mapping, signature scheme translation, and dual-write rollout |
 
 ---
 
@@ -51,6 +52,9 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 
 **Refunds**
 > *"My customer returned an order. Add a refund button to my admin dashboard that issues a full or partial refund via Paytm and tracks its status."*
+
+**Migration from another gateway**
+> *"We currently use Razorpay for all our payments. Migrate the codebase to Paytm — keep both running during rollout so we can canary 10% of traffic first."*
 
 ---
 
@@ -101,34 +105,50 @@ After install:
 
 ## 4. What's inside
 
-Skills are **modular** — eight focused skills load only the context relevant to the user's prompt.
+Skills are **modular** — fifteen focused skills load only the context relevant to the user's prompt.
 
 ```
 .
-├── skills/                      # One folder per skill - load only what's needed
-│   ├── getting-started/         # MID/key, environments, .env conventions, decision tree
-│   ├── js-checkout/             # One-time payments + JS Checkout
+├── skills/                        # One folder per skill - load only what's needed
+│   ├── getting-started/           # MID/key, environments, .env conventions, decision tree
+│   ├── js-checkout/               # One-time payments + JS Checkout
 │   │   └── references/REFERENCE.md
-│   ├── subscriptions/           # UPI Autopay / NATIVE_SUBSCRIPTION
+│   ├── subscriptions/             # UPI Autopay / NATIVE_SUBSCRIPTION
 │   │   └── references/REFERENCE.md
-│   ├── payment-links/           # /link/* APIs
+│   ├── payment-links/             # /link/* APIs
 │   │   └── references/REFERENCE.md
-│   ├── qr-codes/                # Dynamic QR
+│   ├── qr-codes/                  # Dynamic QR
 │   │   └── references/REFERENCE.md
-│   ├── webhooks/                # S2S receiver + signature verification + dedup
-│   ├── refunds/                 # Full + partial refunds (stub - expanded soon)
-│   └── troubleshooting/         # Symptom -> cause -> fix tree
+│   ├── all-in-one-sdk/            # Native Android / iOS - Paytm-branded checkout
+│   │   └── references/REFERENCE.md
+│   ├── custom-sdk/                # Native Android / iOS - custom payment UI
+│   │   └── references/REFERENCE.md
+│   ├── webhooks/                  # S2S receiver + signature verification + dedup
+│   │   └── references/REFERENCE.md
+│   ├── refunds/                   # Full + partial refunds via /refund/apply + /v2/refund/status
+│   │   └── references/REFERENCE.md
+│   ├── troubleshooting/           # Symptom -> cause -> fix tree
+│   │   └── references/REFERENCE.md
+│   ├── migrate-from-razorpay/     # Razorpay -> Paytm migration playbook
+│   │   └── references/REFERENCE.md
+│   ├── migrate-from-payu/         # PayU -> Paytm migration playbook
+│   │   └── references/REFERENCE.md
+│   ├── migrate-from-cashfree/     # Cashfree -> Paytm migration playbook
+│   │   └── references/REFERENCE.md
+│   ├── migrate-from-juspay/       # Juspay -> Paytm migration playbook
+│   │   └── references/REFERENCE.md
+│   └── migrate-from-ccavenue/     # CCAvenue -> Paytm migration playbook
 │       └── references/REFERENCE.md
-└── scripts/                     # Reference backends + frontend examples
-    ├── backend-node/            # Node.js (Express + paytmchecksum)
-    ├── backend-python/          # Python (Flask + paytmchecksum)
-    ├── backend-spring/          # Spring Boot 3 + Jakarta + executable JAR
-    ├── backend-spring-legacy/   # Spring 5 + javax.servlet + WAR (Tomcat 9)
+└── scripts/                       # Reference backends + frontend examples
+    ├── backend-node/              # Node.js (Express + paytmchecksum)
+    ├── backend-python/            # Python (Flask + paytmchecksum)
+    ├── backend-spring/            # Spring Boot 3 + Jakarta + executable JAR
+    ├── backend-spring-legacy/     # Spring 5 + javax.servlet + WAR (Tomcat 9)
     └── frontend/
-        ├── checkout.html        # JS Checkout (one-time payment)
-        ├── subscription.html    # Recurring payment setup
-        ├── payment-link.html    # Create and share payment links
-        └── qr.html              # Dynamic UPI QR
+        ├── checkout.html          # JS Checkout (one-time payment)
+        ├── subscription.html      # Recurring payment setup
+        ├── payment-link.html      # Create and share payment links
+        └── qr.html                # Dynamic UPI QR
 ```
 
 ---
