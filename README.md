@@ -23,7 +23,7 @@ The skills teach your AI agent the full Paytm spec, integration patterns, and co
 | **Custom SDK** | Native Android / iOS SDK for fully custom payment UI |
 | **Webhooks** | S2S notification receiver with signature verification |
 | **Refunds** | Full and partial refund APIs |
-| **Migration playbooks** | Move from Razorpay / PayU / Cashfree / Juspay / CCAvenue to Paytm with per-flow API mapping, signature scheme translation, and dual-write rollout |
+| **Migration playbooks** | Move from Razorpay / PayU / Cashfree / Juspay / CCAvenue / BillDesk to Paytm with per-flow API mapping, signature scheme translation, and dual-write rollout |
 
 ---
 
@@ -105,7 +105,7 @@ After install:
 
 ## 4. What's inside
 
-Skills are **modular** — fifteen focused skills load only the context relevant to the user's prompt.
+Skills are **modular** — sixteen focused skills load only the context relevant to the user's prompt.
 
 ```
 .
@@ -137,7 +137,9 @@ Skills are **modular** — fifteen focused skills load only the context relevant
 │   │   └── references/REFERENCE.md
 │   ├── migrate-from-juspay/       # Juspay -> Paytm migration playbook
 │   │   └── references/REFERENCE.md
-│   └── migrate-from-ccavenue/     # CCAvenue -> Paytm migration playbook
+│   ├── migrate-from-ccavenue/     # CCAvenue -> Paytm migration playbook
+│   │   └── references/REFERENCE.md
+│   └── migrate-from-billdesk/     # BillDesk -> Paytm migration playbook
 │       └── references/REFERENCE.md
 └── scripts/                       # Reference backends + frontend examples
     ├── backend-node/              # Node.js (Express + paytmchecksum)

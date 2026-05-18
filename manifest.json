@@ -153,6 +153,16 @@
       ]
     },
     {
+      "name": "migrate-from-billdesk",
+      "path": "skills/migrate-from-billdesk",
+      "entry": "SKILL.md",
+      "description": "Migration playbook from BillDesk (IndiaIdeas.com) to Paytm: covers BOTH the legacy pipe-delimited PaymentRequest flow (HMAC-SHA256 checksum) AND the newer v1.2 JWS+JWE flow, eMandate / SI handover (don't cancel active mandates), refunds via PGIQueryController or /payments/ve1_2/refunds, dual-write rollout.",
+      "triggers": ["billdesk", "BillDesk", "pgi.billdesk.com", "uat.billdesk.com", "/pgidsk/PGIMerchantPayment", "/pgidsk/PGIMerchantRequestHandler", "/pgidsk/PGIQueryController", "/payments/ve1_2/orders/create", "/payments/ve1_2/refunds", "BILLDESK_MERCHANT_ID", "BILLDESK_CLIENT_ID", "BILLDESK_SECRET_KEY", "BILLDESK_CHECKSUM_KEY", "IndiaIdeas", "BdSign", "BdJwe", "BdSignature", "BdTimestamp", "migrate from billdesk", "switch from billdesk"],
+      "references": [
+        { "path": "skills/migrate-from-billdesk/references/REFERENCE.md", "load": "lazy", "summary": "Both BillDesk variants (legacy pipe-delimited and v1.2 JWS+JWE) per-step diff with code, eMandate handover (NPCI mandates can't be cancelled mid-cycle), status enum mapping, 180-day cutover for SIP merchants." }
+      ]
+    },
+    {
       "name": "troubleshooting",
       "path": "skills/troubleshooting",
       "entry": "SKILL.md",
@@ -236,6 +246,12 @@
       "title": "CCAvenue -> Paytm",
       "path": "skills/migrate-from-ccavenue",
       "summary": "Migration from CCAvenue (Avenues India). AES-256-CBC encrypted form-POST -> REST JSON architecture shift, 3 credentials -> 2, billing/shipping field reduction, SI mandate handover, 150-day cutover."
+    },
+    {
+      "id": "billdesk",
+      "title": "BillDesk -> Paytm",
+      "path": "skills/migrate-from-billdesk",
+      "summary": "Migration from BillDesk (IndiaIdeas.com). Covers BOTH the legacy pipe-delimited PaymentRequest flow AND the newer v1.2 JWS+JWE flow, eMandate handover (NPCI mandates), 180-day cutover for SIP / utility merchants."
     }
   ],
 
