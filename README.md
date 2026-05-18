@@ -131,10 +131,6 @@ Skills are **modular** — eight focused skills load only the context relevant t
         └── qr.html              # Dynamic UPI QR
 ```
 
-### How modular skills help
-
-When a user asks *"how do I send a payment link via SMS?"*, only the `payment-links` skill content is loaded — not the full 144 KB of every flow. Smaller context per request = better LLM accuracy and faster responses.
-
 ---
 
 ## 5. Important notes
