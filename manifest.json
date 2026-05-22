@@ -83,6 +83,16 @@
       ]
     },
     {
+      "name": "large-payment-collection",
+      "path": "skills/large-payment-collection",
+      "entry": "SKILL.md",
+      "description": "Paytm Large Payment Collection (Bank Transfer) - accept high-ticket payments via NEFT/RTGS/IMPS using a unique 16-char Virtual Account Number (VAN). DEFAULT FLOW = Flow 2: order-based VAN issued via /theia/api/v1/initiateTransaction with a vanInfo block, surfaced inside the standard Paytm JS Checkout modal alongside UPI / Credit Cards / Debit Cards / Net Banking / EMI. Flow 1 (standalone /van/create server-only with permanent VANs, no checkout modal) is the fallback for school fees / distributor ledger / BFSI-with-TPV. Auto-reconciles inbound transfers via signed webhooks. T+1 settlement.",
+      "triggers": ["Large Payment Collection", "large-payment-collection", "large payment collection", "Paytm Bank Transfer", "Bank Transfer", "bank transfer payment", "Virtual Account", "Virtual Account Number", "VAN", "vanId", "vanInfo", "vanDetails", "merchantPrefix", "identificationNo", "/van/create", "/van/query", "/van/update", "/van/list", "/van/orderList", "/van/transactionStatus", "/van/refund", "vanproxy", "/vanproxy/", "thirdPartyValidation", "TPV", "third party validation", "PYTM0123456", "One97 Communications Limited", "NEFT collection", "RTGS collection", "IMPS collection", "NEFT payment", "RTGS payment", "IMPS collection", "bulk bank transfer", "fee collection", "school fee collection", "tuition fee collection", "distributor collection", "dealer collection", "BFSI collection", "invoice bank transfer", "B2B invoice payment", "remitterAccount", "remitterIFSC", "remitter bank", "large payment", "high ticket payment", "high value payment", "above 2 lakh", "above ₹2L", "ticket size > 2L", "B2B collection", "enterprise collection", "corporate collection", "subscription bank transfer", "AMC fee", "AIF investment", "mutual fund collection", "broker collection", "auction payment", "insurance premium large"],
+      "references": [
+        { "path": "skills/large-payment-collection/references/REFERENCE.md", "load": "lazy", "summary": "Full VAN endpoint field tables, TPV deep dive, Flow 1 vs Flow 2 sequences, webhook payloads, reconciliation pattern (push + pull + settle), error code table, cross-skill notes." }
+      ]
+    },
+    {
       "name": "all-in-one-sdk",
       "path": "skills/all-in-one-sdk",
       "entry": "SKILL.md",
@@ -194,6 +204,8 @@
     "subscription",
     "payment-link",
     "dynamic-qr",
+    "bank-transfer-collection",
+    "virtual-account",
     "callback-verification",
     "transaction-status",
     "refunds",
