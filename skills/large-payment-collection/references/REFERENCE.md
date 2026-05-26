@@ -8,8 +8,8 @@ Reference: <https://www.paytmpayments.com/docs/large-payment-collection?ref=ente
 
 > **⚠️ READ THIS FIRST — common mistakes that cause silent failures and reconciliation gaps:**
 >
-> 1. **`vanId` is always 16 chars; the first 2 chars are always `"11"`.** Don't reconstruct it from `prefix + identificationNo` — always store and compare the full `vanId` from the Create / Query response.
-> 2. **IFSC is always `PYTM0123456`. Beneficiary name is always `One97 Communications Limited`.** Show these *literally* to the payer; if you substitute your own company name in the instructions, the payer's bank will reject the NEFT/RTGS as a beneficiary mismatch.
+> 1. **`vanId` is always 18 chars; the first 4 chars are always `"PPSL"`.** Don't reconstruct from `prefix + identificationNo` : always store the full `vanId` from the API response.
+> 2. **IFSC is always `UTIB0CCH274`. Beneficiary name is always `Paytm Payments Services Ltd.`** Display exactly what the API returns : never hardcode these values.
 > 3. **`requestId` is the idempotency key for `/van/create`.** Replay the same `requestId` on retry — you'll get back the original VAN, not a duplicate. A fresh UUID per retry creates duplicate VANs and wastes your prefix space.
 > 4. **TPV is hard-capped at 10 active accounts per VAN.** Adding an 11th fails — disable an existing one first via `/van/update` with `removeThirdPartyValidation`.
 > 5. **Refunds need `remitterAccount` + `remitterIFSC` from the inbound transfer.** Some banks (older SFMS messages, a few cooperative banks) don't send them — refund API returns `01000009` and you must settle out-of-band. There is no Paytm-side workaround.
@@ -32,6 +32,21 @@ Reference: <https://www.paytmpayments.com/docs/large-payment-collection?ref=ente
    - **TPV requirement**: yes for BFSI / SEBI-regulated entities, optional otherwise.
 3. Configure your webhook URL for `PAYMENT_SUCCESS` / `PAYMENT_FAILURE` / `REFUND_SUCCESS` / `REFUND_FAILURE` events.
 4. Test on staging using Paytm's payment simulator utility (you provide remitter name / account / IFSC / VAN / amount; Paytm fires the webhook).
+5. Store all credentials in environment variables : never hardcode:
+
+   ```
+   PAYTM_MID=your_mid
+   PAYTM_MERCHANT_KEY=your_key
+   PAYTM_ENVIRONMENT=staging        # or production
+   PAYTM_WEBSITE_NAME=WEBSTAGING    # or DEFAULT for production
+   PAYTM_MERCHANT_PREFIX=ABCD
+   ```
+
+   Load `.env` with an explicit path to avoid directory mismatch issues:
+
+   ```js
+   dotenv.config({ path: path.join(__dirname, '.env') });
+   ```
 
 ---
 
@@ -236,9 +251,9 @@ Response includes:
 ```json
 {
   "vanDetails": {
-    "vanId": "11PYTM9432568398",
-    "ifsc": "PYTM0123456",
-    "beneficiaryName": "One97 Communications Limited",
+    "vanId": "PPSLPYTM9432568398",
+    "ifsc": "UTIB0CCH274",
+    "beneficiaryName": "Paytm Payments Services Ltd.",
     "orderAmount": "100000",
     "orderTimeout": 3600,
     "expiryTime": "2026-01-20T11:30:00Z"
@@ -246,7 +261,52 @@ Response includes:
 }
 ```
 
-Render `vanId`, `ifsc`, `beneficiaryName`, `orderAmount`, and a countdown to `expiryTime` on your payment page. **Use the allowed Terminology rules from the bundle preamble — describe this as "Bank Transfer (NEFT / RTGS / IMPS / UPI)", not "Wallet" or any other instrument.**
+Render `vanId`, `ifsc`, `beneficiaryName`, `orderAmount`, and a countdown to `expiryTime` on your payment page. **Use the allowed Terminology rules from the bundle preamble — describe this as "Bank Transfer (NEFT / RTGS / IMPS)", not "Wallet" or any other instrument.**
+
+**Checksum generation (different from VAN webhook HMAC : do not confuse the two):**
+
+```js
+const PaytmChecksum = require('paytmchecksum');
+const signature = await PaytmChecksum.generateSignature(
+  JSON.stringify(bodyObj),
+  process.env.PAYTM_MERCHANT_KEY
+);
+const paytmPayload = { body: bodyObj, head: { signature } };
+```
+
+Always include `callbackUrl` in the request body: `"callbackUrl": "https://yoursite.com/api/callback"`
+
+---
+
+**Frontend null-safety : mandatory:**
+
+```js
+if (!vanDetails || !vanDetails.vanId) {
+  console.error('[LPC] vanDetails absent : LPC not activated on MID:', mid);
+  openPaytmModal(txnToken); // fallback
+  return;
+}
+```
+
+**Browser callback : handle the page reload:**
+
+```js
+// Server
+app.post('/api/callback', (req, res) => {
+  const { ORDERID, STATUS } = req.body;
+  res.redirect(`/?orderId=${ORDERID}&cbStatus=${STATUS}`);
+});
+
+// Frontend : save before API call
+sessionStorage.setItem('paytm_cart', JSON.stringify(cart));
+sessionStorage.setItem('paytm_id_no', identificationNo);
+
+// Frontend : restore on DOMContentLoaded after reload
+const saved = sessionStorage.getItem('paytm_cart');
+if (saved) cart = JSON.parse(saved);
+```
+
+`STATUS` on callback: `TXN_SUCCESS` | `PENDING` (normal for bank transfers) | `TXN_FAILURE`. Always reconcile via webhook : never rely on browser callback alone.
 
 ---
 

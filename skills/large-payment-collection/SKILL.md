@@ -48,9 +48,11 @@ triggers:
   - "remitterIFSC"
 ---
 
+> **Dependencies:** This skill covers the VAN/bank-transfer layer only. Flow 2 also requires the `paytm-js-checkout` skill for the modal fallback. Load both skills when implementing Flow 2. The JS Checkout skill covers: loading CheckoutJS script, initialising `Paytm.CheckoutJS` with `txnToken`, handling `transactionStatus`, `notifyMerchant`, `SESSION_EXPIRED`, and `APP_CLOSED` events.
+
 # Paytm Large Payment Collection (Bank Transfer)
 
-Accept large-ticket payments via **NEFT / RTGS / IMPS** (and UPI in Flow 2) by handing each customer / order a unique **16-character Virtual Account Number (VAN)**. The customer pushes money from their bank → Paytm reconciles it to the VAN → you get a signed webhook with full remitter details → Paytm settles to your bank on **T+1**.
+Accept large-ticket payments via **NEFT / RTGS / IMPS** by handing each customer / order a unique **18-character Virtual Account Number (VAN)**. The customer pushes money from their bank → Paytm reconciles it to the VAN → you get a signed webhook with full remitter details → Paytm settles to your bank on **T+1**.
 
 > Two files: `SKILL.md` (this) gives the endpoint family, VAN structure, and the highest-impact gotchas. `references/REFERENCE.md` has full per-endpoint field tables, TPV deep dive, error code table, and reconciliation patterns.
 >
@@ -61,6 +63,17 @@ Accept large-ticket payments via **NEFT / RTGS / IMPS** (and UPI in Flow 2) by h
 > When the user asks for "Large Payment Collection", "Paytm Bank Transfer", VAN, NEFT/RTGS collection, or anything in the trigger list, generate **Flow 2** code by default — i.e. call `POST /theia/api/v1/initiateTransaction` with a `vanInfo` block, get `txnToken`, and render the standard Paytm JS Checkout. Bank Transfer surfaces as a payment option **inside the Paytm checkout modal** alongside UPI / Credit Cards / Debit Cards / Net Banking / EMI; when the payer picks it, the modal shows them the generated VAN + IFSC + beneficiary + amount + countdown.
 >
 > Only fall back to Flow 1 (standalone `/van/create` server-only flow, no checkout modal) when the user explicitly asks for ongoing / multi-payment collections against a permanent VAN (e.g. school fees per student, distributor ledger, BFSI investor account with TPV).
+
+---
+
+## ⚠️ Pre-flight : confirm ALL of these before writing a single line of code
+
+- [ ] **LPC activated on this MID?** : Confirm with Paytm KAM. If not, stop here.
+- [ ] **`merchantPrefix` confirmed?** : 4 chars, assigned by Paytm at activation. Permanent.
+- [ ] **`identificationNo` scheme?** : `MERCHANT_MANAGED` (you supply 10 chars) or `PAYTM_MANAGED`.
+- [ ] **`orderTimeout` value?** : Seconds the VAN stays alive (e.g. `3600`).
+- [ ] **`websiteName` correct?** : Staging: `WEBSTAGING`. Production: `DEFAULT` or your registered name.
+- [ ] **Webhook URL registered and publicly accessible?** : `localhost` will not work.
 
 ---
 
@@ -88,24 +101,46 @@ Large Payment Collection is the only flow that lets the payer push from **their 
 
 ---
 
-## VAN structure — the 16-character format
+## Complete end-to-end flow : Flow 2 (Checkout)
+
+1. Customer adds items to cart and enters 10-char `identificationNo` → clicks Pay
+2. Frontend validates `identificationNo` is exactly 10 chars; saves cart + `identificationNo` to `sessionStorage`
+3. Frontend calls your server's create-order endpoint with `{ items, identificationNo }`
+4. Server validates inputs, generates `orderId`, builds `initiateTransaction` request body with `vanInfo` block + `callbackUrl`
+5. Server generates Paytm checksum: `PaytmChecksum.generateSignature(JSON.stringify(bodyObj), MERCHANT_KEY)` and wraps as `{ body: bodyObj, head: { signature } }`
+6. Server calls `POST /theia/api/v1/initiateTransaction?mid=...&orderId=...`
+7. Paytm returns `txnToken` + `vanDetails` (only if LPC is activated on the MID)
+8. Server stores order with `status: PENDING` and returns `txnToken`, `vanDetails`, `pgDomain`, `mid` to frontend
+9. Frontend null-checks `vanDetails` : if present: show custom VAN screen + start polling; if absent: open Paytm JS Checkout modal
+10. Customer selects Bank Transfer in modal → verifies mobile via OTP → sees VAN details → clicks Proceed
+11. Customer initiates NEFT / RTGS / IMPS from their bank to the VAN
+12. **Browser callback (best-effort):** Paytm POSTs `{ ORDERID, STATUS }` to `callbackUrl` → server redirects to `/?orderId=...&cbStatus=...` → page reloads → frontend restores cart + `identificationNo` from `sessionStorage`
+13. **S2S Webhook (reliable):** Paytm fires signed `PAYMENT_SUCCESS` to your webhook URL → server ACKs HTTP 200 within 5s → verifies HMAC-SHA256 signature → marks order `SUCCESS`
+14. Frontend polls `/api/order-status` every 10s → detects `SUCCESS` → shows confirmation screen
+15. T+1 settlement : Paytm settles amount to merchant's bank account next working day
+
+---
+
+## VAN structure : the 18-character format
 
 ```
-1 1 [M E R C H A N T] [I D E N T I F I C A T I O N N O]
-└─┬─┘ └─────┬───────┘ └────────────┬─────────────────┘
-"11"   4 chars         10 chars
-fixed  merchant prefix unique per customer / order
+P P S L [M E R C H A N T] [I D E N T I F I C A T I O N N O]
+└──┬───┘ └─────┬─────────┘ └──────────────┬────────────────┘
+"PPSL"   4 chars             10 chars
+fixed    merchant prefix     unique per customer / order
 ```
 
-- **Position 1–2:** fixed `"11"` (Paytm bank identifier — never changes).
-- **Position 3–6:** 4-char merchant prefix you choose at onboarding (e.g. `PYTM`, `IITK`, `ABCD`).
-- **Position 7–16:** 10-char identification number. **Merchant-managed:** you supply it (student roll, invoice no, mobile). **Paytm-managed:** Paytm derives it from the customer's validated mobile.
+- **Position 1–4:** Fixed `"PPSL"` (Paytm bank identifier : never changes).
+- **Position 5–8:** 4-char merchant prefix assigned by Paytm at LPC activation (e.g. `ALIS`, `FITS`).
+- **Position 9–18:** 10-char identification number : merchant-managed (you supply it) or Paytm-managed.
 
 **Fixed for every VAN you ever issue:**
-- IFSC: `PYTM0123456`
-- Beneficiary name: `One97 Communications Limited`
+- IFSC: `UTIB0CCH274`
+- Beneficiary name: `Paytm Payments Services Ltd.`
 
-Display all three (`vanId`, IFSC, beneficiary) to the payer — banks reject NEFT/RTGS without all three.
+> Always render values from the API response (`vanDetails.ifsc`, `vanDetails.beneficiaryName`). Never hardcode these : Paytm may update them.
+
+Display all three (`vanId`, IFSC, beneficiary) to the payer : banks reject NEFT/RTGS without all three.
 
 ---
 
@@ -126,11 +161,11 @@ All requests carry a `signature` (HMAC-SHA256 of the canonical JSON, keyed with 
 
 ---
 
-## ❗ The seven quirks that keep biting
+## ❗ The quirks that keep biting
 
-1. **`vanId` is 16 chars, not 14, not 18.** The first two chars are always `"11"`. If you concatenate `prefix + identificationNo` and store *that*, you'll mismatch every webhook — the payload always uses the full 16-char `vanId`. Store `vanId` whole.
+1. **`vanId` is 18 chars, not 16.** The first four chars are always `"PPSL"`. Never reconstruct it from `prefix + identificationNo` : always store the full 18-char `vanId` from the API response.
 
-2. **IFSC is always `PYTM0123456` and beneficiary is always `One97 Communications Limited` — for every merchant, every customer.** Do not show your own company name on the bank-transfer instructions; the payer's bank will reject the NEFT/RTGS because the beneficiary name won't match what Paytm's bank has on file. Show the Paytm bank entity exactly.
+2. **IFSC is always `UTIB0CCH274` and beneficiary is always `Paytm Payments Services Ltd.` : for every merchant, every customer.** Never show your own company name; the payer's bank will reject the transfer. Always display what the API returns : never hardcode.
 
 3. **`requestId` is your idempotency key for Create VAN.** Replaying the same `requestId` returns the original response — including the original `vanId` — without creating a new VAN. Generate it on your side, store it, and replay on retry. Don't use a fresh UUID per retry or you'll duplicate VANs.
 
@@ -141,6 +176,8 @@ All requests carry a `signature` (HMAC-SHA256 of the canonical JSON, keyed with 
 6. **Refund max per request is ₹2L. For larger refunds, split.** A ₹5L refund needs three calls: ₹2L + ₹2L + ₹1L, each with its own unique `refundId`. The API does not auto-split.
 
 7. **Settlement is T+1 only.** There is no same-day or instant settlement on this product, regardless of inbound rail (IMPS shows up in your webhook in seconds, but the money lands in your bank account next working day). Don't promise instant settlement to internal stakeholders.
+
+8. **`vanDetails` absent + `resultStatus: S` = LPC not activated on this MID.** The `txnToken` is still valid and usable. Do not crash : log `"vanDetails missing : LPC not activated. Contact Paytm KAM."` and fall back to the Paytm JS Checkout modal. Bank Transfer will surface inside the modal once Paytm activates LPC on the MID.
 
 ---
 
@@ -217,6 +254,66 @@ Three sources of truth, in priority order:
 3. **`POST /van/transactionStatus`** (pull, single order) — for support tooling and idempotent replays.
 
 Settle reconciliation (₹ in bank vs ₹ in webhooks) runs T+2 once Paytm's settlement report is published.
+
+---
+
+## Testing on Staging Environment
+
+Before going live, validate your integration end-to-end on staging using Paytm's mock payment page. This simulates a real bank transfer without moving actual money.
+
+> ⚠️ **Never use a real bank's NEFT/RTGS portal for staging testing.** The VAN contains alphanumeric characters (e.g. `PPSLALIS1234567890`) which many bank portals reject. Always use the mock page below.
+
+---
+
+### Step 1 : Set up your staging server
+- `PAYTM_ENVIRONMENT=staging`
+- `PAYTM_WEBSITE_NAME=WEBSTAGING`
+- PG Domain: `https://securestage.paytmpayments.com`
+
+---
+
+### Step 2 : Place a test order on your website
+1. Add items to cart and enter your identification number
+2. Click **Pay** → Paytm JS Checkout modal opens
+3. Select **Bank Transfer / NEFT / RTGS**
+4. Note the **VAN (Account No.)**, **IFSC Code**, and **Amount** from the modal
+5. Use the **copy icons** on the payment page to copy VAN and IFSC accurately : avoid typing manually
+
+---
+
+### Step 3 : Simulate the bank transfer
+
+Open in a new browser tab:
+
+```
+https://securestage.paytmpayments.com/mockbank/largePaymentCollectionForm
+```
+
+| Field | Value |
+|---|---|
+| **Account Holder Name** | Any alphabetic name (e.g. `Test`) |
+| **Bank Account No.** | `120000000000` |
+| **Account IFSC Code** | Copy from payment page (Step 2) |
+| **VAN Number** | Copy from payment page (Step 2) |
+| **Transaction Amount** | Must match exact order amount |
+| **Transaction Mode** | `NEFT`, `RTGS`, or `IMPS` |
+
+Click **Submit**.
+
+---
+
+### Step 4 : Verify the result
+- ✅ Mock page shows success response
+- ✅ Your website updates to payment confirmed
+- ✅ Server logs show `PAYMENT_SUCCESS` webhook received and signature verified
+
+---
+
+### Common staging mistakes to avoid
+- ❌ Amount different from order amount → auto-refunded by Paytm
+- ❌ Expired VAN → place a fresh order
+- ❌ Wrong IFSC or VAN → always copy from the payment page
+- ❌ Webhook URL is `localhost` → use ngrok or a public URL
 
 ---
 
