@@ -2,7 +2,7 @@
 
 > _Companion to **`SKILL.md`** — load this file alongside `SKILL.md`, never instead of it._
 
-Large Payment Collection (a.k.a. Paytm Bank Transfer) lets merchants accept high-ticket payments via **NEFT / RTGS / IMPS / UPI** by issuing each customer a unique 16-character **Virtual Account Number (VAN)**. Paytm auto-reconciles each inbound bank transfer to the correct VAN and fires a signed webhook with full remitter details. Settlement to the merchant's bank account is **T+1**.
+Large Payment Collection (a.k.a. Paytm Bank Transfer) lets merchants accept high-ticket payments via **NEFT / RTGS / IMPS** by issuing each customer a unique 18-character **Virtual Account Number (VAN)**. Paytm auto-reconciles each inbound bank transfer to the correct VAN and fires a signed webhook with full remitter details. Settlement to the merchant's bank account is **T+1**.
 
 Reference: <https://www.paytmpayments.com/docs/large-payment-collection?ref=enterpriseSolutions>
 
@@ -16,7 +16,7 @@ Reference: <https://www.paytmpayments.com/docs/large-payment-collection?ref=ente
 > 6. **Max refund per `/van/refund` call is ₹2L.** Split larger refunds into multiple calls with distinct `refundId`s. The API does not auto-split.
 > 7. **Webhooks must be ACKed with HTTP 200 within 5s.** Non-2xx triggers retries with exponential backoff. Process async; ACK first.
 > 8. **`amount` in API & webhook payloads is a string of rupees (no paise scaling).** `"50000"` means ₹50,000.00, not ₹500.00. Different from JS Checkout's `txnAmount.value` convention — don't share parsing code blindly.
-> 9. **`transactionMode` is one of `NEFT | RTGS | IMPS | UPI`.** UPI only appears under Flow 2 (order-based VANs). If you see UPI on a Flow 1 VAN, raise a ticket.
+> 9. **`transactionMode` is one of `NEFT | RTGS | IMPS | UPI`.** UPI only appears under the Checkout flow (order-based VANs). If you see UPI on a Non-Checkout VAN, raise a ticket.
 > 10. **Settlement is T+1.** IMPS hits your webhook in seconds, but money lands T+1. Don't promise instant cash availability to finance / ops.
 > 11. **Verify the response signature on every webhook AND every API response.** Paytm signs both directions; failing to verify exposes you to spoofed credit notifications.
 
@@ -28,11 +28,12 @@ Reference: <https://www.paytmpayments.com/docs/large-payment-collection?ref=ente
 2. Provide:
    - Your **4-character merchant prefix** (e.g. `ABCD`). Becomes positions 3–6 of every VAN you ever issue. Choose carefully — irreversible.
    - **VAN customization mode:** `MERCHANT_MANAGED` (you supply `identificationNo`) or `PAYTM_MANAGED` (Paytm derives it from the customer's validated mobile).
-   - **Order timeout window** for Flow 2 (e.g. 3600 seconds).
+   - **Order timeout window** for the Checkout flow (e.g. 3600 seconds).
    - **TPV requirement**: yes for BFSI / SEBI-regulated entities, optional otherwise.
 3. Configure your webhook URL for `PAYMENT_SUCCESS` / `PAYMENT_FAILURE` / `REFUND_SUCCESS` / `REFUND_FAILURE` events.
 4. Test on staging using Paytm's payment simulator utility (you provide remitter name / account / IFSC / VAN / amount; Paytm fires the webhook).
-5. Store all credentials in environment variables : never hardcode:
+5. **Request Bank Transfer mode (NEFT/RTGS/IMPS) activation on the MID separately from the general Large Payment Collection activation.** These are two distinct switches. Error `2001` ("Bank Transfer not supported") means switch #2 is off — contact the Paytm integration team; no code change will fix this.
+6. Store all credentials in environment variables : never hardcode:
 
    ```
    PAYTM_MID=your_mid
@@ -52,7 +53,7 @@ Reference: <https://www.paytmpayments.com/docs/large-payment-collection?ref=ente
 
 ## Two flows in detail
 
-### Flow 1 — Pre-created VANs (ongoing collections)
+### Non-Checkout flow — Pre-created VANs (ongoing collections)
 
 One VAN per customer, lives forever (until you `DISABLE` it). Payer can pay any amount, any number of times. Best for:
 
@@ -63,7 +64,7 @@ One VAN per customer, lives forever (until you `DISABLE` it). Payer can pay any 
 
 Create the VAN at customer onboarding, share IFSC + VAN + beneficiary on every invoice / fee notice. Match incoming webhooks against your customer ledger by `vanId` (or `udf.customerId`).
 
-### Flow 2 — Order-based VANs (single-shot, amount-matched)
+### Checkout flow — Order-based VANs (single-shot, amount-matched)
 
 VAN created per order, expires after `orderTimeout`. Payer **must pay exactly `txnAmount`** within the window. Best for:
 
@@ -78,56 +79,92 @@ Under-payment or over-payment is **auto-refunded** by Paytm; late payment (after
 
 ## Endpoints — full request / response field tables
 
-All requests are JSON POST. All carry `signature` (HMAC-SHA256 over canonical JSON, base64). Production base URL is whitelisted with your activation; staging is the standard `securegw-stage.paytm.in` host.
+**Non-Checkout flow uses a single `vanproxy` endpoint** — the `body` discriminates the operation. All requests must be wrapped in a `head` + `body` envelope.
+
+| Environment | Endpoint |
+|---|---|
+| Staging | `POST https://securestage.paytmpayments.com/vanproxy/api/v1/van?mid={MID}` |
+| Production | `POST https://secure.paytmpayments.com/vanproxy/api/v1/van?mid={MID}` |
+
+### vanproxy Request Head — required fields
+
+| Field | Value |
+|---|---|
+| `clientId` | `"C11"` (fixed) |
+| `version` | `"v1"` (fixed) |
+| `requestTimestamp` | `Date.now().toString()` — epoch ms as string |
+| `channelId` | `"WEB"` (fixed) |
+| `tokenType` | `"CHECKSUM"` (fixed) |
+| `token` | `PaytmChecksum.generateSignature(JSON.stringify(body), merchantKey)` |
+
+> ⚠️ The checksum field is **`token`**, NOT `signature`. Naming it `signature` returns `2002 CheckSum Validation Failure`. Omitting any of the five fixed fields above also returns `2002`.
 
 ### 1. Create VAN
 
 ```
-POST {BASE}/van/create
+POST {STAGING_OR_PROD}/vanproxy/api/v1/van?mid={MID}
 ```
 
-Request:
+Request body:
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | `mid` | string | ✅ | Your Paytm MID |
 | `requestId` | string | ✅ | **Idempotency key.** Replay returns original response. |
-| `van` | array | ✅ | 1–10 VAN objects per call |
-| `van[].merchantPrefix` | string(4) | ✅ | Must match your onboarded prefix |
-| `van[].identificationNo` | string(10) | conditional | Required for `MERCHANT_MANAGED`; omit for `PAYTM_MANAGED` |
-| `van[].entityName` | string | ✅ | Customer / business name |
-| `van[].entityType` | enum | ✅ | `INDIVIDUAL` \| `BUSINESS` |
-| `van[].customerId` | string | optional | Your internal customer ID — echoed in webhooks |
-| `van[].invoiceNo` | string | optional | Your invoice — echoed in webhooks |
-| `van[].purpose` | string | optional | Free-text, shown in dashboard |
-| `van[].udf` | object | optional | Up to ~10 string KV pairs — round-tripped on every webhook |
-| `van[].thirdPartyValidation` | array | conditional | Required if TPV is on for your MID. Max 10 entries. |
-| `van[].thirdPartyValidation[].bankAccount` | string | ✅ (when TPV) | Whitelisted payer account |
-| `van[].thirdPartyValidation[].ifsc` | string | ✅ (when TPV) | Whitelisted payer IFSC |
-| `signature` | string | ✅ | HMAC-SHA256 base64 |
+| `vanDetails` | array | ✅ | 1–10 VAN objects per call |
+| `vanDetails[].merchantPrefix` | string(4) | ✅ | Must match your onboarded prefix |
+| `vanDetails[].identificationNo` | string(10) | conditional | Required for `MERCHANT_MANAGED`; omit for `PAYTM_MANAGED` |
+| `vanDetails[].purpose` | string | optional | Free-text, shown in dashboard |
+| `vanDetails[].customerDetails` | array | ✅ | Nested customer info — at least one entry |
+| `vanDetails[].customerDetails[].customerName` | string | ✅ | Customer / business name |
+| `vanDetails[].customerDetails[].customerMobile` | string | ✅ | 10-digit mobile |
+| `vanDetails[].customerDetails[].customerEmail` | string | optional | |
+| `vanDetails[].userDefinedFields` | object | optional | KV pairs — round-tripped on every webhook |
+| `vanDetails[].tpvList` | array | conditional | Required if TPV is on for your MID. Max 10 entries. |
+| `vanDetails[].tpvList[].bankAccount` | string | ✅ (when TPV) | Whitelisted payer account |
+| `vanDetails[].tpvList[].ifsc` | string | ✅ (when TPV) | Whitelisted payer IFSC |
 
-Response:
+> The checksum goes in `head.token`, NOT in the body. See vanproxy head field table above.
+
+Response (success):
 
 ```json
 {
-  "responseCode": "01000100",
-  "responseMessage": "Success",
+  "resultCode": "0000",
+  "resultMsg": "SUCCESS",
   "requestId": "req_2024_01_15_inv12345",
-  "van": [
+  "vanDetails": [
     {
-      "vanId": "11PYTM9876533333",
-      "merchantPrefix": "PYTM",
-      "identificationNo": "9876533333",
-      "ifsc": "PYTM0123456",
-      "beneficiaryName": "One97 Communications Limited",
+      "responseStatus": "SUCCESS",
+      "vanId": "PPSLABCD1234567890",
+      "merchantPrefix": "ABCD",
+      "identificationNo": "1234567890",
+      "ifscCode": "UTIB0CCH274",
+      "beneficiaryName": "Paytm Payments Services Ltd.",
       "status": "ACTIVE",
-      "entityName": "Acme Distributors Pvt Ltd",
       "createdDate": "2024-01-15T10:30:00Z"
     }
-  ],
-  "signature": "<sig>"
+  ]
 }
 ```
+
+Response (per-entry failure):
+
+```json
+{
+  "resultCode": "0000",
+  "resultMsg": "SUCCESS",
+  "vanDetails": [
+    {
+      "responseStatus": "FAILURE",
+      "errorCode": "4010",
+      "errorMessage": "Already exists"
+    }
+  ]
+}
+```
+
+> ⚠️ **Always check `vanDetails[i].responseStatus`.** Outer `resultCode: "0000"` only means the API call was received — VAN creation may still have failed per-entry. Checking only the outer level silently treats failures as successes.
 
 ### 2. Query VAN (idempotency check)
 
@@ -227,9 +264,9 @@ Request: `mid`, `refundId`, `signature`. Returns `refundStatus`, `refundAmount`,
 
 ---
 
-## Flow 2 — Order-based VAN via Initiate Transaction
+## Checkout flow — Order-based VAN via Initiate Transaction
 
-For Flow 2, integrate with the standard `/initiateTransaction` endpoint and add a `vanInfo` block:
+For the Checkout flow, integrate with the standard `/initiateTransaction` endpoint and add a `vanInfo` block:
 
 ```json
 {
@@ -319,7 +356,7 @@ if (saved) cart = JSON.parse(saved);
   "eventType": "PAYMENT_SUCCESS",
   "orderId": "ORDER_001",
   "transactionId": "TXN_001",
-  "vanId": "11PYTM9876533333",
+  "vanId": "PPSLPYTM9876533333",
   "mid": "YOUR_MID",
   "amount": "50000",
   "transactionMode": "NEFT",
@@ -342,7 +379,7 @@ if (saved) cart = JSON.parse(saved);
 {
   "eventType": "PAYMENT_FAILURE",
   "orderId": "ORDER_001",
-  "vanId": "11PYTM9876533333",
+  "vanId": "PPSLPYTM9876533333",
   "mid": "YOUR_MID",
   "amount": "50000",
   "transactionMode": "NEFT",
@@ -356,7 +393,7 @@ if (saved) cart = JSON.parse(saved);
 }
 ```
 
-Common `failureReason` values: `TPV_VALIDATION_FAILED`, `AMOUNT_MISMATCH` (Flow 2), `ORDER_EXPIRED` (Flow 2), `VAN_DISABLED`.
+Common `failureReason` values: `TPV_VALIDATION_FAILED`, `AMOUNT_MISMATCH` (Checkout flow), `ORDER_EXPIRED` (Checkout flow), `VAN_DISABLED`.
 
 ### `REFUND_SUCCESS` / `REFUND_FAILURE`
 
@@ -380,6 +417,10 @@ Common `failureReason` values: `TPV_VALIDATION_FAILED`, `AMOUNT_MISMATCH` (Flow 
 - [ ] ACK HTTP 200 within 5s; process async
 - [ ] Treat `amount` as string-of-rupees; parse to your currency type explicitly
 - [ ] Log raw payload to cold storage for 7+ years (RBI / SEBI reconciliation)
+
+### Non-Checkout flow — frontend polling
+
+The Non-Checkout flow has no redirect or push to the browser. After displaying the VAN to the payer, store incoming webhook payments server-side keyed by `vanId` and expose a polling endpoint (e.g. `GET /api/van-payment-status?vanId=...`). Poll every ~5s from the frontend until `status: SUCCESS` or session timeout. The webhook remains the canonical source of truth; the polling endpoint just reflects what the webhook recorded.
 
 ---
 
@@ -421,17 +462,20 @@ The `udf` map is your friend — populate it with whatever internal IDs (custome
 | `01000003` | VAN not found | `vanId` typo, wrong MID context, VAN belongs to another MID | Confirm `vanId` from a fresh `/van/list` |
 | `01000004` | Merchant not activated | Large Payment Collection not enabled for this MID | Raise activation ticket |
 | `01000005` | Amount out of range | NEFT/IMPS > ₹2L without falling back to RTGS, or below ₹1 | Switch rail or fix amount |
-| `01000006` | Order timeout expired (Flow 2) | Payment arrived after `expiryTime` | Recreate the order with a new VAN; original payment is auto-refunded |
+| `01000006` | Order timeout expired (Checkout flow) | Payment arrived after `expiryTime` | Recreate the order with a new VAN; original payment is auto-refunded |
 | `01000007` | TPV validation failed | Payer bank account not in whitelist | Add to TPV list via `/van/update` (if legitimate) or treat as suspicious |
 | `01000008` | Duplicate request | Replayed `requestId` (Create) or `refundId` (Refund) | Idempotent — original response was returned; no action |
 | `01000009` | Remitter info missing | Inbound bank message had no remitter account/IFSC | Refund out-of-band; surface in dashboard |
+| `2001` | Bank Transfer mode not enabled on MID | LPC is activated but the Bank Transfer (NEFT/RTGS/IMPS) sub-switch is off — these are two distinct switches | Contact Paytm integration team; no code fix |
+| `2002` | CheckSum Validation Failure | `head.token` missing / misnamed as `signature`, or any of `clientId` / `version` / `requestTimestamp` / `channelId` / `tokenType` absent from `head` | Fix the head envelope per the vanproxy head field table |
+| `4010` | Already exists | `(merchantPrefix, identificationNo)` already mapped to a VAN (Non-Checkout flow only — permanent) | Query the existing VAN; use a different `identificationNo` for a new customer |
 
 ---
 
-## Sample sequence — fee collection (Flow 1)
+## Sample sequence — fee collection (Non-Checkout flow)
 
 1. **Customer onboarding:** create one VAN per student, store `vanId` against student ID.
-2. **Fee notice:** email the student with `vanId`, IFSC `PYTM0123456`, beneficiary `One97 Communications Limited`, and amount due.
+2. **Fee notice:** email the student with `vanId`, IFSC `UTIB0CCH274`, beneficiary `Paytm Payments Services Ltd.`, and amount due.
 3. **Parent pays via their bank's NEFT/RTGS/IMPS portal** to that VAN.
 4. **Webhook fires** within seconds (IMPS) to ~2 hrs (NEFT batch) → mark fee paid in your DB; email receipt.
 5. **Nightly recon:** `/van/orderList` for the day → cross-check; flag any unmatched payments for manual review.
@@ -439,7 +483,7 @@ The `udf` map is your friend — populate it with whatever internal IDs (custome
 
 ---
 
-## Sample sequence — auction win (Flow 2)
+## Sample sequence — auction win (Checkout flow)
 
 1. **Customer wins auction at ₹3,50,000.**
 2. **Server calls `/initiateTransaction`** with `txnAmount: "350000.00"` + `vanInfo` block (`orderTimeout: 7200` for 2-hour window).

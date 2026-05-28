@@ -2,10 +2,11 @@
 name: paytm-large-payment-collection
 description: >
   Paytm Large Payment Collection (Bank Transfer) — accept high-ticket payments via NEFT / RTGS / IMPS
-  (and Flow-2 UPI) using a unique 16-char Virtual Account Number (VAN) per customer / order. Paytm
-  auto-reconciles the inbound bank transfer to the right VAN, fires a webhook with full remitter
-  details, and settles T+1. Two flows: pre-created VANs for ongoing collections (BFSI, schools,
-  distributors, subscriptions) and order-based VANs that expire after a configurable timeout. Covers
+  (UPI also supported in the Checkout flow) using a unique 18-char Virtual Account Number (VAN) per customer / order.
+  Paytm auto-reconciles the inbound bank transfer to the right VAN, fires a webhook with full remitter
+  details, and settles T+1. Two integration shapes: the **Checkout flow** (default — order-based VAN issued via
+  /initiateTransaction, surfaced inside the Paytm JS Checkout modal) and the **Non-Checkout flow** (server-only
+  permanent VANs via the vanproxy API for ongoing collections — BFSI, schools, distributors, subscriptions). Covers
   Create VAN, Query VAN, Update VAN (disable / TPV), VAN List, Order List, Transaction Status,
   Refund, Refund Status, and payment / refund webhooks. Load this skill for "bank transfer collection",
   "virtual account", "VAN", "NEFT/RTGS/IMPS collection", "large payment", "bulk collection",
@@ -48,7 +49,7 @@ triggers:
   - "remitterIFSC"
 ---
 
-> **Dependencies:** This skill covers the VAN/bank-transfer layer only. Flow 2 also requires the `paytm-js-checkout` skill for the modal fallback. Load both skills when implementing Flow 2. The JS Checkout skill covers: loading CheckoutJS script, initialising `Paytm.CheckoutJS` with `txnToken`, handling `transactionStatus`, `notifyMerchant`, `SESSION_EXPIRED`, and `APP_CLOSED` events.
+> **Dependencies:** This skill covers the VAN/bank-transfer layer only. The Checkout flow also requires the `paytm-js-checkout` skill for the modal fallback. Load both skills when implementing the Checkout flow. The JS Checkout skill covers: loading CheckoutJS script, initialising `Paytm.CheckoutJS` with `txnToken`, handling `transactionStatus`, `notifyMerchant`, `SESSION_EXPIRED`, and `APP_CLOSED` events.
 
 # Paytm Large Payment Collection (Bank Transfer)
 
@@ -58,11 +59,11 @@ Accept large-ticket payments via **NEFT / RTGS / IMPS** by handing each customer
 >
 > **Do not generate any VAN / bank-transfer code until you have read `references/REFERENCE.md`.**
 
-> **🟢 DEFAULT = Flow 2 (Order-based VAN via JS Checkout / `/initiateTransaction` + `vanInfo`).**
+> **🟢 DEFAULT = Checkout flow (Order-based VAN via JS Checkout / `/initiateTransaction` + `vanInfo`).**
 >
-> When the user asks for "Large Payment Collection", "Paytm Bank Transfer", VAN, NEFT/RTGS collection, or anything in the trigger list, generate **Flow 2** code by default — i.e. call `POST /theia/api/v1/initiateTransaction` with a `vanInfo` block, get `txnToken`, and render the standard Paytm JS Checkout. Bank Transfer surfaces as a payment option **inside the Paytm checkout modal** alongside UPI / Credit Cards / Debit Cards / Net Banking / EMI; when the payer picks it, the modal shows them the generated VAN + IFSC + beneficiary + amount + countdown.
+> When the user asks for "Large Payment Collection", "Paytm Bank Transfer", VAN, NEFT/RTGS collection, or anything in the trigger list, generate **Checkout flow** code by default — i.e. call `POST /theia/api/v1/initiateTransaction` with a `vanInfo` block, get `txnToken`, and render the standard Paytm JS Checkout. Bank Transfer surfaces as a payment option **inside the Paytm checkout modal** alongside UPI / Credit Cards / Debit Cards / Net Banking / EMI; when the payer picks it, the modal shows them the generated VAN + IFSC + beneficiary + amount + countdown.
 >
-> Only fall back to Flow 1 (standalone `/van/create` server-only flow, no checkout modal) when the user explicitly asks for ongoing / multi-payment collections against a permanent VAN (e.g. school fees per student, distributor ledger, BFSI investor account with TPV).
+> Only fall back to the Non-Checkout flow (standalone `/van/create` server-only flow, no checkout modal) when the user explicitly asks for ongoing / multi-payment collections against a permanent VAN (e.g. school fees per student, distributor ledger, BFSI investor account with TPV).
 
 ---
 
@@ -94,14 +95,14 @@ Large Payment Collection is the only flow that lets the payer push from **their 
 
 | Flow | When | VAN lifetime |
 |---|---|---|
-| **Flow 1 — Pre-created VANs** | Ongoing collections (fees, distributors, subscriptions). One VAN per customer, no amount validation. Customer can pay any amount, any time. | Permanent (until you `DISABLE` it) |
-| **Flow 2 — Order-based VANs** | One-shot orders with a known amount. Payment must match `txnAmount`; VAN expires after `orderTimeout`. Supports UPI in addition to NEFT/RTGS/IMPS. | Until `orderTimeout` expires |
+| **Non-Checkout flow — Pre-created VANs** | Ongoing collections (fees, distributors, subscriptions). One VAN per customer, no amount validation. Customer can pay any amount, any time. | Permanent (until you `DISABLE` it) |
+| **Checkout flow — Order-based VANs** | One-shot orders with a known amount. Payment must match `txnAmount`; VAN expires after `orderTimeout`. Supports UPI in addition to NEFT/RTGS/IMPS. | Until `orderTimeout` expires |
 
-**Default: Flow 2.** It plugs Bank Transfer into the standard JS Checkout modal, so the merchant gets one unified checkout surface (UPI / Credit Cards / Debit Cards / Net Banking / EMI **+ Bank Transfer**) for high-ticket orders. Use Flow 1 only when the merchant explicitly wants a permanent, server-only VAN per customer (school fees, distributor ledger, BFSI with TPV) and is NOT rendering a checkout modal at all.
+**Default: Checkout flow.** It plugs Bank Transfer into the standard JS Checkout modal, so the merchant gets one unified checkout surface (UPI / Credit Cards / Debit Cards / Net Banking / EMI **+ Bank Transfer**) for high-ticket orders. Use Non-Checkout flow only when the merchant explicitly wants a permanent, server-only VAN per customer (school fees, distributor ledger, BFSI with TPV) and is NOT rendering a checkout modal at all.
 
 ---
 
-## Complete end-to-end flow : Flow 2 (Checkout)
+## Complete end-to-end flow : Checkout flow
 
 1. Customer adds items to cart and enters 10-char `identificationNo` → clicks Pay
 2. Frontend validates `identificationNo` is exactly 10 chars; saves cart + `identificationNo` to `sessionStorage`
@@ -146,18 +147,14 @@ Display all three (`vanId`, IFSC, beneficiary) to the payer : banks reject NEFT/
 
 ## Endpoint family
 
-| Operation | Endpoint |
-|---|---|
-| Create VAN (bulk, ≤ 10 per call) | `POST {BASE}/van/create` |
-| Query VAN by `requestId` (idempotency) | `POST {BASE}/van/query` |
-| Update VAN — DISABLE / add TPV bank accounts | `POST {BASE}/van/update` |
-| List all VANs (paginated) | `POST {BASE}/van/list` |
-| List inbound payments on a VAN (paginated) | `POST {BASE}/van/orderList` |
-| Single transaction status by `orderId` | `POST {BASE}/van/transactionStatus` |
-| Initiate refund (≤ ₹2L per request) | `POST {BASE}/van/refund` |
-| Refund status | `POST {BASE}/van/refundStatus` |
+**Non-Checkout flow uses a single `vanproxy` endpoint** — all VAN operations (create / query / update) are routed through the same URL; the `body` discriminates the operation.
 
-All requests carry a `signature` (HMAC-SHA256 of the canonical JSON, keyed with your merchant key, base64-encoded). Responses are signed too — **verify before trusting**.
+| Environment | Endpoint |
+|---|---|
+| Staging | `POST https://securestage.paytmpayments.com/vanproxy/api/v1/van?mid={MID}` |
+| Production | `POST https://secure.paytmpayments.com/vanproxy/api/v1/van?mid={MID}` |
+
+Every request **must** be wrapped in a `head` + `body` envelope. The checksum goes inside `head` as the field name **`token`** (NOT `signature`). See `references/REFERENCE.md` for the full head field table (`clientId`, `version`, `requestTimestamp`, `channelId`, `tokenType`, `token`).
 
 ---
 
@@ -179,31 +176,48 @@ All requests carry a `signature` (HMAC-SHA256 of the canonical JSON, keyed with 
 
 8. **`vanDetails` absent + `resultStatus: S` = LPC not activated on this MID.** The `txnToken` is still valid and usable. Do not crash : log `"vanDetails missing : LPC not activated. Contact Paytm KAM."` and fall back to the Paytm JS Checkout modal. Bank Transfer will surface inside the modal once Paytm activates LPC on the MID.
 
+9. **`identificationNo` is permanent per `merchantPrefix` in the Non-Checkout flow.** Once a VAN is created for a `(prefix, identificationNo)` pair, it cannot be recreated — calling Create again returns error **`4010` Already exists**. Query the existing VAN instead of retrying create. In the Checkout flow (order-based), the same `identificationNo` *can* be reused after `orderTimeout` expires.
+
+10. **vanproxy response is two-level — check BOTH.** Outer `resultCode: "0000"` only means the API call was received. Each entry inside `vanDetails[]` has its own `responseStatus` (`SUCCESS` / `FAILURE`) with its own `errorCode` and `errorMessage`. Checking only the outer level silently treats per-VAN failures as successes.
+
 ---
 
-## Minimum Create VAN body (Flow 1, merchant-managed)
+## Minimum Create VAN body (Non-Checkout flow, merchant-managed) — vanproxy envelope
 
 ```json
 {
-  "mid": "YOUR_MID",
-  "requestId": "req_2024_01_15_inv12345",
-  "van": [
-    {
-      "merchantPrefix": "PYTM",
-      "identificationNo": "9876533333",
-      "entityName": "Acme Distributors Pvt Ltd",
-      "entityType": "BUSINESS",
-      "customerId": "CUST_001",
-      "invoiceNo": "INV_2024_001",
-      "purpose": "Distributor Settlement",
-      "udf": { "region": "north", "salesRep": "rk@acme" }
-    }
-  ],
-  "signature": "<HMAC-SHA256 over canonical JSON>"
+  "head": {
+    "clientId": "C11",
+    "version": "v1",
+    "requestTimestamp": "1700000000000",
+    "channelId": "WEB",
+    "tokenType": "CHECKSUM",
+    "token": "<PaytmChecksum.generateSignature(JSON.stringify(body), MERCHANT_KEY)>"
+  },
+  "body": {
+    "mid": "YOUR_MID",
+    "requestId": "unique-key",
+    "vanDetails": [
+      {
+        "merchantPrefix": "ABCD",
+        "identificationNo": "1234567890",
+        "purpose": "Book Purchase",
+        "customerDetails": [
+          {
+            "customerName": "Acme Ltd",
+            "customerMobile": "9876543210",
+            "customerEmail": "acme@example.com"
+          }
+        ],
+        "userDefinedFields": {},
+        "tpvList": []
+      }
+    ]
+  }
 }
 ```
 
-The `udf` map is round-tripped on every webhook for that VAN — use it for whatever internal IDs you need to match against (don't rely solely on `customerId`, which the bank message will never carry).
+The `userDefinedFields` map is round-tripped on every webhook for that VAN — use it for whatever internal IDs you need to match against (the bank message will never carry your application's customer ID).
 
 ---
 
@@ -242,6 +256,8 @@ app.post("/webhook/paytm/van", express.json({ verify: keepRawBody }), (req, res)
 ```
 
 Webhook events: `PAYMENT_SUCCESS`, `PAYMENT_FAILURE` (mostly TPV rejections), `REFUND_SUCCESS`, `REFUND_FAILURE`.
+
+**Non-Checkout flow UI updates — frontend must poll.** After displaying the VAN, there is no redirect or push to the frontend. Poll your server (e.g. `GET /api/van-payment-status?vanId=...`) every ~5 seconds to detect payment confirmation. The webhook is the source of truth server-side; the frontend polls a server endpoint that surfaces what the webhook recorded.
 
 ---
 
@@ -317,6 +333,31 @@ Click **Submit**.
 
 ---
 
+## Testing Non-Checkout flow (permanent VAN) on Staging
+
+1. **Create the VAN** — `POST https://securestage.paytmpayments.com/vanproxy/api/v1/van?mid={MID}` with the correct `head` + `body` envelope (see "Minimum Create VAN body" above).
+2. **Extract** `vanId`, `ifscCode` (`UTIB0CCH274`), and `beneficiaryName` from `vanDetails[0]` in the response.
+3. **Open the mock payment page** in a new tab: `https://securestage.paytmpayments.com/mockbank/largePaymentCollectionForm`.
+4. **Fill the mock form:**
+
+   | Field | Value |
+   |---|---|
+   | Account Holder Name | Any alphabetic name |
+   | Bank Account No. | `120000000000` |
+   | IFSC | `UTIB0CCH274` |
+   | VAN Number | From step 2 |
+   | Transaction Amount | Any |
+   | Transaction Mode | `NEFT` / `RTGS` / `IMPS` |
+
+5. **Verify** — your server should receive a signed `PAYMENT_SUCCESS` webhook. Check signature verification + server logs.
+
+**Common Non-Checkout flow staging mistakes:**
+- ❌ Using a real bank's NEFT portal → rejects alphanumeric VANs like `PPSLALIS1234567890`. Use only the mock page above.
+- ❌ Wrong IFSC typed manually → always copy `UTIB0CCH274` exactly.
+- ❌ Webhook URL is `localhost` → expose via ngrok or deploy to a public URL.
+
+---
+
 ## Common error codes
 
 | Code | Meaning | Fix |
@@ -327,9 +368,12 @@ Click **Submit**.
 | `01000003` | VAN not found | `vanId` typo, or VAN belongs to a different MID |
 | `01000004` | Merchant not activated for Large Payment Collection | Raise activation request from dashboard |
 | `01000005` | Amount exceeds rail limit | Split or switch rail (RTGS for > ₹2L) |
-| `01000006` | Order timeout expired (Flow 2) | Recreate the order with a fresh VAN |
+| `01000006` | Order timeout expired (Checkout flow) | Recreate the order with a fresh VAN |
 | `01000007` | TPV validation failed | Payer's bank account not in registered TPV list |
 | `01000008` | Duplicate `requestId` | Idempotent replay — original response was returned |
 | `01000009` | Remitter info missing — refund not possible | Handle refund out-of-band (see quirk #5) |
+| `2001` | Bank Transfer mode not enabled on this MID | Bank Transfer (NEFT/RTGS/IMPS) is a separate activation switch from LPC itself. Contact Paytm integration team — no code fix. |
+| `2002` | CheckSum Validation Failure | `head.token` field missing or named incorrectly (e.g. as `signature`), or any required head field absent (`clientId` / `version` / `requestTimestamp` / `channelId` / `tokenType`) | Fix the head envelope — see vanproxy request format in `references/REFERENCE.md` |
+| `4010` | Already exists | `identificationNo` already has a VAN under this `merchantPrefix` (Non-Checkout flow only — permanent) | Query the existing VAN; use a different `identificationNo` for a new customer |
 
 Full table, all flows, full request/response field reference: `references/REFERENCE.md`.
