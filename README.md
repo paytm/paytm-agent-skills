@@ -52,6 +52,7 @@ If you don't see a node version, download and install it from [nodejs.org](https
 | **Custom SDK** | Fully branded mobile checkout, your UI on top of the Paytm rails |
 | **Webhooks** | Real-time payment notifications delivered to your server |
 | **Refunds** | Issue full and partial refund and check refund status |
+| **Large Payment Collection** | Virtual account based high-value bank transfers via NEFT, RTGS, IMPS. |
 
 ---
 
@@ -77,6 +78,9 @@ If you don't see a node version, download and install it from [nodejs.org](https
 
 **Refunds**
 > *"I run an online clothing store. Sometimes customers return products. Integrate Paytm refunds into my website so that I can make refunds to my customers."*
+
+**Large Payment Collection**
+> *"I run a school and collect fees from parents via bank transfer. Integrate Paytm so each parent gets a unique account number to send the payment."*
 
 ---
 
@@ -113,6 +117,8 @@ Skills are **modular**, each prompt loads only the relevant skill, keeping the A
 │   ├── all-in-one-sdk/              # Native checkout on Android and iOS, with Paytm-hosted UI
 │   │   └── references/REFERENCE.md
 │   ├── custom-sdk/                  # Fully branded mobile checkout, your UI on top of the Paytm rails
+│   │   └── references/REFERENCE.md
+│   ├── large-payment-collection/    # High-value bank transfers via NEFT, RTGS, IMPS 
 │   │   └── references/REFERENCE.md
 │   ├── troubleshooting/             # Common Paytm PG integration errors and fixes
 │   │   └── references/REFERENCE.md
