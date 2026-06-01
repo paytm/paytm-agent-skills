@@ -160,7 +160,7 @@ Every request **must** be wrapped in a `head` + `body` envelope. The checksum go
 
 ## ❗ The quirks that keep biting
 
-1. **`vanId` is 18 chars, not 16.** The first four chars are always `"PPSL"`. Never reconstruct it from `prefix + identificationNo` : always store the full 18-char `vanId` from the API response. Note: the vanproxy Create VAN response returns this as the field `van` (not `vanId`). Normalize on read: `vanEntry.van || vanEntry.vanId`.
+1. **`vanId` is 18 chars, not 16.** The first four chars are always `"PPSL"`. Never reconstruct it from `prefix + identificationNo` : always store the full 18-char `vanId` from the API response.
 
 2. **IFSC is always `UTIB0CCH274` and beneficiary is always `Paytm Payments Services Ltd.` : for every merchant, every customer.** Never show your own company name; the payer's bank will reject the transfer. Always display what the API returns : never hardcode.
 
@@ -179,8 +179,6 @@ Every request **must** be wrapped in a `head` + `body` envelope. The checksum go
 9. **`identificationNo` is permanent per `merchantPrefix` in the Non-Checkout flow.** Once a VAN is created for a `(prefix, identificationNo)` pair, it cannot be recreated — calling Create again returns error **`4010` Already exists**. Query the existing VAN instead of retrying create. In the Checkout flow (order-based), the same `identificationNo` *can* be reused after `orderTimeout` expires.
 
 10. **vanproxy response is two-level — check BOTH.** Outer `resultCode: "0000"` only means the API call was received. Each entry inside `vanDetails[]` has its own `responseStatus` (`SUCCESS` / `FAILURE`) with its own `errorCode` and `errorMessage`. Checking only the outer level silently treats per-VAN failures as successes.
-
-11. **Non-Checkout flow: never wire the Create VAN button as a form submit.** If the button is `type="submit"` inside a `<form>` with any required fields, the browser silently swallows the click when validation fails — JavaScript never runs, nothing happens. Use `type="button"` with a direct click handler. Show validation errors and API status inline next to the button, not in a remote status panel.
 
 ---
 
