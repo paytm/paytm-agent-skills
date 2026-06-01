@@ -136,7 +136,7 @@ Response (success):
   "vanDetails": [
     {
       "responseStatus": "SUCCESS",
-      "vanId": "PPSLABCD1234567890",
+      "van": "PPSLABCD1234567890",
       "merchantPrefix": "ABCD",
       "identificationNo": "1234567890",
       "ifscCode": "UTIB0CCH274",
@@ -147,6 +147,8 @@ Response (success):
   ]
 }
 ```
+
+> ⚠️ The VAN number is returned as `van`, NOT `vanId`, in the vanproxy Create VAN response. This differs from the Checkout flow (`/initiateTransaction`) which uses `vanId`. Always normalize in code: `const vanId = vanEntry.van || vanEntry.vanId;` — using only `vanEntry.vanId` returns `undefined` silently.
 
 Response (per-entry failure):
 
@@ -421,6 +423,13 @@ Common `failureReason` values: `TPV_VALIDATION_FAILED`, `AMOUNT_MISMATCH` (Check
 ### Non-Checkout flow — frontend polling
 
 The Non-Checkout flow has no redirect or push to the browser. After displaying the VAN to the payer, store incoming webhook payments server-side keyed by `vanId` and expose a polling endpoint (e.g. `GET /api/van-payment-status?vanId=...`). Poll every ~5s from the frontend until `status: SUCCESS` or session timeout. The webhook remains the canonical source of truth; the polling endpoint just reflects what the webhook recorded.
+
+### Non-Checkout flow — frontend form pattern
+
+- **Use `type="button"` with a direct `onclick` handler — never `type="submit"` inside a `<form>` with required fields.** Browser-native form validation silently blocks the submit before JavaScript runs when any required field is empty, making the button appear dead with no error shown.
+- **Show inline status directly below the Create VAN button** — not in a separate status panel elsewhere on the page. If the error is far from where the user clicked, it is invisible.
+- **Add a loading state.** Disable the button and change its label to something like "Creating VAN…" while the API call is in flight. Without this, a slow API call looks identical to a dead button.
+- **Only `identificationNo` should be required from the user.** Name, mobile, and email are needed for the Paytm payload but should be optional in the UI with backend-supplied defaults — don't block VAN creation with browser validation on fields the user doesn't strictly need to enter.
 
 ---
 
