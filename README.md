@@ -52,6 +52,7 @@ If you don't see a node version, download and install it from [nodejs.org](https
 | **Custom SDK** | Fully branded mobile checkout, your UI on top of the Paytm rails |
 | **Webhooks** | Real-time payment notifications delivered to your server |
 | **Refunds** | Issue full and partial refund and check refund status |
+| **Large Payment Collection** | Virtual account based high-value bank transfers via NEFT, RTGS, IMPS. |
 
 ---
 
@@ -78,15 +79,18 @@ If you don't see a node version, download and install it from [nodejs.org](https
 **Refunds**
 > *"I run an online clothing store. Sometimes customers return products. Integrate Paytm refunds into my website so that I can make refunds to my customers."*
 
+**Large Payment Collection**
+> *"I run a school and collect fees from parents via bank transfer. Integrate Paytm so each parent gets a unique account number to send the payment."*
+
 ---
 
 ## 4. How Paytm Integration Skill Works
 
-1. Describe what you want to build in plain English. The skill maps your prompt to the right Paytm product skill automatically.
-2. Only the relevant skill loads, keeping the AI focused and the generated code accurate.
-3. The skill injects Paytm-specific knowledge API endpoints, checksum logic, token flows, and common errors.
-4. Code is generated for your tech stack Node.js, Python, or Java using verified reference implementations.
-5. Every integration ends with a checklist staging credentials, webhook setup, and production go-live steps.
+- Describe what you want to build in plain English. The skill maps your prompt to the right Paytm product skill automatically.
+- Only the relevant skill loads, keeping the AI focused and the generated code accurate.
+- The skill injects Paytm-specific knowledge API endpoints, checksum logic, token flows, and common errors.
+- Code is generated for your tech stack Node.js, Python, or Java using verified reference implementations.
+- Every integration ends with a checklist staging credentials, webhook setup, and production go-live steps.
 
 ---
 
@@ -114,6 +118,8 @@ Skills are **modular**, each prompt loads only the relevant skill, keeping the A
 │   │   └── references/REFERENCE.md
 │   ├── custom-sdk/                  # Fully branded mobile checkout, your UI on top of the Paytm rails
 │   │   └── references/REFERENCE.md
+│   ├── large-payment-collection/    # High-value bank transfers via NEFT, RTGS, IMPS 
+│   │   └── references/REFERENCE.md
 │   ├── troubleshooting/             # Common Paytm PG integration errors and fixes
 │   │   └── references/REFERENCE.md
 │   ├── migrate-from-razorpay/       # Migrate to Paytm PG from Razorpay
@@ -122,9 +128,13 @@ Skills are **modular**, each prompt loads only the relevant skill, keeping the A
 │   │   └── references/REFERENCE.md
 │   ├── migrate-from-juspay/         # Migrate to Paytm PG from Juspay
 │   │   └── references/REFERENCE.md
-│   └── migrate-from-payu/           # Migrate to Paytm PG from PayU
+│   ├── migrate-from-payu/           # Migrate to Paytm PG from PayU
+│   │   └── references/REFERENCE.md
+│   ├── migrate-from-ccavenue/       # Migrate to Paytm PG from CCAvenue
+│   │   └── references/REFERENCE.md
+│   └── migrate-from-billdesk/       # Migrate to Paytm PG from BillDesk
 │       └── references/REFERENCE.md
-└── scripts/                         # Ready to run code samples. Pick your tech stack 
+└── scripts/                         # Ready to run code samples. Pick your tech stack
     ├── backend-node/                # Node.js backend example for payment integration
     ├── backend-python/              # Python backend example for payment integration
     ├── backend-spring/              # Java backend example for payment integration (Spring Boot 3)
