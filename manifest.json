@@ -3,7 +3,7 @@
   "manifest_version": "2.0",
 
   "name": "paytm-agent-skills",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Paytm Payment Gateway integration skills bundle - one-time payments, subscriptions, payment links, dynamic QR, webhooks, refunds, and troubleshooting. Loaded modularly per intent.",
   "license": "MIT",
 

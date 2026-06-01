@@ -3,6 +3,12 @@
 All notable changes to the `paytm` skills bundle are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.0.4]
+
+### Changed
+
+- Maintenance release. Version bump only — no skill or CLI content changes since 0.0.3.
+
 ## [0.0.3]
 
 ### Changed
