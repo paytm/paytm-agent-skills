@@ -3,6 +3,17 @@
 All notable changes to the `paytm` skills bundle are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.0.3]
+
+### Changed
+
+- `large-payment-collection`: corrected the vanproxy Create VAN response field to `van` (not `vanId`) with a normalize-on-read warning, and added a "Non-Checkout flow — frontend form pattern" section to `references/REFERENCE.md`.
+- `large-payment-collection/SKILL.md`: added the `van` normalization note to quirk #1 and a new quirk #11 (never wire the Create VAN button as a form submit).
+
+### Added
+
+- `scripts/frontend/lpc-non-checkout.html` — reference frontend template for the Non-Checkout flow (`type="button"` handler, inline status, loading state, only `identificationNo` required).
+
 ## [0.0.1] - Unreleased
 
 Initial pre-release of the Paytm Agent Skills bundle and `paytm-agent-skills` CLI installer.
