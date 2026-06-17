@@ -166,3 +166,129 @@ def _upstream(code: str, message: str, order_id: str, raw: str) -> PaytmError:
     except Exception:
         pass
     return PaytmError(code, message, http_status=502, order_id=order_id, paytm=paytm or None)
+
+
+# ---------------------------------------------------------------------------
+# Post-consent recurring lifecycle.
+#
+# IMPORTANT host split: subscription/create is the ONLY endpoint on the
+# /theia/api/v1 prefix (and only on production). EVERY management API below
+# lives on the NON-/theia/ host on BOTH environments - see paytm_config.py.
+# Reusing subscription_create_url for these returns 404 / HTML on prod.
+#
+# The `head` envelope differs per endpoint; each function sets only the fields
+# that endpoint requires (create's head does NOT carry over).
+# ---------------------------------------------------------------------------
+
+
+def _post_signed(url: str, body: dict, head_extra: dict, cfg: dict) -> dict:
+    """Sign `body` and POST {head, body} to `url`. `head_extra` carries the
+    per-endpoint head fields (e.g. {"tokenType": "AES"})."""
+    signature = PaytmChecksum.generateSignature(json.dumps(body), cfg["merchant_key"])
+    head = {**head_extra, "signature": signature}
+    r = requests.post(url, json={"head": head, "body": body},
+                      headers={"Content-Type": "application/json"}, timeout=15)
+    text = r.text
+    if not r.ok:
+        raise _upstream("SUBSCRIPTION_HTTP_ERROR", f"{url} HTTP {r.status_code}",
+                        body.get("orderId", ""), text)
+    try:
+        return json.loads(text)
+    except Exception:
+        # A non-JSON (HTML) body almost always means the wrong host/prefix was used.
+        raise _upstream("SUBSCRIPTION_NON_JSON",
+                        f"{url} returned non-JSON (wrong host/prefix?)",
+                        body.get("orderId", ""), text)
+
+
+def check_subscription_status(*, subs_id: Optional[str] = None,
+                              order_id: Optional[str] = None,
+                              cust_id: Optional[str] = None) -> dict:
+    """POST /subscription/checkStatus - the only reliable cancel/expiry signal.
+    head: tokenType "AES" + signature. A cancelled mandate is status:"REJECT" +
+    subStatus MERCHANT_CANCELLED/USER_CANCELLED - read subStatus to interpret."""
+    cfg = get_paytm_config()
+    body: dict = {"mid": cfg["mid"]}
+    if subs_id:
+        body["subsId"] = subs_id
+    if order_id:
+        body["orderId"] = order_id
+    if cust_id:
+        body["custId"] = _sanitize_cust_id(cust_id)
+    data = _post_signed(cfg["subscription_check_status_url"], body, {"tokenType": "AES"}, cfg)
+    b = data.get("body") or {}
+    sub_status = b.get("subStatus") or ""
+    return {
+        "subsId": b.get("subsId"),
+        "status": b.get("status"),
+        "subStatus": b.get("subStatus"),
+        "lastOrderStatus": b.get("lastOrderStatus"),
+        "expiryDate": b.get("expiryDate"),
+        "cancelled": b.get("status") == "REJECT" and sub_status.endswith("CANCELLED"),
+        "active": b.get("status") == "ACTIVE" and sub_status == "ACTIVE",
+        "raw": b,
+    }
+
+
+def renew_subscription(*, subscription_id: str, amount: Any,
+                       order_id: Optional[str] = None) -> dict:
+    """POST /subscription/renew - trigger one recurring debit. head: bare signature.
+    Use a fresh order_id per debit, then confirm with get_order_status(order_id)."""
+    cfg = get_paytm_config()
+    order_id = (order_id or "").strip() or ("RENEW_" + secrets.token_hex(8).upper())
+    body = {
+        "mid": cfg["mid"],
+        "subscriptionId": subscription_id,
+        "orderId": order_id,
+        "txnAmount": {"value": _normalize_amount(amount), "currency": "INR"},
+    }
+    data = _post_signed(cfg["subscription_renew_url"], body, {}, cfg)
+    return {"orderId": order_id, "raw": data.get("body") or data}
+
+
+def pre_notify_subscription(*, subscription_id: str, amount: Any,
+                            order_id: Optional[str] = None,
+                            scheduled_execution_date: Optional[str] = None) -> dict:
+    """POST /subscription/preNotify - NPCI pre-debit notice. You MUST call this
+    before every debit; Paytm does not auto-handle it. head: tokenType "AES" + signature."""
+    cfg = get_paytm_config()
+    order_id = (order_id or "").strip() or ("PRENOTIFY_" + secrets.token_hex(8).upper())
+    body: dict = {
+        "mid": cfg["mid"],
+        "subscriptionId": subscription_id,
+        "orderId": order_id,
+        "txnAmount": {"value": _normalize_amount(amount), "currency": "INR"},
+    }
+    if scheduled_execution_date:
+        body["subscriptionScheduledExecutionDate"] = scheduled_execution_date
+    data = _post_signed(cfg["subscription_pre_notify_url"], body, {"tokenType": "AES"}, cfg)
+    return {"orderId": order_id, "raw": data.get("body") or data}
+
+
+def pre_notify_status(*, subscription_id: str, order_id: str) -> dict:
+    """POST /subscription/preNotify/status.
+    head: clientId + tokenType "AES" + version + signature."""
+    cfg = get_paytm_config()
+    body = {"mid": cfg["mid"], "subscriptionId": subscription_id, "orderId": order_id}
+    data = _post_signed(
+        cfg["subscription_pre_notify_status_url"], body,
+        {"clientId": cfg["client_id"], "version": "v1", "tokenType": "AES"}, cfg,
+    )
+    return data.get("body") or data
+
+
+def cancel_subscription(*, subscription_id: str) -> dict:
+    """POST /subscription/cancel - terminal. head: signature + tokenType "AES"."""
+    cfg = get_paytm_config()
+    body = {"mid": cfg["mid"], "subscriptionId": subscription_id}
+    data = _post_signed(cfg["subscription_cancel_url"], body, {"tokenType": "AES"}, cfg)
+    return data.get("body") or data
+
+
+def get_order_status(*, order_id: str) -> dict:
+    """POST /v3/order/status - per-charge transaction status (NOT mandate state).
+    head: bare signature. Same host on both envs (non-/theia/, non-versioned)."""
+    cfg = get_paytm_config()
+    body = {"mid": cfg["mid"], "orderId": order_id}
+    data = _post_signed(cfg["order_status_url"], body, {}, cfg)
+    return data.get("body") or data

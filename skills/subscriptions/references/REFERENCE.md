@@ -1,6 +1,8 @@
 # Paytm Subscriptions / UPI Autopay (Native Create Subscription)
 
 > _Companion to **`SKILL.md`** - load this file alongside `SKILL.md`, never instead of it._
+>
+> _This file covers mandate **creation**. For everything **after consent** — `checkStatus`, `renew`, `preNotify`, `cancel`, `v3/order/status`, the `/theia/` vs non-`/theia/` host split, status/subStatus value sets, ID-name drift, and subscription webhook events — see [`recurring-lifecycle.md`](recurring-lifecycle.md)._
 
 Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay** (NPCI), **Cards** (RBI e-mandate), **Net Banking** (limited issuers).
 
@@ -30,7 +32,7 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 >     const expiryDate = getISTDateString(365 * 24 * 60 * 60 * 1000);   // +1 year
 >     ```
 > 11. `subscriptionStartDate` and `subscriptionGraceDays` are **conditionally paired** - if you send one, send both.
-> 12. **`userInfo.custId` must be sanitized** - alphanumerics + `_` `@` `!` `$` `.` are accepted; spaces, special characters, and unicode otherwise are rejected with `"Invalid Customer ID"`. Safest: `custId.replace(/[^a-zA-Z0-9_]/g, "_")`.
+> 12. **`userInfo.custId` must be sanitized.** **Authoritative rule: normalize to `[A-Za-z0-9_]`** via `custId.replace(/[^a-zA-Z0-9_]/g, "_")`. Although Paytm's prose lists `@ ! $ .` as "accepted", their support is MID-dependent and unreliable — the `[A-Za-z0-9_]` regex is the only rule that works everywhere, so it (not the prose) is authoritative. Spaces, other specials, and unicode are rejected with `"Invalid Customer ID"`.
 > 13. **"No payment options available" on the consent screen** = subscription product is not enabled on the MID. Ask Paytm support / KAM to enable Subscription / UPI Autopay; the API will let you generate `txnToken` even when the product isn't entitled, so it surfaces only at JS Checkout time.
 > 14. **CC / DC mandates have stricter rules than UPI / BANK_MANDATE:**
 >     - `txnAmount.value` must be **> ₹1** (use `"2.00"` or higher; ₹1 is rejected for card mandates).
@@ -44,7 +46,7 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 >     |---|---|---|
 >     | `"1"` × `DAY` | 1 | omit (or `"0"`) |
 >     | `"2"` × `DAY` | 2 | `"1"` |
->     | `"1"` × `WEEK` | 7 | up to `"6"` (or `"3"` for CC/DC compat) |
+>     | `"7"` × `DAY` (weekly) | 7 | up to `"6"` (or `"3"` for CC/DC compat) |
 >     | `"1"` × `MONTH` | ~30 | `"3"` (CC/DC cap) or up to `"29"` for UPI |
 >     | `"1"` × `YEAR` | ~365 | `"3"` (CC/DC cap) or higher for UPI |
 >
@@ -54,11 +56,11 @@ Recurring debits with one user-consented mandate. Supported rails: **UPI Autopay
 
 ## Scope of this skill
 
-This skill covers **only** the mandate-creation flow:
+**Creation flow (this file):**
 1. Server calls `/subscription/create` to get a `txnToken` + `subscriptionId`.
 2. Browser invokes JS Checkout with that `txnToken` so the user can complete the mandate consent.
 
-Subsequent operations (status check, recurring debit, edit, cancel) are intentionally **out of scope**. Refer to live Paytm docs and validate paths before implementing those.
+**Post-consent recurring lifecycle ([`recurring-lifecycle.md`](recurring-lifecycle.md)):** status checks (`checkStatus`), recurring debits (`renew`), pre-debit notification (`preNotify` + `/status`), cancellation (`cancel`), and per-charge status (`v3/order/status`) — with the correct hosts (management APIs are **not** on `/theia/`), per-endpoint `head` requirements, status/`subStatus` value sets, and webhook events. **A production subscription requires both files.**
 
 ---
 
@@ -67,11 +69,11 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 | Term | Meaning |
 |---|---|
 | **Mandate** | One-time user authorization at a maximum amount, frequency, and validity window |
-| **Subscription ID** | Paytm-issued ID for the mandate, returned in the create response |
-| **Mandate state** | `INITIATED` → `ACTIVE` → `EXPIRED` / `CANCELLED` / `REJECTED` |
+| **Subscription ID** | Paytm-issued ID for the mandate. **Same ID, three names across surfaces:** `subscriptionId` (create response), `subsId` (checkStatus / order/status), `SUBS_ID` (redirect/webhook POST). Read all three defensively |
+| **Mandate state** | From `checkStatus`: `status` ∈ {`INIT`, `ACTIVE`, `REJECT`, `IN_AUTHORIZATION`, `AUTHORIZED`, `AUTHORIZATION_FAILED`, `EXPIRED`, `CLOSED`, `SUSPENDED`} + `subStatus` ∈ {`ACTIVE`, `MERCHANT_CANCELLED`, `USER_CANCELLED`, `TIMED_OUT`, …}. A cancelled mandate is `status: REJECT` — read `subStatus` to interpret. See [`recurring-lifecycle.md`](recurring-lifecycle.md) §1 |
 | **traceId** | Per-request unique id for tracing on Paytm's side. Generate one per call (UUID-like) |
 | **clientId** | Paytm-issued identifier for the merchant key (`"C11"` for single-key merchants) |
-| **Pre-notification** | NPCI rule: notify user 24h before debit on UPI Autopay (Paytm handles this) |
+| **Pre-notification** | NPCI rule: the payer must be notified ~24h before each debit. **The merchant must call `POST /subscription/preNotify` before every debit — Paytm does NOT auto-handle this for `NATIVE_SUBSCRIPTION`.** See [`recurring-lifecycle.md`](recurring-lifecycle.md) §3 |
 
 ---
 
@@ -162,7 +164,7 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 | `websiteName` | ✅ | `"WEBSTAGING"` for staging; per-MID for prod (e.g. `"DEFAULT"`, `"retail"`) |
 | `txnAmount.value` | ✅ | First-debit amount as **string** with two decimals. **Default `"2.00"`** - must be > ₹1 for CC/DC mandates; `"1.00"` works for UPI/BANK_MANDATE only |
 | `txnAmount.currency` | ✅ | `"INR"` |
-| `userInfo.custId` | ✅ | Sanitize first - see callout above. Allowed extras: `@ ! _ $ .` |
+| `userInfo.custId` | ✅ | Sanitize to `[A-Za-z0-9_]` (authoritative — see callout #12). Paytm prose claims `@ ! $ .` are allowed, but support is MID-dependent; don't rely on them |
 | `userInfo.mobile` / `email` / `firstName` / `lastName` | optional | Strongly recommended - pre-fills consent screen |
 
 **`body` - subscription**
@@ -227,7 +229,7 @@ Subsequent operations (status check, recurring debit, edit, cancel) are intentio
 
 ### Sanitize `userInfo.custId` before sending
 
-Paytm rejects custIds with characters outside `[A-Za-z0-9_@!$.]` with `"Invalid Customer ID"`. Safest path is to normalize to `[A-Za-z0-9_]` only:
+Paytm rejects custIds containing spaces, unicode, or unsupported specials with `"Invalid Customer ID"`. Paytm prose lists `@ ! $ .` as accepted, but their support varies by MID — **the authoritative, portable rule is to normalize to `[A-Za-z0-9_]` only**:
 
 ```javascript
 // Node
@@ -277,7 +279,9 @@ Same JS Checkout flow as a one-time payment - only the `txnToken` source differs
 </script>
 ```
 
-The user sees the consent screen showing the recurring amount + frequency, approves the mandate, then Paytm POSTs to your `callbackUrl` with the standard fields plus `subscriptionId`. **Verify `CHECKSUMHASH` on the callback** before treating the mandate as set up. Full callback details in `references/js-checkout.md`.
+The user sees the consent screen showing the recurring amount + frequency, approves the mandate, then Paytm POSTs to your `callbackUrl` with the standard fields plus `SUBS_ID`.
+
+> ⚠️ **The redirect POST may arrive with NO `CHECKSUMHASH` field** (observed in production). A naive "reject if checksum invalid" on the redirect path will block legitimate users. **Robust pattern: never trust the posted form — re-confirm server-to-server.** If `CHECKSUMHASH` is present, verify it; *regardless*, call `checkStatus` (mandate state) and/or `v3/order/status` (the SALE txn) before activating the subscription. Full snippet + endpoint details in [`recurring-lifecycle.md`](recurring-lifecycle.md) §6; checksum verification mechanics in the `webhooks` / `js-checkout` skills.
 
 ---
 

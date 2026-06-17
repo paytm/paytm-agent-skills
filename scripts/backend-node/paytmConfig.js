@@ -24,10 +24,17 @@ export function getPaytmConfig() {
     callbackUrl, // auto-set from serverBaseUrl at runtime when still ''
     initiateTransactionUrl: `${pgDomain}/theia/api/v1/initiateTransaction`,
     orderStatusUrl: process.env.PAYTM_STATUS_API_URL?.trim() || `${pgDomain}/v3/order/status`,
-    // Subscription endpoints differ between staging (no /theia prefix) and production.
+    // subscription/create is the ONLY endpoint with the /theia/api/v1 prefix, and only on prod.
     subscriptionCreateUrl: env === "production"
       ? `${pgDomain}/theia/api/v1/subscription/create`
       : `${pgDomain}/subscription/create`,
+    // All post-consent management APIs live on the NON-/theia/ host on BOTH envs.
+    // Reusing the create base URL for these returns 404 / HTML error pages on prod.
+    subscriptionCheckStatusUrl: `${pgDomain}/subscription/checkStatus`,
+    subscriptionRenewUrl: `${pgDomain}/subscription/renew`,
+    subscriptionPreNotifyUrl: `${pgDomain}/subscription/preNotify`,
+    subscriptionPreNotifyStatusUrl: `${pgDomain}/subscription/preNotify/status`,
+    subscriptionCancelUrl: `${pgDomain}/subscription/cancel`,
     linkCreateUrl: `${pgDomain}/link/create`,
     linkFetchTransactionUrl: `${pgDomain}/link/fetchTransaction`,
     qrCreateUrl: `${pgDomain}/paymentservices/qr/create`,
