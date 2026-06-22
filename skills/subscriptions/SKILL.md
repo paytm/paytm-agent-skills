@@ -81,7 +81,7 @@ const SUBSCRIPTION_URL =
 
 ## Critical defaults (use these unless the user overrides)
 
-- `subscriptionPaymentMode: "UNKNOWN"` — let user pick at consent.
+- `subscriptionPaymentMode: "UPI"` — UPI Autopay is the dominant recurring rail. **`"UNKNOWN"` can render an empty checkout ("no payment options") on certain production MIDs even when the subscription product is provisioned** — so default to `"UPI"`. Use a specific value (`"CC"` / `"DC"` / `"BANK_MANDATE"`) only when restricting to that rail; only fall back to `"UNKNOWN"` if you've confirmed it renders rails on your MID.
 - `txnAmount.value: "2.00"` — minimum for CC/DC mandates.
 - `subscriptionGraceDays`: **ALWAYS set this field — it is mandatory**, omitting it returns `"Grace days value is mandatory"`. The valid value depends on the cycle length and **must be < the cycle in days** (else `4001 Grace days cannot be greater than the frequency`):
 
@@ -89,10 +89,11 @@ const SUBSCRIPTION_URL =
   |---|---|---|---|
   | Daily | `"1"`, `"DAY"` | 1 | `"0"` (only valid value) |
   | Every 2 days | `"2"`, `"DAY"` | 2 | `"0"` or `"1"` |
-  | Weekly | `"7"`, `"DAY"` | 7 | `"0"` to `"6"` (default `"1"`) |
-  <!-- Weekly cadence is standardized as "7" + "DAY" across this skill (REFERENCE.md too). "1" + "WEEK" is equivalent only if your MID has the WEEK unit enabled — prefer "7"+"DAY" for portability. -->
+  | Weekly | `"1"`, `"WEEK"` | 7 | `"0"` to `"6"` (default `"1"`) |
   | Monthly | `"1"`, `"MONTH"` | ~30 | `"0"` to `"3"` for CC/DC; default `"3"` |
   | Yearly | `"1"`, `"YEAR"` | 365 | `"0"` to `"3"`; default `"3"` |
+
+  > ⚠️ **For UPI Autopay (the default `subscriptionPaymentMode: "UPI"`), `subscriptionFrequencyUnit` accepts only `"WEEK"` / `"MONTH"` / `"YEAR"` — `"DAY"` is rejected with `4001`.** Use `"1"` + `"WEEK"` for weekly UPI mandates (not `"7"` + `"DAY"`). The `"DAY"` unit (incl. daily / every-N-days) is only valid on non-UPI rails.
 
 - `subscriptionStartDate` = today **in IST** (`YYYY-MM-DD`). Generate at request time using an IST-aware helper (see `references/REFERENCE.md` § rule 17 for per-language snippets). **Do NOT use `new Date().toISOString().slice(0, 10)` in Node** — it returns UTC, and between 00:00–05:30 IST every night UTC is still "yesterday" → Paytm rejects with `5028 subscription start in past`.
 - `subscriptionEnableRetry: "0"` with `subscriptionRetryCount` omitted.
@@ -124,7 +125,7 @@ const SUBSCRIPTION_URL =
     "subscriptionFrequencyUnit": "MONTH",
     "subscriptionStartDate": "2026-05-09",
     "subscriptionExpiryDate": "2027-05-09",
-    "subscriptionPaymentMode": "UNKNOWN",
+    "subscriptionPaymentMode": "UPI",
     "subscriptionGraceDays": "3",
     "subscriptionEnableRetry": "0"
   }

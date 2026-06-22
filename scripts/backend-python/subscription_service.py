@@ -32,6 +32,11 @@ def _today_ist() -> str:
     return datetime.now(IST).strftime("%Y-%m-%d")
 
 
+def _today_ist_ddmmyyyy() -> str:
+    # DD-MM-YYYY in IST - preNotify.txnDate format (differs from YYYY-MM-DD dates).
+    return datetime.now(IST).strftime("%d-%m-%Y")
+
+
 def _plus_one_year(yyyymmdd: str) -> str:
     d = datetime.strptime(yyyymmdd, "%Y-%m-%d")
     return d.replace(year=d.year + 1).strftime("%Y-%m-%d")
@@ -69,7 +74,9 @@ def create_subscription(
     start_date: Optional[str] = None,
     expiry_date: Optional[str] = None,
     grace_days: str = "3",
-    payment_mode: str = "UNKNOWN",  # CC | DC | BANK_MANDATE | UNKNOWN
+    payment_mode: str = "UPI",      # UPI (default) | CC | DC | BANK_MANDATE | UNKNOWN
+                                    # "UNKNOWN" can render an empty checkout on some prod MIDs.
+                                    # Note: UPI accepts only WEEK/MONTH/YEAR frequency units (not DAY).
     mandate_type: Optional[str] = None,  # E_MANDATE | PAPER_MANDATE - only with BANK_MANDATE
     order_id: Optional[str] = None,
     server_base_url: str = "",
@@ -233,6 +240,8 @@ def check_subscription_status(*, subs_id: Optional[str] = None,
 def renew_subscription(*, subscription_id: str, amount: Any,
                        order_id: Optional[str] = None) -> dict:
     """POST /subscription/renew - trigger one recurring debit. head: bare signature.
+    mid + orderId MUST also be in the query string (else 1007 / 2014). A successful
+    preNotify must precede renew, else renew returns 3054.
     Use a fresh order_id per debit, then confirm with get_order_status(order_id)."""
     cfg = get_paytm_config()
     order_id = (order_id or "").strip() or ("RENEW_" + secrets.token_hex(8).upper())
@@ -242,22 +251,36 @@ def renew_subscription(*, subscription_id: str, amount: Any,
         "orderId": order_id,
         "txnAmount": {"value": _normalize_amount(amount), "currency": "INR"},
     }
-    data = _post_signed(cfg["subscription_renew_url"], body, {}, cfg)
+    url = f"{cfg['subscription_renew_url']}?mid={cfg['mid']}&orderId={order_id}"
+    data = _post_signed(url, body, {}, cfg)
     return {"orderId": order_id, "raw": data.get("body") or data}
 
 
 def pre_notify_subscription(*, subscription_id: str, amount: Any,
                             order_id: Optional[str] = None,
-                            scheduled_execution_date: Optional[str] = None) -> dict:
+                            scheduled_execution_date: Optional[str] = None,
+                            txn_message: str = "Subscription renewal",
+                            merchant_name: str = "Subscription",
+                            merchant_logo_url: str = "") -> dict:
     """POST /subscription/preNotify - NPCI pre-debit notice. You MUST call this
-    before every debit; Paytm does not auto-handle it. head: tokenType "AES" + signature."""
+    before every debit; Paytm does not auto-handle it. head: tokenType "AES" + signature.
+
+    Field quirks (live prod): txnAmount is a FLAT STRING (not {value,currency});
+    txnDate = today in DD-MM-YYYY; subsId + referenceId = subscriptionId; txnMessage /
+    merchantName / merchantLogoUrl required. Call within 1-7 days before the billing date."""
     cfg = get_paytm_config()
     order_id = (order_id or "").strip() or ("PRENOTIFY_" + secrets.token_hex(8).upper())
     body: dict = {
         "mid": cfg["mid"],
         "subscriptionId": subscription_id,
+        "subsId": subscription_id,
+        "referenceId": subscription_id,
         "orderId": order_id,
-        "txnAmount": {"value": _normalize_amount(amount), "currency": "INR"},
+        "txnAmount": _normalize_amount(amount),   # flat string, NOT an object
+        "txnDate": _today_ist_ddmmyyyy(),         # today, DD-MM-YYYY
+        "txnMessage": txn_message,
+        "merchantName": merchant_name,
+        "merchantLogoUrl": merchant_logo_url,
     }
     if scheduled_execution_date:
         body["subscriptionScheduledExecutionDate"] = scheduled_execution_date
@@ -278,10 +301,13 @@ def pre_notify_status(*, subscription_id: str, order_id: str) -> dict:
 
 
 def cancel_subscription(*, subscription_id: str) -> dict:
-    """POST /subscription/cancel - terminal. head: signature + tokenType "AES"."""
+    """POST /subscription/cancel - terminal. head: signature + tokenType "AES".
+    subscriptionId must also be in the query string; subsId (same value) required in body
+    (else 400 "Subscription Id field can not be empty")."""
     cfg = get_paytm_config()
-    body = {"mid": cfg["mid"], "subscriptionId": subscription_id}
-    data = _post_signed(cfg["subscription_cancel_url"], body, {"tokenType": "AES"}, cfg)
+    body = {"mid": cfg["mid"], "subscriptionId": subscription_id, "subsId": subscription_id}
+    url = f"{cfg['subscription_cancel_url']}?mid={cfg['mid']}&subscriptionId={subscription_id}"
+    data = _post_signed(url, body, {"tokenType": "AES"}, cfg)
     return data.get("body") or data
 
 

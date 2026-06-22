@@ -132,12 +132,17 @@ Interpretation cheat sheet:
 
 ## 2. `POST /subscription/renew` — trigger a recurring debit
 
-Charges the mandate for one cycle. Run on your own scheduler (Paytm does not auto-debit for `NATIVE_SUBSCRIPTION`).
+Charges the mandate for one cycle. Run on your own scheduler (Paytm does not auto-debit for `NATIVE_SUBSCRIPTION`). **A successful `preNotify` must precede every `renew` — otherwise `renew` returns `3054`.**
 
-- **Host:** non-theia — `{PG_DOMAIN}/subscription/renew` (both envs).
+- **Host:** non-theia — `{PG_DOMAIN}/subscription/renew?mid=YOUR_MID&orderId=YOUR_ORDER_ID`.
 - **Head:** bare `signature`.
+- ⚠️ **`mid` AND `orderId` must be in BOTH the query string and the body.** Missing them in the query string returns `1007` ("Mid is mandatory in query parameter"); a mismatch between query and body returns `2014`.
 
 Request:
+
+```
+POST {PG_DOMAIN}/subscription/renew?mid=YOUR_MID&orderId=RENEW_ORD_2026_06_01
+```
 
 ```json
 {
@@ -151,7 +156,7 @@ Request:
 }
 ```
 
-- Use a **fresh `orderId`** per debit (it becomes the charge's transaction order id).
+- Use a **fresh `orderId`** per debit (it becomes the charge's transaction order id); keep the query-string `orderId` identical to the body `orderId`.
 - After renew, confirm the actual money movement with `v3/order/status` on that `orderId` — `renew` accepting the request is not the same as the debit succeeding.
 - For `VARIABLE` amount mandates, `txnAmount.value` may differ per cycle but must be ≤ `subscriptionMaxAmount`.
 
@@ -169,12 +174,27 @@ Request:
   "body": {
     "mid": "YOUR_MID",
     "subscriptionId": "1012567997xx",
+    "subsId": "1012567997xx",
+    "referenceId": "1012567997xx",
     "orderId": "PRENOTIFY_2026_06_01",
-    "txnAmount": { "value": "499.00", "currency": "INR" },
+    "txnAmount": "499.00",
+    "txnDate": "01-06-2026",
+    "txnMessage": "Subscription renewal",
+    "merchantName": "Your App Name",
+    "merchantLogoUrl": "",
     "subscriptionScheduledExecutionDate": "2026-06-02"
   }
 }
 ```
+
+> **preNotify field gotchas (all from live production validation):**
+> - **`txnAmount` is a flat string** (`"499.00"`), **NOT** a `{ value, currency }` object — unlike `create` / `renew`.
+> - **`txnDate`** — required, **today's date** (when the notification is dispatched) in **`DD-MM-YYYY`**.
+> - **`subscriptionScheduledExecutionDate`** — the billing date, in **`YYYY-MM-DD`** (date only).
+> - **`subsId`** and **`referenceId`** — both required, both equal to `subscriptionId`.
+> - **`txnMessage`**, **`merchantName`**, **`merchantLogoUrl`** — all required (`merchantLogoUrl` may be empty string).
+> - **Call within Paytm's notification window — 1–7 days before the billing date.** Calling too far ahead returns `"notification can not be send at given txnDate"`.
+> - **`renew` returns `3054` if a successful `preNotify` was not called first.** Always `preNotify` → then `renew`.
 
 `preNotify/status` — **Host:** non-theia. **Head:** `clientId` + `tokenType: "AES"` + `version` + `signature`.
 
@@ -191,13 +211,18 @@ Typical sequence per cycle: `preNotify` (≥24h ahead) → wait → `renew` → 
 
 ## 4. `POST /subscription/cancel` — cancel a mandate
 
-- **Host:** non-theia — `{PG_DOMAIN}/subscription/cancel` (both envs).
+- **Host:** non-theia — `{PG_DOMAIN}/subscription/cancel?mid=YOUR_MID&subscriptionId=YOUR_SUB_ID`.
 - **Head:** `signature` (+ `tokenType: "AES"`).
+- ⚠️ **`subscriptionId` must be in BOTH the query string and the body, and `subsId` (same value) is required in the body.** Sending only `subscriptionId` in the body returns `400` "Subscription Id field can not be empty".
+
+```
+POST {PG_DOMAIN}/subscription/cancel?mid=YOUR_MID&subscriptionId=1012567997xx
+```
 
 ```json
 {
   "head": { "tokenType": "AES", "signature": "<checksum over body>" },
-  "body": { "mid": "YOUR_MID", "subscriptionId": "1012567997xx" }
+  "body": { "mid": "YOUR_MID", "subscriptionId": "1012567997xx", "subsId": "1012567997xx" }
 }
 ```
 
@@ -233,7 +258,10 @@ After consent, Paytm redirects the user with a POST to your `callbackUrl`. The s
 ```js
 // Express — redirect callback handler (consent return)
 app.post("/paytm/callback", express.urlencoded({ extended: false }), async (req, res) => {
-  const posted = req.body;                       // ORDERID, SUBS_ID, STATUS, maybe CHECKSUMHASH
+  // express.urlencoded returns a NULL-PROTOTYPE object. paytmchecksum calls
+  // params.hasOwnProperty(), which throws "params.hasOwnProperty is not a function"
+  // on a null-prototype object. Spread into a plain object before verifying.
+  const posted = { ...req.body };                 // ORDERID, SUBS_ID, STATUS, maybe CHECKSUMHASH
   const mandateId = posted.SUBS_ID;
 
   // CHECKSUMHASH may be absent on the redirect — do NOT hard-reject if missing.
@@ -264,6 +292,17 @@ Cross-link the `webhooks` skill for signature verification, raw-body handling, d
 > **`SUBSCRIPTION_CANCEL` may not fire on all MIDs** (confirmed missing in production). Teams relying on it for cancellation silently miss every cancel. **Treat the webhook as best-effort and use `checkStatus` polling as the reliable fallback** for detecting cancellations/expiries.
 
 ---
+
+## Lifecycle error codes (management endpoints)
+
+| Code / message | Endpoint | Cause & fix |
+|---|---|---|
+| `3054` | `renew` | No successful `preNotify` preceded this debit. Call `preNotify` (within the 1–7 day window) first, then `renew`. |
+| `"notification can not be send at given txnDate"` | `preNotify` | Called outside the notification window. Send only 1–7 days before the billing date. |
+| `1007` "Mid is mandatory in query parameter" | `renew` | `mid` missing from the URL query string. Add `?mid=...&orderId=...`. |
+| `2014` | `renew` | `orderId` in the query string ≠ `orderId` in the body. Keep them identical. |
+| `400` "Subscription Id field can not be empty" | `cancel` | Body missing `subsId`, or `subscriptionId` missing from the query string. Send `subsId` in the body and `subscriptionId` in both query + body. |
+| `404` `SVE-003` "Requested API could not be located" | any | Wrong route name (e.g. `subscription/status` instead of `checkStatus`) or wrong host (used the `/theia/` create base). See the host table at top. |
 
 ## Putting it together — production lifecycle loop
 

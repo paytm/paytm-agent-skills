@@ -20,6 +20,12 @@ function todayIST() {
   return new Date(Date.now() + offsetMs).toISOString().slice(0, 10);
 }
 
+function todayISTddmmyyyy() {
+  // DD-MM-YYYY in IST — preNotify.txnDate format (differs from the YYYY-MM-DD dates).
+  const [y, m, d] = todayIST().split("-");
+  return `${d}-${m}-${y}`;
+}
+
 function plusOneYear(yyyymmdd) {
   const [y, m, d] = yyyymmdd.split("-").map(Number);
   return `${y + 1}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -50,7 +56,9 @@ export async function createSubscription({
   startDate,                        // YYYY-MM-DD; defaults to today
   expiryDate,                       // YYYY-MM-DD; defaults to startDate + 1 year
   graceDays = "3",
-  paymentMode = "UNKNOWN",          // CC | DC | BANK_MANDATE | UNKNOWN
+  paymentMode = "UPI",              // UPI (default) | CC | DC | BANK_MANDATE | UNKNOWN
+                                    // "UNKNOWN" can render an empty checkout on some prod MIDs.
+                                    // Note: UPI accepts only WEEK/MONTH/YEAR frequency units (not DAY).
   mandateType,                      // E_MANDATE | PAPER_MANDATE - only with BANK_MANDATE
   orderId: callerOrderId,
   serverBaseUrl,
@@ -214,6 +222,8 @@ export async function checkSubscriptionStatus({ subsId, orderId, custId } = {}) 
 }
 
 // POST /subscription/renew — trigger one recurring debit. head: bare signature.
+// mid + orderId MUST also be in the query string (else 1007 / 2014). A successful
+// preNotify must precede renew, else renew returns 3054.
 // Use a fresh orderId per debit, then confirm with getOrderStatus(orderId).
 export async function renewSubscription({ subscriptionId, amount, orderId: callerOrderId }) {
   const cfg = getPaytmConfig();
@@ -225,21 +235,39 @@ export async function renewSubscription({ subscriptionId, amount, orderId: calle
     orderId,
     txnAmount: { value: normalizeAmount(amount), currency: "INR" },
   };
-  const json = await postSigned(cfg.subscriptionRenewUrl, body, {}, cfg);
+  const url = new URL(cfg.subscriptionRenewUrl);
+  url.searchParams.set("mid", cfg.mid);
+  url.searchParams.set("orderId", orderId);
+  const json = await postSigned(url.toString(), body, {}, cfg);
   return { orderId, raw: json?.body || json };
 }
 
 // POST /subscription/preNotify — NPCI pre-debit notice. You MUST call this
 // before every debit; Paytm does not auto-handle it. head: tokenType "AES" + signature.
-export async function preNotifySubscription({ subscriptionId, amount, orderId: callerOrderId, scheduledExecutionDate }) {
+// Field quirks (live prod): txnAmount is a FLAT STRING (not {value,currency});
+// txnDate = today in DD-MM-YYYY; subsId + referenceId = subscriptionId; txnMessage /
+// merchantName / merchantLogoUrl required. Call within 1–7 days before the billing date.
+export async function preNotifySubscription({
+  subscriptionId, amount, orderId: callerOrderId,
+  scheduledExecutionDate,           // billing date, YYYY-MM-DD
+  txnMessage = "Subscription renewal",
+  merchantName = "Subscription",
+  merchantLogoUrl = "",
+}) {
   const cfg = getPaytmConfig();
   const orderId = callerOrderId?.trim()
     || `PRENOTIFY_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
   const body = {
     mid: cfg.mid,
     subscriptionId,
+    subsId: subscriptionId,
+    referenceId: subscriptionId,
     orderId,
-    txnAmount: { value: normalizeAmount(amount), currency: "INR" },
+    txnAmount: normalizeAmount(amount),   // flat string, NOT an object
+    txnDate: todayISTddmmyyyy(),          // today, DD-MM-YYYY
+    txnMessage,
+    merchantName,
+    merchantLogoUrl,
   };
   if (scheduledExecutionDate) body.subscriptionScheduledExecutionDate = scheduledExecutionDate;
   const json = await postSigned(cfg.subscriptionPreNotifyUrl, body, { tokenType: "AES" }, cfg);
@@ -260,10 +288,15 @@ export async function preNotifyStatus({ subscriptionId, orderId }) {
 }
 
 // POST /subscription/cancel — terminal. head: signature + tokenType "AES".
+// subscriptionId must also be in the query string; subsId (same value) required in body
+// (else 400 "Subscription Id field can not be empty").
 export async function cancelSubscription({ subscriptionId }) {
   const cfg = getPaytmConfig();
-  const body = { mid: cfg.mid, subscriptionId };
-  const json = await postSigned(cfg.subscriptionCancelUrl, body, { tokenType: "AES" }, cfg);
+  const body = { mid: cfg.mid, subscriptionId, subsId: subscriptionId };
+  const url = new URL(cfg.subscriptionCancelUrl);
+  url.searchParams.set("mid", cfg.mid);
+  url.searchParams.set("subscriptionId", subscriptionId);
+  const json = await postSigned(url.toString(), body, { tokenType: "AES" }, cfg);
   return json?.body || json;
 }
 
