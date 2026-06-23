@@ -3,6 +3,19 @@
 All notable changes to the `paytm` skills bundle are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows [SemVer](https://semver.org/).
 
+## [0.0.5]
+
+### Added
+
+- `subscriptions`: new `references/recurring-lifecycle.md` documenting the full post-consent lifecycle — `checkStatus`, `renew`, `preNotify` (+`/status`), `cancel`, `v3/order/status` — with per-endpoint hosts (the `/theia/` vs non-`/theia/` split), `head` requirements, `status`+`subStatus` value sets, mandate-ID name drift, subscription webhook events, and callback verification.
+- Node + Python sample backends now implement the recurring lifecycle (`checkStatus` / `renew` / `preNotify` / `preNotifyStatus` / `cancel` / `orderStatus`) plus the non-`/theia/` management URLs.
+
+### Changed
+
+- `js-checkout` + `subscriptions`: use `flow: "SUBSCRIPTION"` (not `"DEFAULT"`) for mandate tokens, else checkout shows no UPI Autopay rails.
+- Default `subscriptionPaymentMode` is now `"UPI"` (`"UNKNOWN"` can render an empty checkout on some prod MIDs). Weekly cadence standardized to `"1"` + `"WEEK"`; documented that UPI rejects the `"DAY"` frequency unit (`4001`).
+- Corrected `preNotify` required fields, `renew`/`cancel` query params + `subsId`, the null-prototype callback fix, and authoritative `custId` sanitization (`[A-Za-z0-9_]`).
+
 ## [0.0.4]
 
 ### Changed
