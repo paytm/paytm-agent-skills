@@ -35,12 +35,19 @@ def get_paytm_config() -> dict:
         "callback_url": callback_url,
         "initiate_transaction_url": f"{pg_domain}/theia/api/v1/initiateTransaction",
         "order_status_url": (os.environ.get("PAYTM_STATUS_API_URL") or f"{pg_domain}/v3/order/status").strip(),
-        # Subscription endpoint differs between staging (no /theia prefix) and production.
+        # subscription/create is the ONLY endpoint with the /theia/api/v1 prefix, and only on prod.
         "subscription_create_url": (
             f"{pg_domain}/theia/api/v1/subscription/create"
             if env == "production"
             else f"{pg_domain}/subscription/create"
         ),
+        # All post-consent management APIs live on the NON-/theia/ host on BOTH envs.
+        # Reusing the create base URL for these returns 404 / HTML error pages on prod.
+        "subscription_check_status_url": f"{pg_domain}/subscription/checkStatus",
+        "subscription_renew_url": f"{pg_domain}/subscription/renew",
+        "subscription_pre_notify_url": f"{pg_domain}/subscription/preNotify",
+        "subscription_pre_notify_status_url": f"{pg_domain}/subscription/preNotify/status",
+        "subscription_cancel_url": f"{pg_domain}/subscription/cancel",
         "link_create_url": f"{pg_domain}/link/create",
         "link_fetch_transaction_url": f"{pg_domain}/link/fetchTransaction",
         "qr_create_url": f"{pg_domain}/paymentservices/qr/create",

@@ -37,9 +37,10 @@
       "path": "skills/subscriptions",
       "entry": "SKILL.md",
       "description": "UPI Autopay / Native Subscription for recurring charges (mandates, monthly / weekly / yearly, SIPs).",
-      "triggers": ["subscription/create", "NATIVE_SUBSCRIPTION", "NATIVE_MF_SIP", "subscriptionFrequency", "subscriptionPaymentMode", "UPI Autopay", "recurring payments", "auto-debit", "NPCI mandate", "eMandate", "pre-debit notification", "monthly subscription", "recurring charges"],
+      "triggers": ["subscription/create", "subscription/checkStatus", "subscription/renew", "subscription/preNotify", "subscription/cancel", "v3/order/status", "NATIVE_SUBSCRIPTION", "NATIVE_MF_SIP", "subscriptionFrequency", "subscriptionPaymentMode", "subscriptionId", "subsId", "SUBS_ID", "subStatus", "SUBSCRIPTION_DEBIT", "SUBSCRIPTION_CANCEL", "UPI Autopay", "recurring payments", "auto-debit", "NPCI mandate", "eMandate", "pre-debit notification", "pre-notification", "recurring debit", "cancel subscription", "subscription status", "monthly subscription", "recurring charges"],
       "references": [
-        { "path": "skills/subscriptions/references/REFERENCE.md", "load": "lazy", "summary": "Subscription full field reference, error code table, charge/edit/cancel flows." }
+        { "path": "skills/subscriptions/references/REFERENCE.md", "load": "lazy", "summary": "Subscription full field reference, error code table, mandate-creation flow." },
+        { "path": "skills/subscriptions/references/recurring-lifecycle.md", "load": "lazy", "summary": "Post-consent lifecycle: checkStatus/renew/preNotify/cancel/order-status, /theia vs non-theia host split, per-endpoint head, status+subStatus value sets, ID-name drift, subscription webhook events, callback verification." }
       ]
     },
     {

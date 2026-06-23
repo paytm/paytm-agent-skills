@@ -315,6 +315,8 @@ window.Paytm.CheckoutJS.invoke();
 
 `merchant: { redirect: false }` (modal-only) silently does **nothing** when the browser blocks the popup — common on mobile Safari, in iframes, and with strict ad blockers. Use `redirect: true` for the safe default; switch to `false` only if you've user-tested the modal in your specific UX.
 
+> ⚠️ **For subscription / mandate tokens, always use `flow: "SUBSCRIPTION"`** (not `"DEFAULT"`). `flow: "DEFAULT"` renders the one-time payment UI with **no UPI Autopay / mandate rails**, so a subscription token opens a checkout showing "no payment options". Use `"DEFAULT"` only for one-time payments; use `"SUBSCRIPTION"` for any `txnToken` minted by `/subscription/create`. See the `paytm-subscriptions` skill.
+
 ### Step 3.5 — wire BOTH handlers
 
 **Symptom:** Payment completes (or fails, or is cancelled) and the page just sits there. User reloads, gets confused, may double-pay.
